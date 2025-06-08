@@ -1,0 +1,107 @@
+🚀 PHASE 1 – INITIALE
+1. Initialisation du projet
+ Création de l'arborescence onlyflick/
+ Setup du module Go (go mod init)
+ Docker avec Postgres + Mailpit
+
+2. Structure et base technique
+ Configuration initiale (fichier .env, chargement config)
+ Routing HTTP (chi ou mux)
+ Middlewares de base (CORS, logging, recover)
+
+🔐 PHASE 2 – AUTHENTIFICATION & UTILISATEURS
+3.Système d’authentification
+ Création compte (abonné par défaut)
+ Login avec JWT
+ Middleware d’authentification
+ Role-based access control (RBAC)
+
+4. Gestion des profils utilisateur
+ Vue profil / édition / suppression
+ Demande de passage en créateur
+
+📦 PHASE 3 – CONTENU & MULTIMEDIA
+5. Gestion de contenu (CRUD)
+ Upload fichiers (S3 / MinIO)
+ Création post multimédia
+ Visibilité : public / abonné
+ Modification, suppression, filtrage
+
+6. Abonnement / following
+ POST /follow/{creator_id}
+ GET /me/following / GET /me/followers
+
+🔐 PHASE 4 – INTERACTIONS SOCIALES
+4.1. Commentaires
+ Endpoint POST /posts/{id}/comments — ajouter un commentaire
+ Endpoint GET /posts/{id}/comments — lister les commentaires
+ Endpoint PATCH /comments/{id} — éditer (auteur ou admin)
+ Endpoint DELETE /comments/{id} — supprimer (auteur ou admin)
+
+4.2. Likes
+ Endpoint POST /posts/{id}/like
+ Endpoint DELETE /posts/{id}/like
+ Affichage du nombre de likes par post
+ Affichage “j’ai liké ce post” dans la réponse du post
+
+4.3. Signalements
+ Endpoint POST /report/user/{id}
+ Endpoint POST /report/post/{id}
+ Table reports (id, content_type, content_id, user_id, reason, status)
+
+--------------------------------------------- TERMINER ---------------------------------------------
+
+4.4. Messagerie privée
+ Création table conversations et messages
+ Endpoint POST /messages/{recipient_id} — envoyer un message
+ Endpoint GET /conversations — voir les discussions
+ Endpoint GET /conversations/{id} — voir les messages d'une discussion
+
+Ok next step passons aux "Messagerie privée", je veux un systeme de messagerie où l'utilisateur n'auras pas besoin de recharger la page pour recevoir les message.
+Les messages sont entre deux personnes, on peut connecter uniquement des créateurs et pour ce faire il faut être abonnée à lui
+
+💳 PHASE 5 – ABONNEMENTS & PAIEMENTS
+5.1. Validation e-mail & sécurité
+ Génération de token de validation à la création de compte
+ Endpoint GET /verify?token=xxx
+ Middleware pour forcer l’email vérifié
+
+5.2. Réinitialisation mot de passe
+ Endpoint POST /forgot-password — envoi token
+ Endpoint POST /reset-password — définir nouveau mot de passe
+
+5.3. Paiements (Stripe)
+ Création produits/plan mensuels via Stripe API
+ Intégration de Stripe Checkout ou customer portal
+ Webhooks Stripe (paiement réussi, annulé)
+ Résiliation/suspension abonnements
+
+🧠 PHASE 6 – ADMINISTRATION & ANALYTICS
+6.1. Back-office admin
+ Gestion utilisateurs (ban, désactivation)
+ Tableau des signalements
+ Vue des revenus par créateur (simulé dans un premier temps)
+
+6.2. Statistiques
+ Nombre de posts, likes, abonnés
+ Vue mensuelle des revenus (mock si pas Stripe)
+
+🔧 PHASE 7 – OUTILS, TESTS & DEVOPS
+7.1. Tests
+ Tests unitaires (auth, abonnement, création post, IsSubscribed)
+ Tests d’intégration simples
+ Collection Postman exhaustive ✅ (en cours)
+
+7.2. Logs & Monitoring
+ Logger structuré (zap ou logrus)
+ Middleware de log JSON
+ Intégration Loki ou service tiers (Sentry, Grafana Cloud)
+
+7.3. DevOps
+ Dockerfile + docker-compose complet (backend + pg + mailpit)
+ Fichier .env.example
+ CI/CD (GitHub Actions avec build + test)
+ Déploiement sur Render, Heroku ou VPS
+
+7.4. Bonus
+ Feature toggles simples (via .env ou DB)

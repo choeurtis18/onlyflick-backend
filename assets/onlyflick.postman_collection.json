@@ -1,0 +1,273 @@
+{
+  "info": {
+    "name": "OnlyFlick Full API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "🌟 Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{SERVER_URL}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"first_name\":\"Alice\",\"last_name\":\"Smith\",\"email\":\"alice@example.com\",\"password\":\"pass123\"}"
+            },
+            "url": "{{SERVER_URL}}/register"
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"alice@example.com\",\"password\":\"pass123\"}"
+            },
+            "url": "{{SERVER_URL}}/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 Profile",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{token}}"}],
+            "url": "{{SERVER_URL}}/profile/"
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {"key":"Authorization","value":"Bearer {{token}}"},
+              {"key":"Content-Type","value":"application/json"}
+            ],
+            "body": {"mode":"raw","raw":"{\"first_name\":\"AliceUpdated\"}"},
+            "url": "{{SERVER_URL}}/profile/"
+          }
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key":"Authorization","value":"Bearer {{token}}"}],
+            "url": "{{SERVER_URL}}/profile/"
+          }
+        },
+        {
+          "name": "Request Creator Upgrade",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Authorization","value":"Bearer {{token}}"}],
+            "url": "{{SERVER_URL}}/profile/request-upgrade"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛠 Admin",
+      "item": [
+        {
+          "name": "Admin Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"}],
+            "url": "{{SERVER_URL}}/admin/dashboard"
+          }
+        },
+        {
+          "name": "List Creator Requests",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"}],
+            "url": "{{SERVER_URL}}/admin/creator-requests"
+          }
+        },
+        {
+          "name": "Approve Creator",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"}],
+            "url": "{{SERVER_URL}}/admin/creator-requests/{{requestId}}/approve"
+          }
+        },
+        {
+          "name": "Reject Creator",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"}],
+            "url": "{{SERVER_URL}}/admin/creator-requests/{{requestId}}/reject"
+          }
+        }
+      ]
+    },
+    {
+      "name": "✍️ Creator Posts",
+      "item": [
+        {
+          "name": "Create Post (multipart)",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Authorization","value":"Bearer {{creator_token}}"}],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {"key":"title","value":"My First Post","type":"text"},
+                {"key":"description","value":"Hello world!","type":"text"},
+                {"key":"visibility","value":"public","type":"text"},
+                {"key":"media","type":"file","src":"<PATH_TO_FILE>"}
+              ]
+            },
+            "url": "{{SERVER_URL}}/creator/posts"
+          }
+        },
+        {
+          "name": "List My Posts",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{creator_token}}"}],
+            "url": "{{SERVER_URL}}/creator/posts"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 Post Management",
+      "item": [
+        {
+          "name": "Get All Visible Posts",
+          "request": {
+            "method": "GET",
+            "url": "{{SERVER_URL}}/posts/all"
+          }
+        },
+        {
+          "name": "Get Posts From Creator",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{token}}"}],
+            "url": "{{SERVER_URL}}/posts/from/{{creatorId}}"
+          }
+        },
+        {
+          "name": "Get Post by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{creator_token}}"}],
+            "url": "{{SERVER_URL}}/posts/{{postId}}"
+          }
+        },
+        {
+          "name": "Update Post (with new media)",
+          "request": {
+            "method": "PATCH",
+            "header": [{"key":"Authorization","value":"Bearer {{creator_token}}"}],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {"key":"title","value":"Updated Title","type":"text"},
+                {"key":"media","type":"file","src":"<NEW_PATH_TO_FILE>"}
+              ]
+            },
+            "url": "{{SERVER_URL}}/posts/{{postId}}"
+          }
+        },
+        {
+          "name": "Delete Post",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key":"Authorization","value":"Bearer {{creator_token}}"}],
+            "url": "{{SERVER_URL}}/posts/{{postId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📷 Media",
+      "item": [
+        {
+          "name": "Upload Media (standalone)",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Authorization","value":"Bearer {{creator_token}}"}],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{"key":"file","type":"file","src":"<PATH_TO_FILE>"}]
+            },
+            "url": "{{SERVER_URL}}/media/upload"
+          }
+        },
+        {
+          "name": "Delete Media",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key":"Authorization","value":"Bearer {{creator_token}}"}],
+            "url": "{{SERVER_URL}}/media/{{fileId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔁 Subscriptions",
+      "item": [
+        {
+          "name": "Subscribe to Creator",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Authorization","value":"Bearer {{subscriber_token}}"}],
+            "url": "{{SERVER_URL}}/subscriptions/{{creatorId}}"
+          }
+        },
+        {
+          "name": "Unsubscribe",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key":"Authorization","value":"Bearer {{subscriber_token}}"}],
+            "url": "{{SERVER_URL}}/subscriptions/{{creatorId}}"
+          }
+        },
+        {
+          "name": "List My Subscriptions",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{subscriber_token}}"}],
+            "url": "{{SERVER_URL}}/subscriptions/"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {"key": "SERVER_URL", "value": "http://localhost:8080"},
+    {"key": "token", "value": ""},
+    {"key": "creator_token", "value": ""},
+    {"key": "subscriber_token", "value": ""},
+    {"key": "admin_token", "value": ""},
+    {"key": "creatorId", "value": ""},
+    {"key": "postId", "value": ""},
+    {"key": "fileId", "value": ""},
+    {"key": "requestId", "value": ""}
+  ]
+}
