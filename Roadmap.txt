@@ -49,16 +49,13 @@
  Endpoint POST /report/post/{id}
  Table reports (id, content_type, content_id, user_id, reason, status)
 
---------------------------------------------- TERMINER ---------------------------------------------
-
 4.4. Messagerie privée
  Création table conversations et messages
  Endpoint POST /messages/{recipient_id} — envoyer un message
  Endpoint GET /conversations — voir les discussions
  Endpoint GET /conversations/{id} — voir les messages d'une discussion
 
-Ok next step passons aux "Messagerie privée", je veux un systeme de messagerie où l'utilisateur n'auras pas besoin de recharger la page pour recevoir les message.
-Les messages sont entre deux personnes, on peut connecter uniquement des créateurs et pour ce faire il faut être abonnée à lui
+--------------------------------------------- TERMINER ---------------------------------------------
 
 💳 PHASE 5 – ABONNEMENTS & PAIEMENTS
 5.1. Validation e-mail & sécurité
@@ -66,11 +63,7 @@ Les messages sont entre deux personnes, on peut connecter uniquement des créate
  Endpoint GET /verify?token=xxx
  Middleware pour forcer l’email vérifié
 
-5.2. Réinitialisation mot de passe
- Endpoint POST /forgot-password — envoi token
- Endpoint POST /reset-password — définir nouveau mot de passe
-
-5.3. Paiements (Stripe)
+5.2. Paiements (Stripe)
  Création produits/plan mensuels via Stripe API
  Intégration de Stripe Checkout ou customer portal
  Webhooks Stripe (paiement réussi, annulé)

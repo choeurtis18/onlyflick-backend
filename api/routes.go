@@ -138,6 +138,19 @@ func SetupRoutes() http.Handler {
 		rep.With(middleware.JWTMiddlewareWithRole("admin")).Post("/{id}/action", handler.AdminActOnReport)
 	})
 
+	// ========================
+	// Gestion des conversations et messages
+	// ========================
+	r.Route("/conversations", func(mr chi.Router) {
+		mr.Use(middleware.JWTMiddleware)
+
+		mr.Get("/", handler.GetMyConversations)
+		mr.Post("/{receiverId}", handler.StartConversation)
+
+		mr.Get("/{id}/messages", handler.GetMessagesInConversation)
+		mr.Post("/{id}/messages", handler.SendMessageInConversation)
+	})
+
 	log.Println("API routes setup complete.")
 	return r
 }

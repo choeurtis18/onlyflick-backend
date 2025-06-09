@@ -15,6 +15,8 @@ func RunMigrations() {
 	runCommentsMigration()
 	runLikesMigration()
 	runReportsMigration()
+	runConversationsMigration()
+	runMessagesMigration()
 
 	log.Println("✅ [MIGRATIONS] Toutes les migrations ont été exécutées avec succès.")
 	log.Println("🚀 [MIGRATIONS] La base de données est prête à l'emploi.")
@@ -198,4 +200,50 @@ func runReportsMigration() {
 		log.Fatalf("❌ [reports] Échec de la migration de la table 'reports' : %v", err)
 	}
 	log.Println("✅ [reports] Table 'reports' migrée avec succès.")
+}
+
+//
+// ===================== CONVERSATIONS =====================
+
+// runConversationsMigration crée la table 'conversations' si elle n'existe pas.
+func runConversationsMigration() {
+	log.Println("➡️  [conversations] Migration de la table 'conversations'...")
+
+	query := `
+	CREATE TABLE IF NOT EXISTS conversations (
+		id SERIAL PRIMARY KEY,
+		creator_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		subscriber_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		UNIQUE(creator_id, subscriber_id)
+	);`
+
+	if _, err := DB.Exec(query); err != nil {
+		log.Fatalf("❌ [conversations] Échec de la migration : %v", err)
+	}
+
+	log.Println("✅ [conversations] Table 'conversations' migrée avec succès.")
+}
+
+//
+// ===================== MESSAGES =====================
+
+// runMessagesMigration crée la table 'messages' si elle n'existe pas.
+func runMessagesMigration() {
+	log.Println("➡️  [messages] Migration de la table 'messages'...")
+
+	query := `
+	CREATE TABLE IF NOT EXISTS messages (
+		id SERIAL PRIMARY KEY,
+		conversation_id BIGINT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+		sender_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		content TEXT NOT NULL,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+	);`
+
+	if _, err := DB.Exec(query); err != nil {
+		log.Fatalf("❌ [messages] Échec de la migration : %v", err)
+	}
+
+	log.Println("✅ [messages] Table 'messages' migrée avec succès.")
 }
