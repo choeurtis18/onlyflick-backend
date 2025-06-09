@@ -7,9 +7,13 @@ import (
 	"onlyflick/internal/domain"
 )
 
-// CreateMessage insère un nouveau message dans la base de données.
-func CreateMessage(msg *domain.Message) error {
-	log.Printf("[CreateMessage] Création d'un message pour la conversation %d par l'utilisateur %d", msg.ConversationID, msg.SenderID)
+// CreateMessage insère un nouveau message dans la base de données et retourne le message créé.
+func CreateMessage(conversationID, senderID int64, content string) (*domain.Message, error) {
+	msg := &domain.Message{
+		ConversationID: conversationID,
+		SenderID:       senderID,
+		Content:        content,
+	}
 
 	err := database.DB.QueryRow(`
 		INSERT INTO messages (conversation_id, sender_id, content, created_at)
@@ -19,11 +23,11 @@ func CreateMessage(msg *domain.Message) error {
 
 	if err != nil {
 		log.Printf("[CreateMessage][ERREUR] Échec de l'insertion du message : %v", err)
-		return fmt.Errorf("[CreateMessage] Erreur insertion message : %w", err)
+		return nil, fmt.Errorf("[CreateMessage] Erreur insertion message : %w", err)
 	}
 
 	log.Printf("[CreateMessage] Message créé avec succès, ID: %d", msg.ID)
-	return nil
+	return msg, nil
 }
 
 // GetMessages récupère les messages avec pagination.

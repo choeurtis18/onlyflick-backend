@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"onlyflick/internal/database"
-	"onlyflick/internal/domain"
 	"onlyflick/internal/middleware"
 	"onlyflick/internal/repository"
 	"onlyflick/pkg/response"
@@ -94,12 +93,8 @@ func SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg := &domain.Message{
-		ConversationID: convID,
-		SenderID:       userID,
-		Content:        payload.Content,
-	}
-	if err := repository.CreateMessage(msg); err != nil {
+	msg, err := repository.CreateMessage(convID, userID, payload.Content)
+	if err != nil {
 		log.Printf("[SendMessage] Échec DB: %v", err)
 		response.RespondWithError(w, http.StatusInternalServerError, "Impossible d'envoyer le message")
 		return
@@ -204,12 +199,8 @@ func SendMessageInConversation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg := &domain.Message{
-		ConversationID: conversationID,
-		SenderID:       userID,
-		Content:        req.Content,
-	}
-	if err := repository.CreateMessage(msg); err != nil {
+	msg, err := repository.CreateMessage(conversationID, userID, req.Content)
+	if err != nil {
 		log.Printf("[SendMessageInConversation] Erreur insertion : %v", err)
 		response.RespondWithError(w, http.StatusInternalServerError, "Erreur envoi")
 		return

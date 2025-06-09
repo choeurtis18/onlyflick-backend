@@ -151,6 +151,14 @@ func SetupRoutes() http.Handler {
 		mr.Post("/{id}/messages", handler.SendMessageInConversation)
 	})
 
+	// ========================
+	// WebSocket pour la messagerie privée
+	// ========================
+	r.Route("/ws", func(wsRouter chi.Router) {
+		wsRouter.Use(middleware.JWTMiddleware)
+		wsRouter.Get("/messages/{conversation_id}", handler.HandleMessagesWebSocket)
+	})
+
 	log.Println("API routes setup complete.")
 	return r
 }
