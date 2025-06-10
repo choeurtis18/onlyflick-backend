@@ -1,0 +1,1323 @@
+{
+	"info": {
+		"_postman_id": "bd25294d-f844-454d-a71b-c227c66432b2",
+		"name": "OnlyFlick API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "16409343"
+	},
+	"item": [
+		{
+			"name": "🌟 Health",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{SERVER_URL}}/health",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🔐 Authentication",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"first_name\":\"alice\",\n    \"last_name\":\"alice\",\n    \"email\":\"alice@onlyflick.com\",// admin / creator / user / alice-onlyflick@yopmail.com\n    \"password\":\"pass123\" //pass123\n}"
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/register",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\":\"alice@onlyflick.com\",// admin / creator / user / alice-onlyflick@yopmail.com\n    \"password\":\"pass123\" //pass123\n}"
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/login",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "👤 Profile",
+			"item": [
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/profile/",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"profile",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"first_name\":\"AliceUpdated\"}"
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/profile/",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"profile",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Account",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/profile/",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"profile",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Request Creator Upgrade",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/profile/request-upgrade",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"profile",
+								"request-upgrade"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🛠 Admin",
+			"item": [
+				{
+					"name": "Admin Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/admin/dashboard",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"admin",
+								"dashboard"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Creator Requests",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/admin/creator-requests",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"admin",
+								"creator-requests"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Account",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/admin/users/{{subscriberId}}",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"admin",
+								"users",
+								"{{subscriberId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Creator",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/admin/creator-requests/{{requestId}}/approve",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"admin",
+								"creator-requests",
+								"{{requestId}}",
+								"approve"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Creator",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/admin/creator-requests/{{requestId}}/reject",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"admin",
+								"creator-requests",
+								"{{requestId}}",
+								"reject"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "✍️ Creator Posts",
+			"item": [
+				{
+					"name": "Create Post",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "My First Post",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Hello world!",
+									"type": "text"
+								},
+								{
+									"key": "visibility",
+									"value": "subscriber",
+									"description": "subscriber ou public",
+									"type": "text"
+								},
+								{
+									"key": "media",
+									"type": "file",
+									"src": "/Users/skurtis/Documents/Capture d’écran 2025-06-08 à 18.58.58.png"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/creator/posts",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"creator",
+								"posts"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List My Posts",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/creator/posts",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"creator",
+								"posts"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📦 Post Management",
+			"item": [
+				{
+					"name": "Get All Visible Posts",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": []
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/posts/all",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"posts",
+								"all"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Subscriber Posts Of Creator",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{subscriber_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/posts/from/{{creatorId}}/subscriber-only",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"posts",
+								"from",
+								"{{creatorId}}",
+								"subscriber-only"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Posts From Creator",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDkzMzk4NjUsImlhdCI6MTc0OTI1MzQ2NSwicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjU2fQ.b9i7WRW9qmaDVXrnTkw7DOVUmyz8arr5j_fTjsj5nY4",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": []
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/posts/from/{{creatorId}}",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"posts",
+								"from",
+								"{{creatorId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Post by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/posts/{{postId}}",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"posts",
+								"{{postId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Post (with new media)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "Updated Title",
+									"type": "text"
+								},
+								{
+									"key": "media",
+									"type": "file",
+									"src": "/Users/skurtis/Documents/Capture d’écran 2025-06-08 à 18.58.58.png"
+								},
+								{
+									"key": "visibility",
+									"value": "subscriber",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "dddddddddd",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/posts/{{postId}}",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"posts",
+								"{{postId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Post",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/posts/{{postId}}",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"posts",
+								"{{postId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📷 Media",
+			"item": [
+				{
+					"name": "Upload Media",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "/Users/skurtis/Documents/Capture d’écran 2025-06-08 à 00.39.23.png"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/media/upload",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"media",
+								"upload"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Media",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/media/{{fileId}}",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"media",
+								"{{fileId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "💬 Commentaires",
+			"item": [
+				{
+					"name": "Créer un commentaire",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{subscriber_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"post_id\": 2, \"content\": \"Super post !\"}"
+						},
+						"url": {
+							"raw": "http://localhost:8080/comments",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"comments"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Lister les commentaires d’un post",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{subscriber_token}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/comments/post/{{postId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"comments",
+								"post",
+								"{{postId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Supprimer un commentaire",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/comments/{{commentId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"comments",
+								"{{commentId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🧡 Likes",
+			"item": [
+				{
+					"name": "Toggle Like",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/posts/{{postId}}/likes/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"posts",
+								"{{postId}}",
+								"likes",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Likes Count",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/posts/{{postId}}/likes/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"posts",
+								"{{postId}}",
+								"likes",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🔔 Signalements",
+			"item": [
+				{
+					"name": "Signaler un post",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content_type\": \"post\",\n  \"content_id\": 1,\n  \"reason\": \"Inappropriate content\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8080/reports",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"reports"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Signaler un commentaire",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content_type\": \"comment\",\n  \"content_id\": 3,\n  \"reason\": \"Spam or harassment\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8080/reports",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"reports"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Voir tous les signalements",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/reports",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"reports"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Voir tous les signalements en attente",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/reports/pending",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"reports",
+								"pending"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Traiter un signalement",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"action\": \"approved\"   // \"approved\", \"rejected\", \"pending\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8080/reports/{{reportId}}/action",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"reports",
+								"{{reportId}}",
+								"action"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🔁 Subscriptions",
+			"item": [
+				{
+					"name": "Subscribe to Creator",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{subscriber_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/subscriptions/{{creatorId}}",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"subscriptions",
+								"{{creatorId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Unsubscribe",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{subscriber_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/subscriptions/{{creatorId}}",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"subscriptions",
+								"{{creatorId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List My Subscriptions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{subscriber_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/subscriptions/",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"subscriptions",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "💌 Message",
+			"item": [
+				{
+					"name": "Create Conversation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{subscriber_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/conversations/{{receiverId}}",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"conversations",
+								"{{receiverId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Conversations",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{subscriber_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/conversations",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"conversations"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Message",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"content\": \"I'am the best\" }"
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/conversations/{{conversationId}}/messages",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"conversations",
+								"{{conversationId}}",
+								"messages"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Messages",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{subscriber_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/conversations/{{conversationId}}/messages?limit=50&offset=0",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"conversations",
+								"{{conversationId}}",
+								"messages"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "SERVER_URL",
+			"value": "http://localhost:8080"
+		},
+		{
+			"key": "token",
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDk1OTEwNzIsImlhdCI6MTc0OTUwNDY3Miwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjZ9.r6AVsDLyrpuOHqV43ny5p8DhaAp8VPd2R3yDDSBhiF8"
+		},
+		{
+			"key": "creator_token",
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDk1OTEwNTEsImlhdCI6MTc0OTUwNDY1MSwicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjN9.0pzPUi6XGssxRTft9JVI8dZ5ZDxSfMcGhsvNAF1-EKA"
+		},
+		{
+			"key": "subscriber_token",
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDk1OTEwMDgsImlhdCI6MTc0OTUwNDYwOCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjR9.vPvFhP3kZ6vshQZ7AmPiIOu4lxIlAG9HUIW2LdnQ2B4"
+		},
+		{
+			"key": "admin_token",
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDk1OTEwMzIsImlhdCI6MTc0OTUwNDYzMiwicm9sZSI6ImFkbWluIiwic3ViIjoyfQ.5vJpFPVm83FycUXxlgLVEqLBQmExnaGP6IE894ArAFM"
+		},
+		{
+			"key": "creatorId",
+			"value": "2"
+		},
+		{
+			"key": "subscriberId",
+			"value": "6",
+			"type": "string"
+		},
+		{
+			"key": "postId",
+			"value": "28"
+		},
+		{
+			"key": "commentId",
+			"value": "6",
+			"type": "string"
+		},
+		{
+			"key": "fileId",
+			"value": "6844bfa5b13a102537ddd6ad"
+		},
+		{
+			"key": "requestId",
+			"value": "10"
+		},
+		{
+			"key": "reportId",
+			"value": "3",
+			"type": "string"
+		},
+		{
+			"key": "conversationId",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "receiverId",
+			"value": "3",
+			"type": "string"
+		},
+		{
+			"key": "senderId",
+			"value": "4",
+			"type": "string"
+		},
+		{
+			"key": "adminMail",
+			"value": "admin-onlyflick@yopmail.com",
+			"type": "string",
+			"disabled": true
+		},
+		{
+			"key": "creatorMail",
+			"value": "creator-onlyflick@yopmail.com",
+			"type": "string",
+			"disabled": true
+		},
+		{
+			"key": "userMail",
+			"value": "user-onlyflick@yopmail.com",
+			"type": "string",
+			"disabled": true
+		},
+		{
+			"key": "password",
+			"value": "securepassword",
+			"type": "string",
+			"disabled": true
+		}
+	]
+}
