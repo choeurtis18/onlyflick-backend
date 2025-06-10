@@ -7,8 +7,8 @@ import (
 	"onlyflick/internal/middleware"
 	"onlyflick/internal/repository"
 	"onlyflick/internal/service"
+	"onlyflick/internal/utils" // Changement ici
 	"onlyflick/pkg/response"
-	"onlyflick/pkg/utils"
 )
 
 type UpdateProfileRequest struct {
@@ -37,17 +37,17 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.FirstName != nil {
-		if encrypted, err := utils.Encrypt(*req.FirstName); err == nil {
+		if encrypted, err := utils.EncryptAES(*req.FirstName); err == nil { // Changement ici
 			req.FirstName = &encrypted
 		}
 	}
 	if req.LastName != nil {
-		if encrypted, err := utils.Encrypt(*req.LastName); err == nil {
+		if encrypted, err := utils.EncryptAES(*req.LastName); err == nil { // Changement ici
 			req.LastName = &encrypted
 		}
 	}
 	if req.Email != nil {
-		if encrypted, err := utils.Encrypt(*req.Email); err == nil {
+		if encrypted, err := utils.EncryptAES(*req.Email); err == nil { // Changement ici
 			req.Email = &encrypted
 		}
 	}

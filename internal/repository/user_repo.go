@@ -5,7 +5,7 @@ import (
 	"log"
 	"onlyflick/internal/database"
 	"onlyflick/internal/domain"
-	"onlyflick/pkg/utils"
+	"onlyflick/internal/utils" // Changement ici
 )
 
 // =========================
@@ -54,7 +54,7 @@ func GetUserByEmail(email string) (*domain.User, error) {
 			return nil, fmt.Errorf("erreur lors du scan d'un utilisateur: %v", err)
 		}
 
-		decryptedEmail, err := utils.Decrypt(user.Email)
+		decryptedEmail, err := utils.DecryptAES(user.Email) // Changement ici
 		if err != nil {
 			log.Printf("[GetUserByEmail][ERREUR] Erreur lors du décryptage de l'email: %v", err)
 			return nil, fmt.Errorf("erreur lors du décryptage de l'email: %v", err)

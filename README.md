@@ -24,6 +24,8 @@ OnlyFlick est une plateforme sociale conçue pour connecter créateurs de conten
 ## 🚀 Lancer le projet
 
 ```bash
+go mod init onlyflick
+go mod tidy
 go run cmd/server/main.go
 ``` 
 

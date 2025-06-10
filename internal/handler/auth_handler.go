@@ -9,8 +9,8 @@ import (
 	"onlyflick/internal/middleware"
 	"onlyflick/internal/repository"
 	"onlyflick/internal/service"
+	"onlyflick/internal/utils" // Changement ici
 	"onlyflick/pkg/response"
-	"onlyflick/pkg/utils"
 )
 
 // ===== STRUCTURES =====
@@ -50,9 +50,9 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	encryptedEmail, _ := utils.Encrypt(req.Email)
-	encryptedFirstName, _ := utils.Encrypt(req.FirstName)
-	encryptedLastName, _ := utils.Encrypt(req.LastName)
+	encryptedEmail, _ := utils.EncryptAES(req.Email)         // Changement ici
+	encryptedFirstName, _ := utils.EncryptAES(req.FirstName) // Changement ici
+	encryptedLastName, _ := utils.EncryptAES(req.LastName)   // Changement ici
 
 	user := &domain.User{
 		FirstName: encryptedFirstName,
@@ -129,9 +129,9 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	firstName, _ := utils.Decrypt(user.FirstName)
-	lastName, _ := utils.Decrypt(user.LastName)
-	email, _ := utils.Decrypt(user.Email)
+	firstName, _ := utils.DecryptAES(user.FirstName) // Changement ici
+	lastName, _ := utils.DecryptAES(user.LastName)   // Changement ici
+	email, _ := utils.DecryptAES(user.Email)         // Changement ici
 
 	profile := domain.User{
 		ID:        user.ID,
