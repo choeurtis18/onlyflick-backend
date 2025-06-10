@@ -1,0 +1,3 @@
+[submodule "frontend/onlyflick-app"]
+	path = frontend/onlyflick-app
+	url = https://github.com/ibrahima-eemi/onlyflick.git
