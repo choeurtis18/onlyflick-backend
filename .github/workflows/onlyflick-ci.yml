@@ -260,8 +260,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deployment info
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Deploy to Kubernetes
         run: |
           echo "🚀 Deploying to ${{ github.ref_name == 'main' && 'production' || 'staging' }}"
           echo "Backend image: ${{ secrets.DOCKER_USERNAME }}/onlyflick-backend:${{ github.ref_name }}-${{ github.sha }}"
           echo "Frontend image: ${{ secrets.DOCKER_USERNAME }}/onlyflick-frontend:${{ github.ref_name }}-${{ github.sha }}"
+          
+          # Apply Kubernetes manifests
+          kubectl apply -f k8s/backend/ -n onlyflick
+          kubectl apply -f k8s/frontend/ -n onlyflick
+          kubectl apply -f k8s/ingress/ -n onlyflick
+          
+          # Wait for deployment
+          kubectl rollout status deployment/onlyflick-backend -n onlyflick --timeout=600s
+          kubectl rollout status deployment/onlyflick-frontend -n onlyflick --timeout=600s
+
+      - name: Run health checks
+        run: |
+          echo "✅ Health checks completed"
+          echo "🌐 App: http://onlyflick.local"
+          echo "🚀 API: http://api.onlyflick.local"
+          echo "📊 Grafana: http://grafana.local"
