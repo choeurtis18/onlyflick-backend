@@ -1,0 +1,89 @@
+# Grafana Helm chart values
+
+## Global settings
+replicas: 1
+
+## Service configuration
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+## Ingress configuration
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - grafana.example.com
+  tls: []
+
+## Persistence configuration
+persistence:
+  type: pvc
+  enabled: true
+  size: 10Gi
+  storageClassName: standard
+
+## Admin user credentials
+adminUser: admin
+adminPassword: strongpassword
+
+## Security context
+securityContext:
+  runAsUser: 472
+  runAsGroup: 472
+  fsGroup: 472
+
+## Resource limits
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+## Datasources configuration
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus-server.monitoring.svc.cluster.local
+      access: proxy
+      isDefault: true
+
+## Dashboards configuration
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: false
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards/default
+
+dashboards:
+  default:
+    kubernetes:
+      gnetId: 10856
+      revision: 1
+      datasource: Prometheus
+
+## Grafana configuration
+grafana.ini:
+  server:
+    root_url: "%(protocol)s://%(domain)s/grafana"
+  paths:
+    data: /var/lib/grafana
+    logs: /var/log/grafana
+    plugins: /var/lib/grafana/plugins
+  analytics:
+    reporting_enabled: false

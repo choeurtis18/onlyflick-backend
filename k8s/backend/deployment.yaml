@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: onlyflick-backend
+  namespace: onlyflick
+  labels:
+    app: onlyflick-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: onlyflick-backend
+  template:
+    metadata:
+      labels:
+        app: onlyflick-backend
+    spec:
+      containers:
+      - name: onlyflick-backend
+        image: onlyflick-backend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PORT
+          value: "8080"
+        envFrom:
+        - secretRef:
+            name: onlyflick-backend-secret
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5

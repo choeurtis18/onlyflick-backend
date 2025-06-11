@@ -7,6 +7,7 @@ import (
 	"onlyflick/internal/config"
 	"onlyflick/internal/database"
 	"onlyflick/internal/service"
+	"os"
 )
 
 // Point d'entrée principal du serveur OnlyFlick
@@ -39,7 +40,12 @@ func main() {
 	log.Println("✅ [ROUTAGE] Routes de l'API configurées.")
 
 	// Démarrage du serveur HTTP
-	addr := ":8080"
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	addr := ":" + port
+
 	log.Printf("🚀 [SERVEUR] Le serveur OnlyFlick est démarré sur http://localhost%s\n", addr)
 	if err := http.ListenAndServe(addr, router); err != nil {
 		log.Fatalf("❌ [ERREUR FATALE] Échec du démarrage du serveur : %v", err)

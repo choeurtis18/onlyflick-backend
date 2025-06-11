@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: onlyflick-frontend
+  namespace: onlyflick
+  labels:
+    app: onlyflick-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: onlyflick-frontend
+  template:
+    metadata:
+      labels:
+        app: onlyflick-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: barrydevops/onlyflick:latest
+          imagePullPolicy: Always  # ou Never si locale
+          ports:
+            - containerPort: 80

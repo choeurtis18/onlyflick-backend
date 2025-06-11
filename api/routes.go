@@ -6,6 +6,8 @@ import (
 	"onlyflick/internal/handler"
 	"onlyflick/internal/middleware"
 
+	"encoding/json"
+
 	"github.com/go-chi/chi/v5"
 )
 
@@ -157,6 +159,16 @@ func SetupRoutes() http.Handler {
 	r.Route("/ws", func(wsRouter chi.Router) {
 		wsRouter.Use(middleware.JWTMiddleware)
 		wsRouter.Get("/messages/{conversation_id}", handler.HandleMessagesWebSocket)
+	})
+
+	// Route racine pour éviter 404
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "OnlyFlick API is running",
+			"version": "1.0.0",
+			"status":  "active",
+		})
 	})
 
 	log.Println("API routes setup complete.")
