@@ -273,18 +273,25 @@ jobs:
           version: ${{ env.KUBECTL_VERSION }}
 
       - name: Configure Kubernetes access
-
+        if: ${{ secrets.KUBE_CONFIG != '' }}
         run: |
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
+      - name: Verify cluster connectivity
+        if: ${{ secrets.KUBE_CONFIG != '' }}
+        run: |
+          kubectl version --client
+          kubectl cluster-info
+
       - name: Deploy to Kubernetes
+        if: ${{ secrets.KUBE_CONFIG != '' }}
         env:
           NAMESPACE: ${{ github.ref_name == 'main' && 'onlyflick-prod' || 'onlyflick-staging' }}
           ENVIRONMENT: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
         run: |
-          echo "Deploying to $ENVIRONMENT environment (namespace: $NAMESPACE)"
+          echo "🚀 Deploying to $ENVIRONMENT environment (namespace: $NAMESPACE)"
           
           kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
           
@@ -297,39 +304,79 @@ jobs:
             -n $NAMESPACE \
             --dry-run=client -o yaml | kubectl apply -f -
           
+          if [[ "${{ needs.build-backend.result }}" == "success" ]]; then
+            BACKEND_IMAGE="${{ secrets.DOCKER_USERNAME }}/onlyflick-backend:${{ github.ref_name }}-${{ github.sha }}"
+            echo "Updating backend image to: $BACKEND_IMAGE"
+            sed -i "s|image: .*onlyflick-backend.*|image: $BACKEND_IMAGE|g" k8s/backend/*.yaml
+          fi
+          
+          if [[ "${{ needs.build-frontend.result }}" == "success" ]]; then
+            FRONTEND_IMAGE="${{ secrets.DOCKER_USERNAME }}/onlyflick-frontend:${{ github.ref_name }}-${{ github.sha }}"
+            echo "Updating frontend image to: $FRONTEND_IMAGE"
+            sed -i "s|image: .*onlyflick-frontend.*|image: $FRONTEND_IMAGE|g" k8s/frontend/*.yaml
+          fi
+          
           kubectl apply -f k8s/backend/ -n $NAMESPACE
           kubectl apply -f k8s/frontend/ -n $NAMESPACE
           kubectl apply -f k8s/ingress/ -n $NAMESPACE
           
           kubectl rollout status deployment/onlyflick-backend -n $NAMESPACE --timeout=300s
           kubectl rollout status deployment/onlyflick-frontend -n $NAMESPACE --timeout=300s
+          
+          echo "✅ Deployment completed successfully!"
 
- 
-          echo "Simulating deployment to ${{ github.ref_name == 'main' && 'production' || 'staging' }}"
-          echo "No KUBE_CONFIG secret found - running in simulation mode"
+      - name: Simulate deployment (no cluster)
+        if: ${{ secrets.KUBE_CONFIG == '' }}
+        env:
+          NAMESPACE: ${{ github.ref_name == 'main' && 'onlyflick-prod' || 'onlyflick-staging' }}
+          ENVIRONMENT: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+        run: |
+          echo "🚀 Simulating deployment to $ENVIRONMENT environment (namespace: $NAMESPACE)"
+          echo "⚠️  No KUBE_CONFIG secret found - running in simulation mode"
           
           if [[ "${{ needs.build-backend.result }}" == "success" ]]; then
-            echo "Backend image built: ${{ secrets.DOCKER_USERNAME }}/onlyflick-backend:${{ github.ref_name }}-${{ github.sha }}"
+            echo "✅ Backend image built: ${{ secrets.DOCKER_USERNAME }}/onlyflick-backend:${{ github.ref_name }}-${{ github.sha }}"
           fi
           
           if [[ "${{ needs.build-frontend.result }}" == "success" ]]; then
-            echo "Frontend image built: ${{ secrets.DOCKER_USERNAME }}/onlyflick-frontend:${{ github.ref_name }}-${{ github.sha }}"
+            echo "✅ Frontend image built: ${{ secrets.DOCKER_USERNAME }}/onlyflick-frontend:${{ github.ref_name }}-${{ github.sha }}"
           fi
+          
+          echo ""
+          echo "📋 Deployment steps that would be executed:"
+          echo "  1. Create namespace: $NAMESPACE"
+          echo "  2. Create/update secrets from GitHub secrets"
+          echo "  3. Apply backend manifests to k8s/backend/"
+          echo "  4. Apply frontend manifests to k8s/frontend/"
+          echo "  5. Apply ingress manifests to k8s/ingress/"
+          echo "  6. Wait for rollout completion"
+          echo ""
+          echo "🔧 To enable real deployment, add KUBE_CONFIG secret to repository"
 
       - name: Deployment summary
         run: |
-          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "| Component | Status | Image |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|--------|-------|" >> $GITHUB_STEP_SUMMARY
 
           if [[ "${{ needs.build-backend.result }}" == "success" ]]; then
-            echo "| Backend   | Deployed | \`${{ needs.build-backend.outputs.image-tag }}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| Backend   | ✅ Built | \`${{ needs.build-backend.outputs.image-tag }}\` |" >> $GITHUB_STEP_SUMMARY
           fi
           if [[ "${{ needs.build-frontend.result }}" == "success" ]]; then
-            echo "| Frontend  | Deployed | \`${{ needs.build-frontend.outputs.image-tag }}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| Frontend  | ✅ Built | \`${{ needs.build-frontend.outputs.image-tag }}\` |" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** ${{ github.ref_name == 'main' && 'production' || 'staging' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Namespace:** ${{ github.ref_name == 'main' && 'onlyflick-prod' || 'onlyflick-staging' }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ secrets.KUBE_CONFIG }}" == "" ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ **Note:** Deployment simulated (no KUBE_CONFIG secret)" >> $GITHUB_STEP_SUMMARY
+            echo "To enable real deployment, configure KUBE_CONFIG secret in repository settings." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🎉 **Real deployment executed successfully!**" >> $GITHUB_STEP_SUMMARY
+          fi
