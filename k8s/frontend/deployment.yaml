@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: onlyflick-frontend
-  namespace: onlyflick
+  namespace: ${NAMESPACE}
   labels:
     app: onlyflick-frontend
 spec:
@@ -17,7 +17,14 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: barrydevops/onlyflick:latest
-          imagePullPolicy: Always  # ou Never si locale
+          image: ${DOCKER_USERNAME}/onlyflick-frontend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"

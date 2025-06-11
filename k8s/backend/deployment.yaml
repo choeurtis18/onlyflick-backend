@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: onlyflick-backend
-  namespace: onlyflick
+  namespace: ${NAMESPACE}
   labels:
     app: onlyflick-backend
 spec:
