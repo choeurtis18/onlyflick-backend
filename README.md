@@ -13,6 +13,7 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 - **🔒 Sécurité** : JWT + AES + CORS configurés
 
 ### 🌐 **URLs Actives**
+
 - **Application** : http://onlyflick.local ✅
 - **API Backend** : http://api.onlyflick.local ✅  
 - **Monitoring** : http://grafana.local (admin/admin123) ✅
@@ -90,7 +91,7 @@ go test ./tests/performance/... -v   # Tests de performance
 - **Tests de Performance (1 test)** : ✅ 100% succès
   - Latence d'authentification et benchmarks
 
-**📊 Total : 28 tests | Succès : 100% | Durée : ~5 secondes**
+**Total **: 28 tests | Succès : 100% | Durée : ~5 secondes**
 
 ## 💬 Messagerie WebSocket temps réel
 
@@ -103,16 +104,19 @@ go run scripts/client_b/ws_client_b.go
 ## 📊 API REST complète
 
 ### 🔐 Authentification
+
 - `POST /register` - Inscription utilisateur
 - `POST /login` - Connexion utilisateur
 
 ### 👤 Profil utilisateur  
+
 - `GET /profile` - Récupérer le profil
 - `PATCH /profile` - Mettre à jour le profil
 - `DELETE /profile` - Supprimer le compte
 - `POST /profile/request-upgrade` - Demande passage créateur
 
 ### 📝 Posts et contenu
+
 - `GET /posts/all` - Posts publics
 - `POST /posts` - Créer un post (créateurs)
 - `GET /posts/me` - Mes posts
@@ -120,11 +124,13 @@ go run scripts/client_b/ws_client_b.go
 - `DELETE /posts/{id}` - Supprimer un post
 
 ### 💫 Abonnements
+
 - `POST /subscriptions/{creator_id}` - S'abonner
 - `DELETE /subscriptions/{creator_id}` - Se désabonner
 - `GET /subscriptions` - Mes abonnements
 
 ### 💬 Messagerie
+
 - `GET /conversations` - Mes conversations
 - `POST /conversations/{receiverId}` - Démarrer une conversation
 - `GET /conversations/{id}/messages` - Messages d'une conversation
@@ -132,6 +138,7 @@ go run scripts/client_b/ws_client_b.go
 - `WS /ws/messages/{conversation_id}` - WebSocket temps réel
 
 ### 👑 Administration
+
 - `GET /admin/dashboard` - Tableau de bord
 - `GET /admin/creator-requests` - Demandes créateurs
 - `POST /admin/creator-requests/{id}/approve` - Approuver
@@ -172,6 +179,7 @@ onlyflick-backend/
 ## ☸️ **Infrastructure Kubernetes opérationnelle**
 
 ### Services actifs
+
 - **Frontend Flutter** : `onlyflick-frontend` (1 replica) ✅
 - **Backend Go** : `onlyflick-backend` (2 replicas) ✅  
 - **PostgreSQL** : Base Neon Cloud connectée ✅
@@ -368,7 +376,7 @@ http://localhost:8080 (backend direct)
 http://localhost:3000 (grafana direct)
 ```
 
-# 🎯 **RÉUSSITE CONFIRMÉE - APPLICATION PRÊTE !**
+**RÉUSSITE CONFIRMÉE - APPLICATION PRÊTE !**
 
 ### ✅Ce qui fonctionne parfaitement :**
 
@@ -389,8 +397,4 @@ http://localhost:3000 (grafana direct)
 
 Votre plateforme sociale **OnlyFlick/MatchMaker** est maintenant **100% déployée et opérationnelle** ! L'application combine une interface Flutter moderne avec un backend Go robuste, le tout orchestré sur Kubernetes avec monitoring intégré.
 
-**🚀 Prêt pour la production !** 
-
----
-
-*Dernière mise à jour : 11 juin 2025 - Déploiement réussi avec succès*
+**🚀 Prêt pour la production !**
