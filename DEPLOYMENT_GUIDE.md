@@ -3,6 +3,7 @@
 ## ✅ **Checklist pré-déploiement**
 
 ### 1. Environnement local
+
 - [ ] Docker Desktop installé et démarré
 - [ ] Kubernetes activé dans Docker Desktop  
 - [ ] kubectl installé et fonctionnel
@@ -11,6 +12,7 @@
 - [ ] Go 1.21+ installé
 
 ### 2. Configuration
+
 - [ ] Fichier `.env` configuré avec toutes les variables
 - [ ] DNS local configuré dans le fichier hosts
 - [ ] Ports 80, 443, 3000, 8080 disponibles
@@ -18,6 +20,7 @@
 ## 🎯 **Déploiement étape par étape**
 
 ### Étape 1: Préparation
+
 ```bash
 # Vérifier Docker
 docker info
@@ -30,6 +33,7 @@ kubectl create namespace onlyflick
 ```
 
 ### Étape 2: DNS local (OBLIGATOIRE)
+
 ```bash
 # Éditer le fichier hosts en tant qu'administrateur
 notepad C:\Windows\System32\drivers\etc\hosts
@@ -41,6 +45,7 @@ notepad C:\Windows\System32\drivers\etc\hosts
 ```
 
 ### Étape 3: Ingress Controller
+
 ```bash
 # Installer NGINX Ingress
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
@@ -50,6 +55,7 @@ kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.
 ```
 
 ### Étape 4: Déploiement OnlyFlick
+
 ```bash
 # Déploiement automatique
 .\scripts\deploy-full-stack.ps1
@@ -63,6 +69,7 @@ kubectl apply -f k8s/ingress/
 ```
 
 ### Étape 5: Monitoring
+
 ```bash
 # Installer Prometheus + Grafana
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
@@ -75,6 +82,7 @@ kubectl apply -f k8s/monitoring/grafana-ingress.yaml
 ## 🔍 **Vérifications post-déploiement**
 
 ### Tests de connectivité
+
 ```bash
 # 1. Vérifier les pods
 kubectl get pods -n onlyflick
@@ -90,6 +98,7 @@ curl http://grafana.local
 ```
 
 ### Tests fonctionnels
+
 ```bash
 # Tests automatisés
 go test ./tests/... -v
@@ -101,6 +110,7 @@ go test ./tests/... -v
 ## 🚨 **Résolution de problèmes courants**
 
 ### Erreur 503 Service Unavailable
+
 ```bash
 # Diagnostic
 kubectl describe ingress onlyflick-ingress -n onlyflick
@@ -110,6 +120,7 @@ kubectl describe ingress onlyflick-ingress -n onlyflick
 ```
 
 ### Pods en erreur
+
 ```bash
 # Vérifier les logs
 kubectl logs -n onlyflick -l app=onlyflick-backend
@@ -120,6 +131,7 @@ kubectl rollout restart deployment onlyflick-backend -n onlyflick
 ```
 
 ### Problème DNS
+
 ```bash
 # Vérifier la résolution
 nslookup onlyflick.local
@@ -139,6 +151,7 @@ Une fois le déploiement réussi, ces URLs doivent être accessibles :
 ## 🎉 **Validation finale**
 
 Checklist de validation :
+
 - [ ] Interface Flutter accessible sur http://onlyflick.local
 - [ ] API répond sur http://api.onlyflick.local/health
 - [ ] Grafana accessible sur http://grafana.local

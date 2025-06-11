@@ -1,4 +1,4 @@
-name: 🚀 OnlyFlick CI/CD
+name: OnlyFlick CI/CD Pipeline
 
 on:
   push:
@@ -6,6 +6,8 @@ on:
     paths-ignore:
       - '**.md'
       - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
@@ -14,26 +16,27 @@ env:
   DOCKER_REGISTRY: docker.io
   GO_VERSION: '1.21'
   FLUTTER_VERSION: '3.16.0'
+  KUBECTL_VERSION: 'v1.28.0'
 
 permissions:
   contents: read
   packages: write
+  security-events: write
 
 jobs:
-
-  # 🔍 Detect Changes
-  changes:
-    name: 🔍 Detect Changes
+  detect-changes:
+    name: Detect Changes
     runs-on: ubuntu-latest
     outputs:
-      backend: ${{ steps.changes.outputs.backend }}
-      frontend: ${{ steps.changes.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      k8s: ${{ steps.filter.outputs.k8s }}
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Filter paths
-        id: changes
+      - name: Detect changed paths
+        id: filter
         uses: dorny/paths-filter@v3
         with:
           filters: |
@@ -42,18 +45,20 @@ jobs:
               - 'cmd/**'
               - 'internal/**'
               - 'pkg/**'
-              - 'go.mod'
-              - 'go.sum'
+              - 'go.{mod,sum}'
               - 'Dockerfile'
+              - '.dockerignore'
             frontend:
               - 'frontend/**'
+            k8s:
+              - 'k8s/**'
+              - 'deployments/**'
 
-  # 🧪 Backend Tests
   test-backend:
-    name: 🧪 Backend Tests
+    name: Backend Tests
     runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend == 'true'
 
     services:
       postgres:
@@ -93,12 +98,11 @@ jobs:
         with:
           version: latest
 
-  # 🎨 Frontend Tests
   test-frontend:
-    name: 🎨 Frontend Tests
+    name: Frontend Tests
     runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true'
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
 
     steps:
       - name: Checkout code
@@ -125,15 +129,17 @@ jobs:
         working-directory: frontend/onlyflick-app
         run: flutter analyze
 
-  # 🏗️ Build Backend
   build-backend:
-    name: 🏗️ Build Backend
+    name: Build Backend
     runs-on: ubuntu-latest
-    needs: [changes, test-backend]
+    needs: [detect-changes, test-backend]
     if: |
       always() &&
-      needs.changes.outputs.backend == 'true' &&
+      needs.detect-changes.outputs.backend == 'true' &&
       (needs.test-backend.result == 'success' || needs.test-backend.result == 'skipped')
+
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
 
     steps:
       - name: Checkout code
@@ -159,7 +165,7 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build & push backend image
+      - name: Build and push backend image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -171,15 +177,17 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
 
-  # 🎨 Build Frontend
   build-frontend:
-    name: 🎨 Build Frontend
+    name: Build Frontend
     runs-on: ubuntu-latest
-    needs: [changes, test-frontend]
+    needs: [detect-changes, test-frontend]
     if: |
       always() &&
-      needs.changes.outputs.frontend == 'true' &&
+      needs.detect-changes.outputs.frontend == 'true' &&
       (needs.test-frontend.result == 'success' || needs.test-frontend.result == 'skipped')
+
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
 
     steps:
       - name: Checkout code
@@ -230,7 +238,7 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build & push frontend image
+      - name: Build and push frontend image
         uses: docker/build-push-action@v5
         with:
           context: frontend/onlyflick-app
@@ -242,11 +250,10 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
 
-  # 🚀 Deploy
   deploy:
-    name: 🚀 Deploy
+    name: Deploy
     runs-on: ubuntu-latest
-    needs: [build-backend, build-frontend]
+    needs: [detect-changes, build-backend, build-frontend]
     if: |
       always() &&
       github.event_name == 'push' &&
@@ -257,32 +264,72 @@ jobs:
       name: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup kubectl
         uses: azure/setup-kubectl@v3
         with:
-          version: 'v1.28.0'
+          version: ${{ env.KUBECTL_VERSION }}
+
+      - name: Configure Kubernetes access
+
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
 
       - name: Deploy to Kubernetes
+        env:
+          NAMESPACE: ${{ github.ref_name == 'main' && 'onlyflick-prod' || 'onlyflick-staging' }}
+          ENVIRONMENT: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
         run: |
-          echo "🚀 Deploying to ${{ github.ref_name == 'main' && 'production' || 'staging' }}"
-          echo "Backend image: ${{ secrets.DOCKER_USERNAME }}/onlyflick-backend:${{ github.ref_name }}-${{ github.sha }}"
-          echo "Frontend image: ${{ secrets.DOCKER_USERNAME }}/onlyflick-frontend:${{ github.ref_name }}-${{ github.sha }}"
+          echo "Deploying to $ENVIRONMENT environment (namespace: $NAMESPACE)"
           
-          # Apply Kubernetes manifests
-          kubectl apply -f k8s/backend/ -n onlyflick
-          kubectl apply -f k8s/frontend/ -n onlyflick
-          kubectl apply -f k8s/ingress/ -n onlyflick
+          kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
           
-          # Wait for deployment
-          kubectl rollout status deployment/onlyflick-backend -n onlyflick --timeout=600s
-          kubectl rollout status deployment/onlyflick-frontend -n onlyflick --timeout=600s
+          kubectl create secret generic onlyflick-backend-secret \
+            --from-literal=SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+            --from-literal=DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            --from-literal=IMAGEKIT_PRIVATE_KEY="${{ secrets.IMAGEKIT_PRIVATE_KEY }}" \
+            --from-literal=IMAGEKIT_PUBLIC_KEY="${{ secrets.IMAGEKIT_PUBLIC_KEY }}" \
+            --from-literal=IMAGEKIT_URL_ENDPOINT="${{ secrets.IMAGEKIT_URL_ENDPOINT }}" \
+            -n $NAMESPACE \
+            --dry-run=client -o yaml | kubectl apply -f -
+          
+          kubectl apply -f k8s/backend/ -n $NAMESPACE
+          kubectl apply -f k8s/frontend/ -n $NAMESPACE
+          kubectl apply -f k8s/ingress/ -n $NAMESPACE
+          
+          kubectl rollout status deployment/onlyflick-backend -n $NAMESPACE --timeout=300s
+          kubectl rollout status deployment/onlyflick-frontend -n $NAMESPACE --timeout=300s
 
-      - name: Run health checks
+ 
+          echo "Simulating deployment to ${{ github.ref_name == 'main' && 'production' || 'staging' }}"
+          echo "No KUBE_CONFIG secret found - running in simulation mode"
+          
+          if [[ "${{ needs.build-backend.result }}" == "success" ]]; then
+            echo "Backend image built: ${{ secrets.DOCKER_USERNAME }}/onlyflick-backend:${{ github.ref_name }}-${{ github.sha }}"
+          fi
+          
+          if [[ "${{ needs.build-frontend.result }}" == "success" ]]; then
+            echo "Frontend image built: ${{ secrets.DOCKER_USERNAME }}/onlyflick-frontend:${{ github.ref_name }}-${{ github.sha }}"
+          fi
+
+      - name: Deployment summary
         run: |
-          echo "✅ Health checks completed"
-          echo "🌐 App: http://onlyflick.local"
-          echo "🚀 API: http://api.onlyflick.local"
-          echo "📊 Grafana: http://grafana.local"
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status | Image |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|-------|" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.build-backend.result }}" == "success" ]]; then
+            echo "| Backend   | Deployed | \`${{ needs.build-backend.outputs.image-tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [[ "${{ needs.build-frontend.result }}" == "success" ]]; then
+            echo "| Frontend  | Deployed | \`${{ needs.build-frontend.outputs.image-tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ github.ref_name == 'main' && 'production' || 'staging' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
