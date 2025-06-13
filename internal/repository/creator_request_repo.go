@@ -23,8 +23,8 @@ func FlagUserAsPendingCreator(userID int64) error {
 	log.Printf("[CreatorRequest] Ajout d'une demande de passage en créateur pour l'utilisateur ID: %d", userID)
 
 	query := `
-      INSERT INTO creator_requests (user_id, status)
-      VALUES ($1, 'pending')
+      INSERT INTO creator_requests (user_id, status, created_at, updated_at)
+      VALUES ($1, 'pending', NOW(), NOW())
       ON CONFLICT (user_id)
       DO UPDATE SET status = 'pending', updated_at = NOW();
 	`
