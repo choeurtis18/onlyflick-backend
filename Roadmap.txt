@@ -55,19 +55,38 @@
  Endpoint GET /conversations — voir les discussions
  Endpoint GET /conversations/{id} — voir les messages d'une discussion
 
---------------------------------------------- TERMINER ---------------------------------------------
 
 💳 PHASE 5 – ABONNEMENTS & PAIEMENTS
-5.1. Validation e-mail & sécurité
- Génération de token de validation à la création de compte
- Endpoint GET /verify?token=xxx
- Middleware pour forcer l’email vérifié
-
-5.2. Paiements (Stripe)
+5.1. Paiements (Stripe)
  Création produits/plan mensuels via Stripe API
  Intégration de Stripe Checkout ou customer portal
  Webhooks Stripe (paiement réussi, annulé)
  Résiliation/suspension abonnements
+
+
+Front-end - Finaliser le paiement
+Le front-end doit utiliser le client_secret renvoyé par le backend pour finaliser le paiement.
+
+Exemple 
+```js
+const stripe = Stripe('your-public-key'); // Clé publique Stripe
+
+const clientSecret = "client_secret_from_backend"; // Client secret renvoyé par le backend
+
+stripe.confirmCardPayment(clientSecret).then(function(result) {
+  if (result.error) {
+    // Affiche une erreur si le paiement échoue
+    console.error(result.error.message);
+  } else {
+    if (result.paymentIntent.status === 'succeeded') {
+      // Paiement réussi
+      alert("Paiement réussi");
+    }
+  }
+});
+``` 
+
+--------------------------------------------- TERMINER ---------------------------------------------
 
 🧠 PHASE 6 – ADMINISTRATION & ANALYTICS
 6.1. Back-office admin
