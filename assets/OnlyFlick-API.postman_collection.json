@@ -43,7 +43,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"first_name\":\"alice\",\n    \"last_name\":\"alice\",\n    \"email\":\"alice@onlyflick.com\",// admin / creator / user / alice-onlyflick@yopmail.com\n    \"password\":\"pass123\" //pass123\n}"
+							"raw": "{\n    \"first_name\":\"user\",\n    \"last_name\":\"user\",\n    \"email\":\"user@onlyflick.com\",// admin / creator / user / alice-onlyflick@yopmail.com\n    \"password\":\"pass123\" //pass123\n}"
 						},
 						"url": {
 							"raw": "{{SERVER_URL}}/register",
@@ -69,7 +69,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\":\"alice@onlyflick.com\",// admin / creator / user / alice-onlyflick@yopmail.com\n    \"password\":\"pass123\" //pass123\n}"
+							"raw": "{\n    \"email\":\"user@onlyflick.com\",// admin / creator / user / alice-onlyflick@yopmail.com\n    \"password\":\"pass123\" //pass123\n}"
 						},
 						"url": {
 							"raw": "{{SERVER_URL}}/login",
@@ -95,7 +95,7 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{creator_token}}"
+								"value": "Bearer {{token}}"
 							}
 						],
 						"url": {
@@ -175,6 +175,15 @@
 								"value": "Bearer {{creator_token}}"
 							}
 						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
 							"raw": "{{SERVER_URL}}/profile/request-upgrade",
 							"host": [
@@ -211,6 +220,53 @@
 							"path": [
 								"admin",
 								"dashboard"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Creators",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/admin/creators",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"admin",
+								"creators"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Creators Spécifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/admin/creator/{{creatorId}}",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"admin",
+								"creator",
+								"{{creatorId}}"
 							]
 						}
 					},
@@ -333,7 +389,7 @@
 							"formdata": [
 								{
 									"key": "title",
-									"value": "My First Post",
+									"value": "My Third Post",
 									"type": "text"
 								},
 								{
@@ -665,7 +721,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\"post_id\": 2, \"content\": \"Super post !\"}"
+							"raw": "{\"post_id\": 1, \"content\": \"Super postit !\"}"
 						},
 						"url": {
 							"raw": "http://localhost:8080/comments",
@@ -748,7 +804,7 @@
 							},
 							{
 								"key": "Authorization",
-								"value": "Bearer {{token}}"
+								"value": "Bearer {{admin_token}}"
 							}
 						],
 						"url": {
@@ -843,7 +899,7 @@
 							},
 							{
 								"key": "Authorization",
-								"value": "Bearer {{token}}"
+								"value": "Bearer {{subscriber_token}}"
 							}
 						],
 						"body": {
@@ -962,14 +1018,24 @@
 								"value": "Bearer {{subscriber_token}}"
 							}
 						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"payment_method\": \"pm_card_visa\"  // Utiliser une carte test Stripe\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
-							"raw": "{{SERVER_URL}}/subscriptions/{{creatorId}}",
+							"raw": "{{SERVER_URL}}/subscriptions/{{creatorId}}/payment",
 							"host": [
 								"{{SERVER_URL}}"
 							],
 							"path": [
 								"subscriptions",
-								"{{creatorId}}"
+								"{{creatorId}}",
+								"payment"
 							]
 						}
 					},
@@ -982,7 +1048,7 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{subscriber_token}}"
+								"value": "Bearer {{token}}"
 							}
 						],
 						"url": {
@@ -1235,19 +1301,19 @@
 		},
 		{
 			"key": "token",
-			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDk1OTEwNzIsImlhdCI6MTc0OTUwNDY3Miwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjZ9.r6AVsDLyrpuOHqV43ny5p8DhaAp8VPd2R3yDDSBhiF8"
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDk5OTAyNzUsImlhdCI6MTc0OTkwMzg3NSwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjF9.hhD3aUzbFfUl5a_nrrHZUYvhsAmaSLTodTyc6N4TSBU"
 		},
 		{
 			"key": "creator_token",
-			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDk1OTEwNTEsImlhdCI6MTc0OTUwNDY1MSwicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjN9.0pzPUi6XGssxRTft9JVI8dZ5ZDxSfMcGhsvNAF1-EKA"
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTAxMDM4ODUsImlhdCI6MTc1MDAxNzQ4NSwicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjN9.OFFuKolWIRCCFfS6ZvidsSDAxR4CJ4phDbFwVkHuJGk"
 		},
 		{
 			"key": "subscriber_token",
-			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDk1OTEwMDgsImlhdCI6MTc0OTUwNDYwOCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjR9.vPvFhP3kZ6vshQZ7AmPiIOu4lxIlAG9HUIW2LdnQ2B4"
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTAxMDM5MjQsImlhdCI6MTc1MDAxNzUyNCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjR9.sDzXgrqplMwDNl46C3_lZluZbD0IQkY_pzbRTHCeZO4"
 		},
 		{
 			"key": "admin_token",
-			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDk1OTEwMzIsImlhdCI6MTc0OTUwNDYzMiwicm9sZSI6ImFkbWluIiwic3ViIjoyfQ.5vJpFPVm83FycUXxlgLVEqLBQmExnaGP6IE894ArAFM"
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTAxMDM4MTEsImlhdCI6MTc1MDAxNzQxMSwicm9sZSI6ImFkbWluIiwic3ViIjoyfQ.hDxpY3LqcfZad5JYR_9kwEuiVgqIOT_W5O5xkG6ALlw"
 		},
 		{
 			"key": "creatorId",
