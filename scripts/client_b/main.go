@@ -10,7 +10,7 @@ import (
 
 func main() {
 	conversationID := "1"
-	jwt := "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDk1OTEwMDgsImlhdCI6MTc0OTUwNDYwOCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjR9.vPvFhP3kZ6vshQZ7AmPiIOu4lxIlAG9HUIW2LdnQ2B4"
+	jwt := "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTAxMDM5MjQsImlhdCI6MTc1MDAxNzUyNCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjR9.sDzXgrqplMwDNl46C3_lZluZbD0IQkY_pzbRTHCeZO4"
 
 	url := "ws://localhost:8080/ws/messages/" + conversationID
 	log.Println("Connexion à", url)

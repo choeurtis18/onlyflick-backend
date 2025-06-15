@@ -49,11 +49,24 @@ func SetupRoutes() http.Handler {
 	r.Route("/admin", func(admin chi.Router) {
 		admin.Use(middleware.JWTMiddlewareWithRole("admin"))
 
+		// Tableau de bord de l'admin (statistiques globales)
 		admin.Get("/dashboard", handler.AdminDashboard)
+
+		// Liste des demandes de créateurs en attente
 		admin.Get("/creator-requests", handler.ListCreatorRequests)
+
+		// Approuver ou rejeter une demande de créateur
 		admin.Post("/creator-requests/{id}/approve", handler.ApproveCreatorRequest)
 		admin.Post("/creator-requests/{id}/reject", handler.RejectCreatorRequest)
+
+		// Supprimer un utilisateur par ID
 		admin.Delete("/users/{id}", handler.DeleteAccountByID)
+
+		// Liste des créateurs avec leurs statistiques
+		admin.Get("/creators", handler.ListCreators)
+
+		// Détails d'un créateur spécifique
+		admin.Get("/creator/{id}", handler.GetCreatorDetails)
 	})
 
 	// ========================

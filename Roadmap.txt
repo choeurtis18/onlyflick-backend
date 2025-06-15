@@ -86,8 +86,6 @@ stripe.confirmCardPayment(clientSecret).then(function(result) {
 });
 ``` 
 
---------------------------------------------- TERMINER ---------------------------------------------
-
 🧠 PHASE 6 – ADMINISTRATION & ANALYTICS
 6.1. Back-office admin
  Gestion utilisateurs (ban, désactivation)
@@ -97,6 +95,8 @@ stripe.confirmCardPayment(clientSecret).then(function(result) {
 6.2. Statistiques
  Nombre de posts, likes, abonnés
  Vue mensuelle des revenus (mock si pas Stripe)
+
+--------------------------------------------- TERMINER ---------------------------------------------
 
 🔧 PHASE 7 – OUTILS, TESTS & DEVOPS
 7.1. Tests
