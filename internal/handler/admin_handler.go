@@ -11,12 +11,54 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// AdminDashboard affiche un message de bienvenue sur le tableau de bord admin.
+// AdminDashboard affiche des statistiques globales de l'application.
 func AdminDashboard(w http.ResponseWriter, r *http.Request) {
 	log.Println("[AdminDashboard] Accès au tableau de bord admin")
-	response.RespondWithJSON(w, http.StatusOK, map[string]string{
-		"message": "Bienvenue sur le tableau de bord admin",
-	})
+
+	// Récupérer les statistiques globales
+	stats, err := repository.GetGlobalStats()
+	if err != nil {
+		log.Printf("[AdminDashboard] Erreur récupération des statistiques : %v", err)
+		response.RespondWithError(w, http.StatusInternalServerError, "Erreur récupération des statistiques")
+		return
+	}
+
+	response.RespondWithJSON(w, http.StatusOK, stats)
+}
+
+// ListCreators renvoie la liste de tous les créateurs avec les statistiques basiques.
+func ListCreators(w http.ResponseWriter, r *http.Request) {
+	log.Println("[ListCreators] Récupération des créateurs")
+
+	creators, err := repository.GetCreatorsStats()
+	if err != nil {
+		log.Printf("[ListCreators] Erreur récupération des créateurs : %v", err)
+		response.RespondWithError(w, http.StatusInternalServerError, "Erreur récupération des créateurs")
+		return
+	}
+
+	response.RespondWithJSON(w, http.StatusOK, creators)
+}
+
+// GetCreatorDetails renvoie les détails d'un créateur spécifique.
+func GetCreatorDetails(w http.ResponseWriter, r *http.Request) {
+	log.Println("[GetCreatorDetails] Récupération des détails du créateur")
+
+	creatorID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		log.Printf("[GetCreatorDetails] ID du créateur invalide : %v", err)
+		response.RespondWithError(w, http.StatusBadRequest, "ID du créateur invalide")
+		return
+	}
+
+	creatorDetails, err := repository.GetCreatorDetails(creatorID)
+	if err != nil {
+		log.Printf("[GetCreatorDetails] Erreur récupération des détails pour le créateur %d : %v", creatorID, err)
+		response.RespondWithError(w, http.StatusInternalServerError, "Erreur récupération des détails du créateur")
+		return
+	}
+
+	response.RespondWithJSON(w, http.StatusOK, creatorDetails)
 }
 
 // ListCreatorRequests liste toutes les demandes de créateurs en attente.
