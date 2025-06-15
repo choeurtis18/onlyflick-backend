@@ -102,8 +102,16 @@ func SetupRoutes() http.Handler {
 	r.Route("/subscriptions", func(s chi.Router) {
 		s.Use(middleware.JWTMiddlewareWithRole("subscriber", "creator", "admin"))
 
-		s.Post("/{creator_id}", handler.Subscribe)
+		// Route pour s'abonner à un créateur avec paiement
+		s.Post("/{creator_id}/payment", handler.SubscribeWithPayment)
+
+		// Route pour s'abonner sans paiement immédiat (juste abonnement)
+		// s.Post("/{creator_id}", handler.Subscribe)
+
+		// Route pour se désabonner d'un créateur
 		s.Delete("/{creator_id}", handler.UnSubscribe)
+
+		// Route pour récupérer la liste des abonnements d'un utilisateur
 		s.Get("/", handler.ListMySubscriptions)
 	})
 

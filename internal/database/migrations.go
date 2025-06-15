@@ -17,6 +17,7 @@ func RunMigrations() {
 	runReportsMigration()
 	runConversationsMigration()
 	runMessagesMigration()
+	runPaymentsMigration()
 
 	log.Println("✅ [MIGRATIONS] Toutes les migrations ont été exécutées avec succès.")
 	log.Println("🚀 [MIGRATIONS] La base de données est prête à l'emploi.")
@@ -108,8 +109,6 @@ func runPostsMigration() {
 	log.Println("✅ [posts] Table 'posts' migrée avec succès.")
 }
 
-// ===================== SUBSCRIPTIONS =====================
-
 // runSubscriptionsMigration crée la table 'subscriptions' si elle n'existe pas.
 func runSubscriptionsMigration() {
 	log.Println("➡️  [subscriptions] Migration de la table 'subscriptions'...")
@@ -120,6 +119,8 @@ func runSubscriptionsMigration() {
 		subscriber_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 		creator_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		end_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '1 month',
+		status BOOLEAN NOT NULL DEFAULT TRUE,
 		UNIQUE(subscriber_id, creator_id)
 	);`
 
@@ -246,4 +247,32 @@ func runMessagesMigration() {
 	}
 
 	log.Println("✅ [messages] Table 'messages' migrée avec succès.")
+}
+
+//
+// ===================== PAYMENTS =====================
+
+// runPaymentsMigration crée la table 'payments' si elle n'existe pas.
+func runPaymentsMigration() {
+	log.Println("➡️  [payments] Migration de la table 'payments'...")
+
+	query := `
+	CREATE TABLE IF NOT EXISTS payments (
+		id SERIAL PRIMARY KEY,
+		subscription_id BIGINT NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
+		stripe_payment_id TEXT NOT NULL,
+		payer_id TEXT NOT NULL,
+		start_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		end_at TIMESTAMPTZ NOT NULL,
+		amount INT NOT NULL,
+		status VARCHAR(20) NOT NULL,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+	);
+	`
+
+	_, err := DB.Exec(query)
+	if err != nil {
+		log.Fatalf("❌ [payments] Échec de la migration de la table 'payments' : %v", err)
+	}
+	log.Println("✅ [payments] Table 'payments' migrée avec succès.")
 }

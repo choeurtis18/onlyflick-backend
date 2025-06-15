@@ -65,7 +65,7 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 	file, header, err := r.FormFile("media")
 	if err == nil {
 		defer file.Close()
-		mediaURL, fileID, err = service.UploadFile(file, header.Filename)
+		mediaURL, fileID, err = service.UploadFile(file, title+"_"+header.Filename)
 		if err != nil {
 			response.RespondWithError(w, http.StatusInternalServerError, "Échec de l'upload de l'image")
 			log.Printf("[CreatePost] Échec de l'upload de l'image : %v", err)
