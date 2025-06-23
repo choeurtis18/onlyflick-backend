@@ -2,11 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: onlyflick-backend
-  namespace: ${NAMESPACE}
+  namespace: onlyflick
   labels:
     app: onlyflick-backend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: onlyflick-backend
@@ -21,19 +21,10 @@ spec:
         imagePullPolicy: Never
         ports:
         - containerPort: 8080
-        env:
-        - name: PORT
-          value: "8080"
+          name: http
         envFrom:
         - secretRef:
             name: onlyflick-backend-secret
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "50m"
-          limits:
-            memory: "128Mi"
-            cpu: "100m"
         livenessProbe:
           httpGet:
             path: /health
@@ -46,3 +37,27 @@ spec:
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 5
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: onlyflick-backend-service
+  namespace: onlyflick
+  labels:
+    app: onlyflick-backend
+spec:
+  selector:
+    app: onlyflick-backend
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  type: ClusterIP
