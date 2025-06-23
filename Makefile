@@ -1,29 +1,73 @@
-# Backend
+.PHONY: \
+	backend-image frontend-image flutter-build \
+	push-backend push-frontend \
+	apply-backend apply-frontend apply-ingress apply-monitoring \
+	rollout rollouts rollout-backend rollout-frontend \
+	health-check deploy \
+	all
+
+# ========== Configuration ==========
+
+ENV ?= onlyflick
+NAMESPACE = $(ENV)
+TAG ?= latest
+BACKEND_IMAGE = barrydevops/onlyflick-backend
+FRONTEND_IMAGE = barrydevops/onlyflick-frontend
+
+# ========== Build Images ==========
+
 backend-image:
-	docker build -t barrydevops/onlyflick-backend:latest -f k8s/backend/Dockerfile .
+	docker build -t $(BACKEND_IMAGE):$(TAG) -f k8s/backend/Dockerfile .
 
-# Frontend
-frontend-image:
-	docker build -t barrydevops/onlyflick-frontend:latest -f k8s/frontend/Dockerfile .
+flutter-build:
+	cd frontend/onlyflick-app && \
+	flutter clean && flutter pub get && flutter build web
 
-# Push to Docker Hub
+frontend-image: flutter-build
+	docker build -t $(FRONTEND_IMAGE):$(TAG) -f frontend/onlyflick-app/Dockerfile frontend/onlyflick-app
+
+# ========== Push to Docker Hub ==========
+
 push-backend:
-	docker push barrydevops/onlyflick-backend:latest
+	docker push $(BACKEND_IMAGE):$(TAG)
 
 push-frontend:
-	docker push barrydevops/onlyflick-frontend:latest
+	docker push $(FRONTEND_IMAGE):$(TAG)
 
-# Kubernetes Apply
+# ========== Kubernetes Apply ==========
+
 apply-backend:
-	kubectl apply -f k8s/backend
+	kubectl apply -f k8s/backend -n $(NAMESPACE)
 
 apply-frontend:
-	kubectl apply -f k8s/frontend
+	kubectl apply -f k8s/frontend -n $(NAMESPACE)
 
 apply-ingress:
-	kubectl apply -f k8s/ingress
+	kubectl apply -f k8s/ingress -n $(NAMESPACE)
 
 apply-monitoring:
-	helm upgrade --install monitoring prometheus-community/kube-prometheus-stack -n monitoring --create-namespace -f k8s/monitoring/grafana-values.yaml
+	helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+		-n monitoring --create-namespace \
+		-f k8s/monitoring/grafana-values.yaml
+
+# ========== Restart Deployments ==========
+
+rollout-backend:
+	kubectl rollout restart deployment/onlyflick-backend -n $(NAMESPACE)
+
+rollout-frontend:
+	kubectl rollout restart deployment/onlyflick-frontend -n $(NAMESPACE)
+
+rollout: rollout-backend rollout-frontend
+
+# ========== Health Check ==========
+
+health-check:
+	kubectl run test-health --image=curlimages/curl --rm -i --restart=Never -n $(NAMESPACE) -- \
+		curl -f http://onlyflick-backend-service.$(NAMESPACE).svc.cluster.local/health
+
+# ========== Main Shortcuts ==========
 
 all: backend-image frontend-image push-backend push-frontend apply-backend apply-frontend apply-ingress
+
+deploy: all rollout
