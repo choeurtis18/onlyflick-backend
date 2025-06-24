@@ -129,17 +129,28 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	firstName, _ := utils.DecryptAES(user.FirstName) // Changement ici
-	lastName, _ := utils.DecryptAES(user.LastName)   // Changement ici
-	email, _ := utils.DecryptAES(user.Email)         // Changement ici
+	// Décryptage des champs chiffrés (déjà fait dans GetUserByID, mais on refait par sécurité)
+	firstName, _ := utils.DecryptAES(user.FirstName)
+	lastName, _ := utils.DecryptAES(user.LastName)
+	email, _ := utils.DecryptAES(user.Email)
 
+	// ===== CORRECTION : Retourner TOUS les champs du profil =====
 	profile := domain.User{
 		ID:        user.ID,
 		FirstName: firstName,
 		LastName:  lastName,
 		Email:     email,
 		Role:      user.Role,
+		CreatedAt: user.CreatedAt,
+		// ===== NOUVEAUX CHAMPS AJOUTÉS =====
+		AvatarURL: user.AvatarURL,
+		Bio:       user.Bio,
+		Username:  user.Username,
+		UpdatedAt: user.UpdatedAt,
 	}
+
+	log.Printf("[ProfileHandler] Profil récupéré pour user %d: Username=%s, Bio=%s, Avatar=%s", 
+		userID, profile.Username, profile.Bio, profile.AvatarURL)
 
 	response.RespondWithJSON(w, http.StatusOK, profile)
 }

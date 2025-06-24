@@ -109,13 +109,14 @@ func GetUserByEmail(email string) (*domain.User, error) {
 func GetUserByID(userID int64) (*domain.User, error) {
 	log.Printf("[GetUserByID] Recherche de l'utilisateur avec l'ID: %d", userID)
 	query := `
-		SELECT id, first_name, last_name, email, password, role, avatar_url, bio, username, created_at
+		SELECT id, first_name, last_name, email, password, role, avatar_url, bio, username, created_at, updated_at
 		FROM users 
 		WHERE id = $1
 	`
 
 	var user domain.User
 	var avatarURL, bio, username sql.NullString
+	var updatedAt sql.NullTime
 	
 	err := database.DB.QueryRow(query, userID).Scan(
 		&user.ID,
@@ -124,10 +125,11 @@ func GetUserByID(userID int64) (*domain.User, error) {
 		&user.Email,
 		&user.Password,
 		&user.Role,
-		&avatarURL,
-		&bio,
-		&username,
+		&avatarURL,      // Scanné dans variable temporaire
+		&bio,            // Scanné dans variable temporaire
+		&username,       // Scanné dans variable temporaire
 		&user.CreatedAt,
+		&updatedAt,      // Ajout du champ updated_at
 	)
 
 	if err != nil {
@@ -146,7 +148,7 @@ func GetUserByID(userID int64) (*domain.User, error) {
 		user.Email = decryptedEmail
 	}
 
-	// Les nouveaux champs (non chiffrés)
+	// ===== CORRECTION : Assignation des nouveaux champs (non chiffrés) =====
 	if avatarURL.Valid {
 		user.AvatarURL = avatarURL.String
 	}
@@ -155,6 +157,9 @@ func GetUserByID(userID int64) (*domain.User, error) {
 	}
 	if username.Valid {
 		user.Username = username.String
+	}
+	if updatedAt.Valid {
+		user.UpdatedAt = updatedAt.Time
 	}
 
 	log.Printf("[GetUserByID] Utilisateur trouvé: %s %s (ID: %d)", user.FirstName, user.LastName, user.ID)
@@ -166,11 +171,12 @@ func GetUserByUsername(username string) (*domain.User, error) {
 	log.Printf("[GetUserByUsername] Récupération utilisateur par username: %s", username)
 
 	var user domain.User
-	query := `SELECT id, first_name, last_name, email, role, created_at, avatar_url, bio, username 
+	query := `SELECT id, first_name, last_name, email, role, created_at, avatar_url, bio, username, updated_at
 	          FROM users WHERE username = $1 AND deleted = FALSE`
 
 	var firstName, lastName, email, avatarURL, bio, userUsername sql.NullString
 	var createdAt time.Time
+	var updatedAt sql.NullTime
 
 	err := database.DB.QueryRow(query, username).Scan(
 		&user.ID,
@@ -182,6 +188,7 @@ func GetUserByUsername(username string) (*domain.User, error) {
 		&avatarURL,
 		&bio,
 		&userUsername,
+		&updatedAt,
 	)
 
 	if err != nil {
@@ -227,6 +234,9 @@ func GetUserByUsername(username string) (*domain.User, error) {
 	}
 	if userUsername.Valid {
 		user.Username = userUsername.String
+	}
+	if updatedAt.Valid {
+		user.UpdatedAt = updatedAt.Time
 	}
 
 	user.CreatedAt = createdAt
@@ -349,16 +359,13 @@ func GetUserPosts(userID int64, page, limit int, postType string) ([]*UserPost, 
 
 	offset := (page - 1) * limit
 
-	// Construction de la requête selon le type de posts
-	var query string
-	var args []interface{}
-
+	// ===== CORRECTION : Utiliser les vraies colonnes de la table posts =====
 	baseQuery := `
 		SELECT 
 			p.id,
-			p.content,
-			COALESCE(p.image_url, '') as image_url,
-			COALESCE(p.video_url, '') as video_url,
+			COALESCE(p.title, '') as content,  -- UTILISER title comme content
+			COALESCE(p.media_url, '') as image_url,
+			'' as video_url,  -- Pas de colonne video_url séparée
 			p.visibility,
 			(SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes_count,
 			(SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comments_count,
@@ -367,6 +374,10 @@ func GetUserPosts(userID int64, page, limit int, postType string) ([]*UserPost, 
 		FROM posts p
 		WHERE p.user_id = $1
 	`
+
+	// Construction de la requête selon le type de posts
+	var query string
+	var args []interface{}
 
 	switch postType {
 	case "public":
@@ -398,9 +409,9 @@ func GetUserPosts(userID int64, page, limit int, postType string) ([]*UserPost, 
 
 		err := rows.Scan(
 			&post.ID,
-			&post.Content,
-			&imageURL,
-			&videoURL,
+			&post.Content,    // Maintenant c'est le title
+			&imageURL,        // media_url
+			&videoURL,        // Toujours vide pour l'instant
 			&post.Visibility,
 			&post.LikesCount,
 			&post.CommentsCount,
@@ -476,7 +487,8 @@ func CheckUsernameAvailability(username string) (bool, error) {
 	log.Printf("[CheckUsernameAvailability] Vérification disponibilité username: %s", username)
 
 	var count int
-	query := `SELECT COUNT(*) FROM users WHERE username = $1 AND deleted = FALSE`
+	// ===== CORRECTION : Retirer la condition 'deleted = FALSE' si la colonne n'existe pas =====
+	query := `SELECT COUNT(*) FROM users WHERE username = $1`
 
 	err := database.DB.QueryRow(query, username).Scan(&count)
 	if err != nil {
@@ -485,6 +497,6 @@ func CheckUsernameAvailability(username string) (bool, error) {
 	}
 
 	available := count == 0
-	log.Printf("[CheckUsernameAvailability] Username %s disponible: %v", username, available)
+	log.Printf("[CheckUsernameAvailability] Username %s disponible: %v (count: %d)", username, available, count)
 	return available, nil
 }
