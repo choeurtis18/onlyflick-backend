@@ -1,19 +1,50 @@
 package repository
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
+	"time"
 	"onlyflick/internal/database"
 	"onlyflick/internal/domain"
-	"onlyflick/internal/utils" // Changement ici
+	"onlyflick/internal/utils"
 )
 
-// =========================
-// Repository Utilisateur
-// =========================
+// ===== STRUCTURES DE DONNÉES PROFIL =====
+
+// ProfileStats représente les statistiques d'un profil utilisateur
+type ProfileStats struct {
+	PostsCount     int     `json:"posts_count"`
+	FollowersCount int     `json:"followers_count"`
+	FollowingCount int     `json:"following_count"`  
+	LikesReceived  int     `json:"likes_received"`
+	TotalEarnings  float64 `json:"total_earnings"`
+}
+
+// UserPost représente un post utilisateur pour le profil
+type UserPost struct {
+	ID            int64  `json:"id"`
+	Content       string `json:"content"`
+	ImageURL      string `json:"image_url,omitempty"`
+	VideoURL      string `json:"video_url,omitempty"`
+	Visibility    string `json:"visibility"`
+	LikesCount    int    `json:"likes_count"`
+	CommentsCount int    `json:"comments_count"`
+	CreatedAt     string `json:"created_at"`
+	IsLiked       bool   `json:"is_liked"`
+}
+
+// Payload pour la mise à jour d'un utilisateur.
+type UpdateUserPayload struct {
+	FirstName *string
+	LastName  *string
+	Email     *string
+	Password  *string
+}
+
+// ===== FONCTIONS UTILISATEUR DE BASE =====
 
 // Crée un nouvel utilisateur dans la base de données.
-// Remplit également les champs ID et CreatedAt de l'utilisateur.
 func CreateUser(user *domain.User) error {
 	query := `
 		INSERT INTO users (first_name, last_name, email, password, role)
@@ -37,7 +68,6 @@ func CreateUser(user *domain.User) error {
 }
 
 // Recherche un utilisateur par email (décrypté).
-// Retourne l'utilisateur si trouvé, nil sinon.
 func GetUserByEmail(email string) (*domain.User, error) {
 	log.Printf("[GetUserByEmail] Recherche de l'utilisateur avec l'email: %s", email)
 	rows, err := database.DB.Query(`SELECT id, first_name, last_name, email, password, role FROM users`)
@@ -54,7 +84,7 @@ func GetUserByEmail(email string) (*domain.User, error) {
 			return nil, fmt.Errorf("erreur lors du scan d'un utilisateur: %v", err)
 		}
 
-		decryptedEmail, err := utils.DecryptAES(user.Email) // Changement ici
+		decryptedEmail, err := utils.DecryptAES(user.Email)
 		if err != nil {
 			log.Printf("[GetUserByEmail][ERREUR] Erreur lors du décryptage de l'email: %v", err)
 			return nil, fmt.Errorf("erreur lors du décryptage de l'email: %v", err)
@@ -76,16 +106,17 @@ func GetUserByEmail(email string) (*domain.User, error) {
 }
 
 // Recherche un utilisateur par son ID.
-// Retourne l'utilisateur si trouvé, une erreur sinon.
 func GetUserByID(userID int64) (*domain.User, error) {
 	log.Printf("[GetUserByID] Recherche de l'utilisateur avec l'ID: %d", userID)
 	query := `
-		SELECT id, first_name, last_name, email, password, role 
+		SELECT id, first_name, last_name, email, password, role, avatar_url, bio, username, created_at
 		FROM users 
 		WHERE id = $1
 	`
 
 	var user domain.User
+	var avatarURL, bio, username sql.NullString
+	
 	err := database.DB.QueryRow(query, userID).Scan(
 		&user.ID,
 		&user.FirstName,
@@ -93,6 +124,10 @@ func GetUserByID(userID int64) (*domain.User, error) {
 		&user.Email,
 		&user.Password,
 		&user.Role,
+		&avatarURL,
+		&bio,
+		&username,
+		&user.CreatedAt,
 	)
 
 	if err != nil {
@@ -100,21 +135,107 @@ func GetUserByID(userID int64) (*domain.User, error) {
 		return nil, fmt.Errorf("erreur lors de la récupération de l'utilisateur par ID: %v", err)
 	}
 
+	// Décryption des champs chiffrés
+	if decryptedFirstName, err := utils.DecryptAES(user.FirstName); err == nil {
+		user.FirstName = decryptedFirstName
+	}
+	if decryptedLastName, err := utils.DecryptAES(user.LastName); err == nil {
+		user.LastName = decryptedLastName
+	}
+	if decryptedEmail, err := utils.DecryptAES(user.Email); err == nil {
+		user.Email = decryptedEmail
+	}
+
+	// Les nouveaux champs (non chiffrés)
+	if avatarURL.Valid {
+		user.AvatarURL = avatarURL.String
+	}
+	if bio.Valid {
+		user.Bio = bio.String
+	}
+	if username.Valid {
+		user.Username = username.String
+	}
+
 	log.Printf("[GetUserByID] Utilisateur trouvé: %s %s (ID: %d)", user.FirstName, user.LastName, user.ID)
 	return &user, nil
 }
 
-// Payload pour la mise à jour d'un utilisateur.
-// Les champs nil ne seront pas modifiés.
-type UpdateUserPayload struct {
-	FirstName *string
-	LastName  *string
-	Email     *string
-	Password  *string
+// GetUserByUsername récupère un utilisateur par son username
+func GetUserByUsername(username string) (*domain.User, error) {
+	log.Printf("[GetUserByUsername] Récupération utilisateur par username: %s", username)
+
+	var user domain.User
+	query := `SELECT id, first_name, last_name, email, role, created_at, avatar_url, bio, username 
+	          FROM users WHERE username = $1 AND deleted = FALSE`
+
+	var firstName, lastName, email, avatarURL, bio, userUsername sql.NullString
+	var createdAt time.Time
+
+	err := database.DB.QueryRow(query, username).Scan(
+		&user.ID,
+		&firstName,
+		&lastName,
+		&email,
+		&user.Role,
+		&createdAt,
+		&avatarURL,
+		&bio,
+		&userUsername,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("[GetUserByUsername] Utilisateur non trouvé pour username: %s", username)
+			return nil, nil
+		}
+		log.Printf("[GetUserByUsername][ERROR] Erreur récupération utilisateur: %v", err)
+		return nil, fmt.Errorf("erreur récupération utilisateur: %w", err)
+	}
+
+	// Décryptage des champs chiffrés
+	if firstName.Valid {
+		if decryptedFirstName, err := utils.DecryptAES(firstName.String); err == nil {
+			user.FirstName = decryptedFirstName
+		} else {
+			user.FirstName = firstName.String // Fallback
+		}
+	}
+	
+	if lastName.Valid {
+		if decryptedLastName, err := utils.DecryptAES(lastName.String); err == nil {
+			user.LastName = decryptedLastName
+		} else {
+			user.LastName = lastName.String // Fallback
+		}
+	}
+	
+	if email.Valid {
+		if decryptedEmail, err := utils.DecryptAES(email.String); err == nil {
+			user.Email = decryptedEmail
+		} else {
+			user.Email = email.String // Fallback
+		}
+	}
+
+	// Champs non chiffrés
+	if avatarURL.Valid {
+		user.AvatarURL = avatarURL.String
+	}
+	if bio.Valid {
+		user.Bio = bio.String
+	}
+	if userUsername.Valid {
+		user.Username = userUsername.String
+	}
+
+	user.CreatedAt = createdAt
+
+	log.Printf("[GetUserByUsername] Utilisateur trouvé: ID=%d, Username=%s", user.ID, username)
+	return &user, nil
 }
 
 // Met à jour les champs non-nil du profil utilisateur.
-// Retourne une erreur si la mise à jour échoue.
 func UpdateUser(userID int64, payload UpdateUserPayload) error {
 	log.Printf("[UpdateUser] Mise à jour de l'utilisateur (ID: %d)", userID)
 
@@ -161,7 +282,6 @@ func UpdateUser(userID int64, payload UpdateUserPayload) error {
 }
 
 // Supprime un utilisateur de la base de données.
-// Retourne une erreur si la suppression échoue.
 func DeleteUser(userID int64) error {
 	log.Printf("[DeleteUser] Suppression de l'utilisateur (ID: %d)", userID)
 	_, err := database.DB.Exec(`DELETE FROM users WHERE id = $1`, userID)
@@ -169,4 +289,202 @@ func DeleteUser(userID int64) error {
 		log.Printf("[DeleteUser][ERREUR] Erreur lors de la suppression de l'utilisateur (ID: %d): %v", userID, err)
 	}
 	return err
+}
+
+// ===== FONCTIONS PROFIL AVANCÉES =====
+
+// GetProfileStats récupère les statistiques d'un profil utilisateur
+func GetProfileStats(userID int64) (*ProfileStats, error) {
+	log.Printf("[GetProfileStats] Récupération des stats pour user %d", userID)
+
+	var stats ProfileStats
+
+	query := `
+		SELECT 
+			-- Nombre de posts de l'utilisateur
+			(SELECT COUNT(*) FROM posts WHERE user_id = $1) as posts_count,
+			
+			-- Nombre d'abonnés (si l'utilisateur est créateur)
+			-- CORRECTION: status est boolean, pas string
+			(SELECT COUNT(*) FROM subscriptions WHERE creator_id = $1 AND status = true) as followers_count,
+			
+			-- Nombre d'abonnements (utilisateur abonné à d'autres créateurs)
+			-- CORRECTION: status est boolean, pas string  
+			(SELECT COUNT(*) FROM subscriptions WHERE subscriber_id = $1 AND status = true) as following_count,
+			
+			-- Nombre total de likes reçus sur tous les posts
+			(SELECT COUNT(*) FROM likes l 
+			 JOIN posts p ON l.post_id = p.id 
+			 WHERE p.user_id = $1) as likes_received,
+			
+			-- Revenus totaux (si créateur)
+			-- CORRECTION: subscription.status est boolean, payment.status est string
+			(SELECT COALESCE(SUM(pay.amount), 0) FROM payments pay 
+			 JOIN subscriptions sub ON pay.subscription_id = sub.id 
+			 WHERE sub.creator_id = $1 AND sub.status = true AND pay.status = 'success') as total_earnings
+	`
+
+	err := database.DB.QueryRow(query, userID).Scan(
+		&stats.PostsCount,
+		&stats.FollowersCount,
+		&stats.FollowingCount,
+		&stats.LikesReceived,
+		&stats.TotalEarnings,
+	)
+
+	if err != nil {
+		log.Printf("[GetProfileStats][ERROR] Erreur récupération stats pour user %d: %v", userID, err)
+		return nil, fmt.Errorf("erreur récupération statistiques: %w", err)
+	}
+
+	log.Printf("[GetProfileStats] Stats récupérées: posts=%d, followers=%d, following=%d, likes=%d, earnings=%.2f", 
+		stats.PostsCount, stats.FollowersCount, stats.FollowingCount, stats.LikesReceived, stats.TotalEarnings)
+
+	return &stats, nil
+}
+
+// GetUserPosts récupère les posts d'un utilisateur avec pagination
+func GetUserPosts(userID int64, page, limit int, postType string) ([]*UserPost, error) {
+	log.Printf("[GetUserPosts] Récupération posts pour user %d (page=%d, limit=%d, type=%s)", userID, page, limit, postType)
+
+	offset := (page - 1) * limit
+
+	// Construction de la requête selon le type de posts
+	var query string
+	var args []interface{}
+
+	baseQuery := `
+		SELECT 
+			p.id,
+			p.content,
+			COALESCE(p.image_url, '') as image_url,
+			COALESCE(p.video_url, '') as video_url,
+			p.visibility,
+			(SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes_count,
+			(SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comments_count,
+			p.created_at,
+			EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = $1) as is_liked
+		FROM posts p
+		WHERE p.user_id = $1
+	`
+
+	switch postType {
+	case "public":
+		query = baseQuery + " AND p.visibility = 'public'"
+		args = []interface{}{userID}
+	case "subscriber":
+		query = baseQuery + " AND p.visibility = 'subscriber'"
+		args = []interface{}{userID}
+	default: // "all"
+		query = baseQuery
+		args = []interface{}{userID}
+	}
+
+	query += " ORDER BY p.created_at DESC LIMIT $2 OFFSET $3"
+	args = append(args, limit, offset)
+
+	rows, err := database.DB.Query(query, args...)
+	if err != nil {
+		log.Printf("[GetUserPosts][ERROR] Erreur query posts: %v", err)
+		return nil, fmt.Errorf("erreur récupération posts: %w", err)
+	}
+	defer rows.Close()
+
+	var posts []*UserPost
+	for rows.Next() {
+		var post UserPost
+		var imageURL, videoURL sql.NullString
+		var createdAt time.Time
+
+		err := rows.Scan(
+			&post.ID,
+			&post.Content,
+			&imageURL,
+			&videoURL,
+			&post.Visibility,
+			&post.LikesCount,
+			&post.CommentsCount,
+			&createdAt,
+			&post.IsLiked,
+		)
+
+		if err != nil {
+			log.Printf("[GetUserPosts][ERROR] Erreur scan post: %v", err)
+			continue
+		}
+
+		// Gestion des champs nullable
+		if imageURL.Valid {
+			post.ImageURL = imageURL.String
+		}
+		if videoURL.Valid {
+			post.VideoURL = videoURL.String
+		}
+
+		post.CreatedAt = createdAt.Format(time.RFC3339)
+		posts = append(posts, &post)
+	}
+
+	log.Printf("[GetUserPosts] %d posts récupérés pour user %d", len(posts), userID)
+	return posts, nil
+}
+
+// UpdateUserAvatar met à jour l'avatar d'un utilisateur
+func UpdateUserAvatar(userID int64, avatarURL string) error {
+	log.Printf("[UpdateUserAvatar] Mise à jour avatar pour user %d: %s", userID, avatarURL)
+
+	query := `UPDATE users SET avatar_url = $1, updated_at = NOW() WHERE id = $2`
+	
+	result, err := database.DB.Exec(query, avatarURL, userID)
+	if err != nil {
+		log.Printf("[UpdateUserAvatar][ERROR] Erreur mise à jour avatar: %v", err)
+		return fmt.Errorf("erreur mise à jour avatar: %w", err)
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("utilisateur non trouvé")
+	}
+
+	log.Printf("[UpdateUserAvatar] Avatar mis à jour avec succès pour user %d", userID)
+	return nil
+}
+
+// UpdateUserBio met à jour la bio d'un utilisateur
+func UpdateUserBio(userID int64, bio string) error {
+	log.Printf("[UpdateUserBio] Mise à jour bio pour user %d", userID)
+
+	query := `UPDATE users SET bio = $1, updated_at = NOW() WHERE id = $2`
+	
+	result, err := database.DB.Exec(query, bio, userID)
+	if err != nil {
+		log.Printf("[UpdateUserBio][ERROR] Erreur mise à jour bio: %v", err)
+		return fmt.Errorf("erreur mise à jour bio: %w", err)
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("utilisateur non trouvé")
+	}
+
+	log.Printf("[UpdateUserBio] Bio mise à jour avec succès pour user %d", userID)
+	return nil
+}
+
+// CheckUsernameAvailability vérifie si un username est disponible
+func CheckUsernameAvailability(username string) (bool, error) {
+	log.Printf("[CheckUsernameAvailability] Vérification disponibilité username: %s", username)
+
+	var count int
+	query := `SELECT COUNT(*) FROM users WHERE username = $1 AND deleted = FALSE`
+
+	err := database.DB.QueryRow(query, username).Scan(&count)
+	if err != nil {
+		log.Printf("[CheckUsernameAvailability][ERROR] Erreur vérification username: %v", err)
+		return false, fmt.Errorf("erreur vérification username: %w", err)
+	}
+
+	available := count == 0
+	log.Printf("[CheckUsernameAvailability] Username %s disponible: %v", username, available)
+	return available, nil
 }

@@ -20,4 +20,8 @@ type User struct {
 	Password  string    `json:"-"`          // Mot de passe hashé (non exposé en JSON)
 	Role      Role      `json:"role"`       // Rôle de l'utilisateur
 	CreatedAt time.Time `json:"created_at"` // Date de création du compte
+	AvatarURL string    `json:"avatar_url"`      // URL de l'avatar
+	Bio       string    `json:"bio"`             // Bio du profil  
+	Username  string    `json:"username"`        // Username unique
+	UpdatedAt time.Time `json:"updated_at"` 	// Date de la dernière mise à jour du profil
 }

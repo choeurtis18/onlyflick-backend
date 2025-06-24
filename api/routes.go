@@ -41,6 +41,14 @@ func SetupRoutes() http.Handler {
 		profile.Patch("/", handler.UpdateProfile)
 		profile.Delete("/", handler.DeleteAccount)
 		profile.Post("/request-upgrade", handler.RequestCreatorUpgrade)
+
+		profile.Get("/stats", handler.GetProfileStats)              // GET /profile/stats - Statistiques profil
+		profile.Get("/posts", handler.GetUserPosts)                 // GET /profile/posts - Posts avec pagination
+		profile.Post("/avatar", handler.UploadAvatar)               // POST /profile/avatar - Upload avatar
+		profile.Patch("/bio", handler.UpdateBio)                    // PATCH /profile/bio - Mise à jour bio
+		
+		profile.Get("/username/check", handler.CheckUsernameAvailability) // GET /profile/username/check - Vérifier username
+
 	})
 
 	// ========================
