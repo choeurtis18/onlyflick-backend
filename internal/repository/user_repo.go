@@ -40,37 +40,50 @@ type UpdateUserPayload struct {
 	LastName  *string
 	Email     *string
 	Password  *string
+	Username  *string  // ===== AJOUT USERNAME =====
+	AvatarURL *string
+	Bio       *string
 }
 
 // ===== FONCTIONS UTILISATEUR DE BASE =====
 
-// Crée un nouvel utilisateur dans la base de données.
+// Crée un nouvel utilisateur dans la base de données AVEC USERNAME
 func CreateUser(user *domain.User) error {
 	query := `
-		INSERT INTO users (first_name, last_name, email, password, role)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, created_at
+		INSERT INTO users (first_name, last_name, username, email, password, role, avatar_url, bio)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, created_at, updated_at
 	`
-	log.Printf("[CreateUser] Création de l'utilisateur: %s %s, email: %s", user.FirstName, user.LastName, user.Email)
+	log.Printf("[CreateUser] Création de l'utilisateur: %s %s, username: %s, email: %s", 
+		user.FirstName, user.LastName, user.Username, user.Email)
+	
 	err := database.DB.QueryRow(
 		query,
-		user.FirstName,
-		user.LastName,
-		user.Email,
-		user.Password,
-		user.Role,
-	).Scan(&user.ID, &user.CreatedAt)
+		user.FirstName,    // $1 (chiffré)
+		user.LastName,     // $2 (chiffré) 
+		user.Username,     // $3 (clair - pseudo public)
+		user.Email,        // $4 (chiffré)
+		user.Password,     // $5 (hashé)
+		user.Role,         // $6
+		user.AvatarURL,    // $7
+		user.Bio,          // $8
+	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 
 	if err != nil {
 		log.Printf("[CreateUser][ERREUR] Impossible de créer l'utilisateur (%s): %v", user.Email, err)
+	} else {
+		log.Printf("[CreateUser] Utilisateur créé avec succès - ID: %d, Username: %s", user.ID, user.Username)
 	}
 	return err
 }
 
-// Recherche un utilisateur par email (décrypté).
+// Recherche un utilisateur par email (décrypté) - AVEC TOUS LES CHAMPS
 func GetUserByEmail(email string) (*domain.User, error) {
 	log.Printf("[GetUserByEmail] Recherche de l'utilisateur avec l'email: %s", email)
-	rows, err := database.DB.Query(`SELECT id, first_name, last_name, email, password, role FROM users`)
+	rows, err := database.DB.Query(`
+		SELECT id, first_name, last_name, username, email, password, role, avatar_url, bio, created_at, updated_at 
+		FROM users
+	`)
 	if err != nil {
 		log.Printf("[GetUserByEmail][ERREUR] Erreur lors de la requête SQL: %v", err)
 		return nil, fmt.Errorf("erreur lors de la requête des utilisateurs: %v", err)
@@ -79,9 +92,35 @@ func GetUserByEmail(email string) (*domain.User, error) {
 
 	for rows.Next() {
 		var user domain.User
-		if err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Password, &user.Role); err != nil {
+		var avatarURL, bio sql.NullString
+		var updatedAt sql.NullTime
+		
+		if err := rows.Scan(
+			&user.ID, 
+			&user.FirstName, 
+			&user.LastName, 
+			&user.Username,    // ===== AJOUT USERNAME =====
+			&user.Email, 
+			&user.Password, 
+			&user.Role,
+			&avatarURL,
+			&bio,
+			&user.CreatedAt,
+			&updatedAt,
+		); err != nil {
 			log.Printf("[GetUserByEmail][ERREUR] Erreur lors du scan d'un utilisateur: %v", err)
 			return nil, fmt.Errorf("erreur lors du scan d'un utilisateur: %v", err)
+		}
+
+		// Assignation des champs nullable
+		if avatarURL.Valid {
+			user.AvatarURL = avatarURL.String
+		}
+		if bio.Valid {
+			user.Bio = bio.String
+		}
+		if updatedAt.Valid {
+			user.UpdatedAt = updatedAt.Time
 		}
 
 		decryptedEmail, err := utils.DecryptAES(user.Email)
@@ -91,7 +130,17 @@ func GetUserByEmail(email string) (*domain.User, error) {
 		}
 
 		if decryptedEmail == email {
-			log.Printf("[GetUserByEmail] Utilisateur trouvé pour l'email: %s (ID: %d)", email, user.ID)
+			// Décrypter les autres champs pour le retour
+			if decryptedFirstName, err := utils.DecryptAES(user.FirstName); err == nil {
+				user.FirstName = decryptedFirstName
+			}
+			if decryptedLastName, err := utils.DecryptAES(user.LastName); err == nil {
+				user.LastName = decryptedLastName
+			}
+			user.Email = decryptedEmail
+
+			log.Printf("[GetUserByEmail] Utilisateur trouvé pour l'email: %s (ID: %d, Username: %s)", 
+				email, user.ID, user.Username)
 			return &user, nil
 		}
 	}
@@ -109,27 +158,27 @@ func GetUserByEmail(email string) (*domain.User, error) {
 func GetUserByID(userID int64) (*domain.User, error) {
 	log.Printf("[GetUserByID] Recherche de l'utilisateur avec l'ID: %d", userID)
 	query := `
-		SELECT id, first_name, last_name, email, password, role, avatar_url, bio, username, created_at, updated_at
+		SELECT id, first_name, last_name, username, email, password, role, avatar_url, bio, created_at, updated_at
 		FROM users 
 		WHERE id = $1
 	`
 
 	var user domain.User
-	var avatarURL, bio, username sql.NullString
+	var avatarURL, bio sql.NullString
 	var updatedAt sql.NullTime
 	
 	err := database.DB.QueryRow(query, userID).Scan(
 		&user.ID,
 		&user.FirstName,
 		&user.LastName,
+		&user.Username,      // ===== AJOUT USERNAME =====
 		&user.Email,
 		&user.Password,
 		&user.Role,
-		&avatarURL,      // Scanné dans variable temporaire
-		&bio,            // Scanné dans variable temporaire
-		&username,       // Scanné dans variable temporaire
+		&avatarURL,
+		&bio,
 		&user.CreatedAt,
-		&updatedAt,      // Ajout du champ updated_at
+		&updatedAt,
 	)
 
 	if err != nil {
@@ -155,14 +204,12 @@ func GetUserByID(userID int64) (*domain.User, error) {
 	if bio.Valid {
 		user.Bio = bio.String
 	}
-	if username.Valid {
-		user.Username = username.String
-	}
 	if updatedAt.Valid {
 		user.UpdatedAt = updatedAt.Time
 	}
 
-	log.Printf("[GetUserByID] Utilisateur trouvé: %s %s (ID: %d)", user.FirstName, user.LastName, user.ID)
+	log.Printf("[GetUserByID] Utilisateur trouvé: %s %s (ID: %d, Username: %s)", 
+		user.FirstName, user.LastName, user.ID, user.Username)
 	return &user, nil
 }
 
@@ -172,7 +219,7 @@ func GetUserByUsername(username string) (*domain.User, error) {
 
 	var user domain.User
 	query := `SELECT id, first_name, last_name, email, role, created_at, avatar_url, bio, username, updated_at
-	          FROM users WHERE username = $1 AND deleted = FALSE`
+	          FROM users WHERE username = $1`
 
 	var firstName, lastName, email, avatarURL, bio, userUsername sql.NullString
 	var createdAt time.Time
@@ -245,7 +292,7 @@ func GetUserByUsername(username string) (*domain.User, error) {
 	return &user, nil
 }
 
-// Met à jour les champs non-nil du profil utilisateur.
+// Met à jour les champs non-nil du profil utilisateur AVEC SUPPORT USERNAME
 func UpdateUser(userID int64, payload UpdateUserPayload) error {
 	log.Printf("[UpdateUser] Mise à jour de l'utilisateur (ID: %d)", userID)
 
@@ -263,6 +310,11 @@ func UpdateUser(userID int64, payload UpdateUserPayload) error {
 		params = append(params, *payload.LastName)
 		paramIndex++
 	}
+	if payload.Username != nil {  // ===== AJOUT USERNAME =====
+		query += fmt.Sprintf(" username = $%d,", paramIndex)
+		params = append(params, *payload.Username)
+		paramIndex++
+	}
 	if payload.Email != nil {
 		query += fmt.Sprintf(" email = $%d,", paramIndex)
 		params = append(params, *payload.Email)
@@ -273,22 +325,45 @@ func UpdateUser(userID int64, payload UpdateUserPayload) error {
 		params = append(params, *payload.Password)
 		paramIndex++
 	}
+	if payload.AvatarURL != nil {
+		query += fmt.Sprintf(" avatar_url = $%d,", paramIndex)
+		params = append(params, *payload.AvatarURL)
+		paramIndex++
+	}
+	if payload.Bio != nil {
+		query += fmt.Sprintf(" bio = $%d,", paramIndex)
+		params = append(params, *payload.Bio)
+		paramIndex++
+	}
 
 	if len(params) == 0 {
 		log.Printf("[UpdateUser] Aucun champ à mettre à jour pour l'utilisateur (ID: %d)", userID)
 		return nil
 	}
 
+	// Ajouter updated_at automatiquement
+	query += fmt.Sprintf(" updated_at = $%d,", paramIndex)
+	params = append(params, time.Now())
+	paramIndex++
+
 	query = query[:len(query)-1] // Supprimer la dernière virgule
 	query += fmt.Sprintf(" WHERE id = $%d", paramIndex)
 	params = append(params, userID)
 
 	log.Printf("[UpdateUser] Exécution de la requête: %s | Params: %v", query, params)
-	_, err := database.DB.Exec(query, params...)
+	result, err := database.DB.Exec(query, params...)
 	if err != nil {
 		log.Printf("[UpdateUser][ERREUR] Erreur lors de la mise à jour de l'utilisateur (ID: %d): %v", userID, err)
+		return err
 	}
-	return err
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("utilisateur non trouvé")
+	}
+
+	log.Printf("[UpdateUser] Utilisateur %d mis à jour avec succès", userID)
+	return nil
 }
 
 // Supprime un utilisateur de la base de données.
@@ -487,7 +562,6 @@ func CheckUsernameAvailability(username string) (bool, error) {
 	log.Printf("[CheckUsernameAvailability] Vérification disponibilité username: %s", username)
 
 	var count int
-	// ===== CORRECTION : Retirer la condition 'deleted = FALSE' si la colonne n'existe pas =====
 	query := `SELECT COUNT(*) FROM users WHERE username = $1`
 
 	err := database.DB.QueryRow(query, username).Scan(&count)

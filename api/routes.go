@@ -30,6 +30,7 @@ func SetupRoutes() http.Handler {
 	// ========================
 	r.Post("/register", handler.RegisterHandler)
 	r.Post("/login", handler.LoginHandler)
+	r.Get("/auth/check-username", handler.CheckUsernameHandler)  // ===== AJOUT ROUTE USERNAME =====
 
 	// ========================
 	// Utilisateur connecté (Profile)
@@ -47,7 +48,8 @@ func SetupRoutes() http.Handler {
 		profile.Post("/avatar", handler.UploadAvatar)               // POST /profile/avatar - Upload avatar
 		profile.Patch("/bio", handler.UpdateBio)                    // PATCH /profile/bio - Mise à jour bio
 		
-		profile.Get("/username/check", handler.CheckUsernameAvailability) // GET /profile/username/check - Vérifier username
+		// ===== SUPPRESSION : username check déplacé vers /auth/check-username =====
+		// profile.Get("/username/check", handler.CheckUsernameAvailability) // Déplacé vers /auth
 
 	})
 
