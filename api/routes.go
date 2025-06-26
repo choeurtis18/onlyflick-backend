@@ -30,7 +30,7 @@ func SetupRoutes() http.Handler {
 	// ========================
 	r.Post("/register", handler.RegisterHandler)
 	r.Post("/login", handler.LoginHandler)
-	r.Get("/auth/check-username", handler.CheckUsernameHandler)  // ===== AJOUT ROUTE USERNAME =====
+	r.Get("/auth/check-username", handler.CheckUsernameHandler)
 
 	// ========================
 	// Utilisateur connecté (Profile)
@@ -43,14 +43,10 @@ func SetupRoutes() http.Handler {
 		profile.Delete("/", handler.DeleteAccount)
 		profile.Post("/request-upgrade", handler.RequestCreatorUpgrade)
 
-		profile.Get("/stats", handler.GetProfileStats)              // GET /profile/stats - Statistiques profil
-		profile.Get("/posts", handler.GetUserPosts)                 // GET /profile/posts - Posts avec pagination
-		profile.Post("/avatar", handler.UploadAvatar)               // POST /profile/avatar - Upload avatar
-		profile.Patch("/bio", handler.UpdateBio)                    // PATCH /profile/bio - Mise à jour bio
-		
-		// ===== SUPPRESSION : username check déplacé vers /auth/check-username =====
-		// profile.Get("/username/check", handler.CheckUsernameAvailability) // Déplacé vers /auth
-
+		profile.Get("/stats", handler.GetProfileStats)
+		profile.Get("/posts", handler.GetUserPosts)
+		profile.Post("/avatar", handler.UploadAvatar)
+		profile.Patch("/bio", handler.UpdateBio)
 	})
 
 	// ========================
@@ -104,7 +100,7 @@ func SetupRoutes() http.Handler {
 
 		p.Post("/", handler.CreatePost)
 		p.Get("/me", handler.ListMyPosts)
-		p.Get("/{id}", handler.GetPostByID) // TODO: sécurisation
+		p.Get("/{id}", handler.GetPostByID)
 
 		p.Patch("/{id}", handler.UpdatePost)
 		p.Delete("/{id}", handler.DeletePost)
@@ -120,6 +116,32 @@ func SetupRoutes() http.Handler {
 	})
 
 	// ========================
+	// 🔍 RECHERCHE SIMPLIFIÉE (utilisateurs uniquement)
+	// ========================
+	r.Route("/search", func(search chi.Router) {
+		search.Use(middleware.JWTMiddleware)
+		
+		// Recherche d'utilisateurs par username
+		search.Get("/users", handler.SearchUsersHandler)
+		
+		// Suggestions de recherche
+		search.Get("/suggestions", handler.GetSearchSuggestionsHandler)
+		
+		// Statistiques de recherche
+		search.Get("/stats", handler.GetSearchStatsHandler)
+	})
+
+	// ========================
+	// 📊 TRACKING DES INTERACTIONS
+	// ========================
+	r.Route("/interactions", func(interactions chi.Router) {
+		interactions.Use(middleware.JWTMiddleware)
+		
+		// Enregistrer une interaction utilisateur (analytics)
+		interactions.Post("/track", handler.TrackInteractionHandler)
+	})
+
+	// ========================
 	// Abonnements (Subscriber/Creator/Admin)
 	// ========================
 	r.Route("/subscriptions", func(s chi.Router) {
@@ -127,9 +149,6 @@ func SetupRoutes() http.Handler {
 
 		// Route pour s'abonner à un créateur avec paiement
 		s.Post("/{creator_id}/payment", handler.SubscribeWithPayment)
-
-		// Route pour s'abonner sans paiement immédiat (juste abonnement)
-		// s.Post("/{creator_id}", handler.Subscribe)
 
 		// Route pour se désabonner d'un créateur
 		s.Delete("/{creator_id}", handler.UnSubscribe)

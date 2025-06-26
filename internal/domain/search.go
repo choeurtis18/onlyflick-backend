@@ -1,3 +1,5 @@
+// internal/domain/search.go
+
 package domain
 
 import "time"
@@ -29,26 +31,6 @@ const (
 	SortRecent        SortType = "recent"         // Posts récents par ordre chronologique
 )
 
-// PostTag représente un tag associé à un post
-type PostTag struct {
-	ID       int64       `json:"id"`
-	PostID   int64       `json:"post_id"`
-	Category TagCategory `json:"category"`
-	CreatedAt time.Time  `json:"created_at"`
-}
-
-// UserInteraction représente une interaction utilisateur pour l'algorithme de recommandation
-type UserInteraction struct {
-	ID             int64           `json:"id"`
-	UserID         int64           `json:"user_id"`
-	InteractionType InteractionType `json:"interaction_type"`
-	ContentType    string          `json:"content_type"`    // "post", "user", "tag"
-	ContentID      int64           `json:"content_id"`      // ID du post, user ou tag
-	ContentMeta    string          `json:"content_meta"`    // Métadonnées supplémentaires (ex: tag category)
-	Score          float64         `json:"score"`           // Score d'interaction (1.0=like, 2.0=comment, 0.5=view)
-	CreatedAt      time.Time       `json:"created_at"`
-}
-
 // InteractionType représente le type d'interaction
 type InteractionType string
 
@@ -62,6 +44,52 @@ const (
 	InteractionTagClick    InteractionType = "tag_click"    // Clic sur un tag
 )
 
+// UserSearchResult représente un utilisateur dans les résultats de recherche
+type UserSearchResult struct {
+	ID               int64  `json:"id"`
+	Username         string `json:"username"`
+	FirstName        string `json:"first_name"`
+	LastName         string `json:"last_name"`
+	FullName         string `json:"full_name"`         // Nom complet calculé
+	AvatarURL        string `json:"avatar_url"`
+	Bio              string `json:"bio"`
+	Role             string `json:"role"`              // "subscriber", "creator", "admin"
+	IsCreator        bool   `json:"is_creator"`        // true si role = "creator"
+	FollowersCount   int64  `json:"followers_count"`
+	PostsCount       int64  `json:"posts_count"`
+	IsFollowing      bool   `json:"is_following"`      // Si l'utilisateur actuel suit cette personne
+	MutualFollowers  int64  `json:"mutual_followers"`  // Nombre d'amis en commun
+}
+
+// SearchResult représente le résultat d'une recherche
+type SearchResult struct {
+	Posts   []PostWithDetails  `json:"posts"`
+	Users   []UserSearchResult `json:"users"`
+	Total   int                `json:"total"`
+	HasMore bool               `json:"has_more"`
+}
+
+// PostWithDetails représente un post avec ses détails étendus pour la recherche
+type PostWithDetails struct {
+	ID              int64            `json:"id"`
+	UserID          int64            `json:"user_id"`
+	Title           string           `json:"title"`
+	Description     string           `json:"description"`
+	MediaURL        string           `json:"media_url"`
+	FileID          string           `json:"file_id"`
+	Visibility      string           `json:"visibility"`
+	CreatedAt       time.Time        `json:"created_at"`
+	UpdatedAt       time.Time        `json:"updated_at"`
+	Author          UserSearchResult `json:"author"`           // Auteur du post
+	Tags            []TagCategory    `json:"tags"`             // Tags associés
+	LikesCount      int64            `json:"likes_count"`      // Nombre de likes
+	CommentsCount   int64            `json:"comments_count"`   // Nombre de commentaires
+	ViewsCount      int64            `json:"views_count"`      // Nombre de vues
+	IsLiked         bool             `json:"is_liked"`         // Si l'utilisateur actuel a liké
+	PopularityScore float64          `json:"popularity_score"` // Score de popularité calculé
+	RelevanceScore  float64          `json:"relevance_score"`  // Score de pertinence pour l'utilisateur
+}
+
 // SearchRequest représente une requête de recherche
 type SearchRequest struct {
 	Query        string        `json:"query"`         // Terme de recherche
@@ -73,42 +101,6 @@ type SearchRequest struct {
 	SearchType   string        `json:"search_type"`   // "posts", "users", "discovery"
 }
 
-// SearchResult représente le résultat d'une recherche
-type SearchResult struct {
-	Posts []PostWithDetails `json:"posts"`
-	Users []UserSearchResult `json:"users"`
-	Total int               `json:"total"`
-	HasMore bool            `json:"has_more"`
-}
-
-// PostWithDetails représente un post avec ses détails étendus pour la recherche
-type PostWithDetails struct {
-	Post
-	Author        UserSearchResult `json:"author"`         // Auteur du post
-	Tags          []TagCategory    `json:"tags"`           // Tags associés
-	LikesCount    int64            `json:"likes_count"`    // Nombre de likes
-	CommentsCount int64            `json:"comments_count"` // Nombre de commentaires
-	ViewsCount    int64            `json:"views_count"`    // Nombre de vues
-	IsLiked       bool             `json:"is_liked"`       // Si l'utilisateur actuel a liké
-	PopularityScore float64        `json:"popularity_score"` // Score de popularité calculé
-	RelevanceScore  float64        `json:"relevance_score"`  // Score de pertinence pour l'utilisateur
-}
-
-// UserSearchResult représente un utilisateur dans les résultats de recherche
-type UserSearchResult struct {
-	ID               int64  `json:"id"`
-	Username         string `json:"username"`
-	FirstName        string `json:"first_name"`
-	LastName         string `json:"last_name"`
-	AvatarURL        string `json:"avatar_url"`
-	Bio              string `json:"bio"`
-	Role             Role   `json:"role"`
-	FollowersCount   int64  `json:"followers_count"`
-	PostsCount       int64  `json:"posts_count"`
-	IsFollowing      bool   `json:"is_following"`      // Si l'utilisateur actuel suit cette personne
-	MutualFollowers  int64  `json:"mutual_followers"`  // Nombre d'amis en commun
-}
-
 // DiscoveryRequest représente une requête pour le feed de découverte
 type DiscoveryRequest struct {
 	UserID int64         `json:"user_id"`
@@ -116,6 +108,26 @@ type DiscoveryRequest struct {
 	SortBy SortType      `json:"sort_by"`  // Type de tri
 	Limit  int           `json:"limit"`
 	Offset int           `json:"offset"`
+}
+
+// PostTag représente un tag associé à un post
+type PostTag struct {
+	ID        int64       `json:"id"`
+	PostID    int64       `json:"post_id"`
+	Category  TagCategory `json:"category"`
+	CreatedAt time.Time   `json:"created_at"`
+}
+
+// UserInteraction représente une interaction utilisateur pour l'algorithme de recommandation
+type UserInteraction struct {
+	ID              int64           `json:"id"`
+	UserID          int64           `json:"user_id"`
+	InteractionType InteractionType `json:"interaction_type"`
+	ContentType     string          `json:"content_type"`    // "post", "user", "tag"
+	ContentID       int64           `json:"content_id"`      // ID du post, user ou tag
+	ContentMeta     string          `json:"content_meta"`    // Métadonnées supplémentaires (ex: tag category)
+	Score           float64         `json:"score"`           // Score d'interaction (1.0=like, 2.0=comment, 0.5=view)
+	CreatedAt       time.Time       `json:"created_at"`
 }
 
 // PostMetrics représente les métriques d'un post pour le calcul de popularité
@@ -132,11 +144,11 @@ type PostMetrics struct {
 
 // UserPreferences représente les préférences calculées d'un utilisateur
 type UserPreferences struct {
-	UserID              int64                    `json:"user_id"`
-	PreferredTags       map[TagCategory]float64  `json:"preferred_tags"`        // Score par catégorie de tag
-	PreferredCreators   []int64                  `json:"preferred_creators"`    // IDs des créateurs préférés
-	InteractionHistory  []UserInteraction        `json:"interaction_history"`   // Historique des interactions récentes
-	LastUpdated         time.Time                `json:"last_updated"`
+	UserID             int64                    `json:"user_id"`
+	PreferredTags      map[TagCategory]float64  `json:"preferred_tags"`        // Score par catégorie de tag
+	PreferredCreators  []int64                  `json:"preferred_creators"`    // IDs des créateurs préférés
+	InteractionHistory []UserInteraction        `json:"interaction_history"`   // Historique des interactions récentes
+	LastUpdated        time.Time                `json:"last_updated"`
 }
 
 // TrendingTag représente un tag en tendance
@@ -147,6 +159,8 @@ type TrendingTag struct {
 	TrendingScore float64     `json:"trending_score"`   // Score de tendance calculé
 	Period        string      `json:"period"`           // "24h", "week", "month"
 }
+
+// ===== CONSTRUCTEURS =====
 
 // NewPostTag crée un nouveau tag pour un post
 func NewPostTag(postID int64, category TagCategory) *PostTag {
@@ -177,6 +191,8 @@ func NewPostMetrics(postID int64) *PostMetrics {
 		LastUpdated: time.Now(),
 	}
 }
+
+// ===== MÉTHODES UTILITAIRES POUR LES TAGS =====
 
 // GetTagDisplayName retourne le nom d'affichage d'un tag
 func (tc TagCategory) GetTagDisplayName() string {
@@ -234,6 +250,8 @@ func (tc TagCategory) GetTagEmoji() string {
 	}
 }
 
+// ===== MÉTHODES UTILITAIRES POUR LES MÉTRIQUES =====
+
 // CalculatePopularityScore calcule le score de popularité d'un post
 func (pm *PostMetrics) CalculatePopularityScore() {
 	// Algorithme de scoring : pondération des différentes interactions
@@ -253,4 +271,20 @@ func (pm *PostMetrics) CalculateTrendingScore(hoursAgo float64) {
 	// Score de tendance basé sur la récence des interactions
 	timeFactor := 1.0 / (1.0 + hoursAgo/24.0) // Décroissance sur 24h
 	pm.TrendingScore = pm.PopularityScore * timeFactor
+}
+
+// ===== MÉTHODES UTILITAIRES POUR LES UTILISATEURS =====
+
+// GetDisplayName retourne le nom d'affichage de l'utilisateur
+func (usr *UserSearchResult) GetDisplayName() string {
+	if usr.FullName != "" {
+		return usr.FullName
+	}
+	if usr.FirstName != "" && usr.LastName != "" {
+		return usr.FirstName + " " + usr.LastName
+	}
+	if usr.FirstName != "" {
+		return usr.FirstName
+	}
+	return usr.Username
 }
