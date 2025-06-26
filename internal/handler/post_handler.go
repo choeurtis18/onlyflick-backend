@@ -379,3 +379,24 @@ func ListSubscriberOnlyPostsFromCreator(w http.ResponseWriter, r *http.Request) 
 	log.Printf("[ListSubscriberOnlyPostsFromCreator] %d posts abonnés listés pour le créateur %d", len(posts), creatorID)
 	response.RespondWithJSON(w, http.StatusOK, posts)
 }
+
+func GetRecommendedPosts(w http.ResponseWriter, r *http.Request) {
+	log.Println("[GetRecommendedPosts] Handler appelé")
+
+	userVal := r.Context().Value(middleware.ContextUserIDKey)
+	userID, ok := userVal.(int64)
+	if !ok {
+		response.RespondWithError(w, http.StatusUnauthorized, "Utilisateur non autorisé")
+		return
+	}
+
+	posts, err := repository.ListPostsRecommendedForUser(userID)
+	if err != nil {
+		response.RespondWithError(w, http.StatusInternalServerError, "Impossible de récupérer les posts recommandés")
+		log.Printf("[GetRecommendedPosts] Erreur pour l'utilisateur %d : %v", userID, err)
+		return
+	}
+
+	log.Printf("[GetRecommendedPosts] %d posts recommandés trouvés pour l'utilisateur %d", len(posts), userID)
+	response.RespondWithJSON(w, http.StatusOK, posts)
+}
