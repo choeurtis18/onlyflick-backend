@@ -17,16 +17,19 @@ const (
 
 // Post représente une publication effectuée par un utilisateur.
 type Post struct {
-	ID          int64      `json:"id"`                // Identifiant unique du post
-	UserID      int64      `json:"user_id"`           // Identifiant de l'utilisateur auteur
-	Title       string     `json:"title"`             // Titre du post
-	Description string     `json:"description"`       // Description du post
-	MediaURL    string     `json:"media_url"`         // URL du média associé
-	FileID      string     `json:"file_id,omitempty"` // Identifiant du fichier (optionnel)
-	Visibility  Visibility `json:"visibility"`        // Visibilité du post
-	CreatedAt   time.Time  `json:"created_at"`        // Date de création
-	UpdatedAt   time.Time  `json:"updated_at"`        // Date de dernière modification
+	ID          int64      `json:"id"`
+	UserID      int64      `json:"user_id"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	MediaURL    string     `json:"media_url"`
+	FileID      string     `json:"file_id,omitempty"`
+	Visibility  Visibility `json:"visibility"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	ImageURL    string     `json:"image_url,omitempty"`
+	VideoURL    string     `json:"video_url,omitempty"`
 }
+
 
 // NewPost crée un nouveau post et log l'opération.
 func NewPost(userID int64, title, description, mediaURL, fileID string, visibility Visibility) *Post {

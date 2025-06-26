@@ -89,6 +89,7 @@ func SetupRoutes() http.Handler {
 	// Posts publics et abonnés
 	// ========================
 	r.Get("/posts/all", handler.ListAllVisiblePosts)
+	r.With(middleware.JWTMiddleware).Get("/posts/recommended", handler.GetRecommendedPosts)
 	r.With(middleware.JWTMiddleware).Get("/posts/from/{creator_id}", handler.ListPostsFromCreator)
 	r.With(middleware.JWTMiddleware).Get("/posts/from/{creator_id}/subscriber-only", handler.ListSubscriberOnlyPostsFromCreator)
 

@@ -7,6 +7,7 @@ import (
 	"log"
 	"onlyflick/internal/database"
 	"onlyflick/internal/domain"
+	"database/sql"
 )
 
 // =====================
@@ -278,3 +279,104 @@ func ListSubscriberOnlyPosts(creatorID int64) ([]*domain.Post, error) {
 	log.Printf("[PostRepo] %d posts 'subscriber only' trouvés pour le créateur ID %d", len(posts), creatorID)
 	return posts, nil
 }
+
+
+func ListPostsRecommendedForUser(userID int64) ([]*domain.Post, error) {
+	query := `
+		WITH liked_creators AS (
+			SELECT DISTINCT p.user_id
+			FROM likes l
+			JOIN posts p ON l.post_id = p.id
+			WHERE l.user_id = $1
+		),
+		liked_tags AS (
+			SELECT DISTINCT pt.category
+			FROM likes l
+			JOIN post_tags pt ON pt.post_id = l.post_id
+			WHERE l.user_id = $1
+		),
+		seen_posts AS (
+			SELECT content_id FROM user_interactions
+			WHERE user_id = $1 AND content_type = 'post'
+			UNION
+			SELECT post_id FROM likes WHERE user_id = $1
+		),
+		recommended_from_creators AS (
+			SELECT p.* FROM posts p
+			WHERE p.user_id IN (SELECT user_id FROM liked_creators)
+			AND p.id NOT IN (SELECT content_id FROM seen_posts)
+			AND p.visibility = 'public'
+		),
+		recommended_from_tags AS (
+			SELECT p.* FROM posts p
+			JOIN post_tags pt ON p.id = pt.post_id
+			WHERE pt.category IN (SELECT category FROM liked_tags)
+			AND p.id NOT IN (SELECT content_id FROM seen_posts)
+			AND p.visibility = 'public'
+		),
+		popular_unseen_posts AS (
+			SELECT p.* FROM posts p
+			JOIN post_metrics pm ON p.id = pm.post_id
+			WHERE p.id NOT IN (SELECT content_id FROM seen_posts)
+			AND p.visibility = 'public'
+			ORDER BY pm.popularity_score DESC
+			LIMIT 20
+		),
+		all_recommended AS (
+			SELECT * FROM recommended_from_creators
+			UNION
+			SELECT * FROM recommended_from_tags
+			UNION
+			SELECT * FROM popular_unseen_posts
+		)
+		SELECT DISTINCT id, user_id, title, description, media_url,
+		                file_id, visibility, created_at, updated_at,
+		                image_url, video_url
+		FROM all_recommended
+		ORDER BY created_at DESC
+		LIMIT 30;
+	`
+
+	rows, err := database.DB.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []*domain.Post
+	for rows.Next() {
+		var post domain.Post
+		var fileID, imageURL, videoURL sql.NullString
+
+		err := rows.Scan(
+			&post.ID,
+			&post.UserID,
+			&post.Title,
+			&post.Description,
+			&post.MediaURL,
+			&fileID,
+			&post.Visibility,
+			&post.CreatedAt,
+			&post.UpdatedAt,
+			&imageURL,
+			&videoURL,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if fileID.Valid {
+			post.FileID = fileID.String
+		}
+		if imageURL.Valid {
+			post.ImageURL = imageURL.String
+		}
+		if videoURL.Valid {
+			post.VideoURL = videoURL.String
+		}
+
+		posts = append(posts, &post)
+	}
+	return posts, nil
+}
+
