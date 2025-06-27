@@ -1,0 +1,203 @@
+Table "users" {
+  "id" int4 [pk, not null, increment]
+  "first_name" text [not null]
+  "last_name" text [not null]
+  "email" text [unique, not null]
+  "password" text [not null]
+  "role" varchar(20) [not null, default: 'subscriber']
+  "created_at" timestamptz [not null, default: `now()`]
+  "avatar_url" varchar(255)
+  "bio" text
+  "updated_at" timestamp [default: `now()`]
+  "username" varchar(50) [not null]
+
+  Indexes {
+    role [type: btree, name: "idx_users_role"]
+    username [type: btree, name: "idx_users_username"]
+  }
+}
+
+Table "creator_requests" {
+  "id" int4 [pk, not null, increment]
+  "user_id" int8 [unique, not null]
+  "status" varchar(20) [not null, default: 'pending']
+  "created_at" timestamp [default: `CURRENT_TIMESTAMP`]
+  "updated_at" timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table "posts" {
+  "id" int4 [pk, not null, increment]
+  "user_id" int8 [not null]
+  "title" text [not null]
+  "description" text
+  "media_url" text [not null]
+  "file_id" text
+  "visibility" varchar(20) [not null, default: 'public']
+  "created_at" timestamptz [not null, default: `now()`]
+  "updated_at" timestamptz [not null, default: `now()`]
+  "image_url" varchar(255)
+  "video_url" varchar(255)
+
+  Indexes {
+    created_at [type: btree, name: "idx_posts_created_at"]
+    (user_id, visibility) [type: btree, name: "idx_posts_user_visibility"]
+  }
+}
+
+Table "comments" {
+  "id" int4 [pk, not null, increment]
+  "user_id" int8 [not null]
+  "post_id" int8 [not null]
+  "content" text [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+  "updated_at" timestamptz [not null, default: `now()`]
+}
+
+Table "likes" {
+  "user_id" int8 [not null]
+  "post_id" int8 [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (user_id, post_id) [type: btree, name: "likes_pkey"]
+    post_id [type: btree, name: "idx_likes_post"]
+  }
+}
+
+Table "reports" {
+  "id" int4 [pk, not null, increment]
+  "user_id" int8 [not null]
+  "content_type" varchar(20) [not null]
+  "content_id" int8 [not null]
+  "reason" text [not null]
+  "status" varchar(20) [not null, default: 'pending']
+  "created_at" timestamptz [not null, default: `now()`]
+  "updated_at" timestamptz [not null, default: `now()`]
+}
+
+Table "conversations" {
+  "id" int4 [pk, not null, increment]
+  "creator_id" int8 [not null]
+  "subscriber_id" int8 [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (creator_id, subscriber_id) [type: btree, name: "conversations_creator_id_subscriber_id_key"]
+  }
+}
+
+Table "messages" {
+  "id" int4 [pk, not null, increment]
+  "conversation_id" int8 [not null]
+  "sender_id" int8 [not null]
+  "content" text [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+}
+
+Table "subscriptions" {
+  "id" int4 [pk, not null, increment]
+  "subscriber_id" int8 [not null]
+  "creator_id" int8 [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+  "end_at" timestamptz [not null, default: `(now() + '1 mon'::interval)`]
+  "status" bool [not null, default: true]
+
+  Indexes {
+    (subscriber_id, creator_id) [type: btree, name: "subscriptions_subscriber_id_creator_id_key"]
+    creator_id [type: btree, name: "idx_subscriptions_creator"]
+  }
+}
+
+Table "payments" {
+  "id" int4 [pk, not null, increment]
+  "subscription_id" int8 [not null]
+  "stripe_payment_id" text [not null]
+  "payer_id" text [not null]
+  "start_at" timestamptz [not null, default: `now()`]
+  "end_at" timestamptz [not null]
+  "amount" int4 [not null]
+  "status" varchar(20) [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+}
+
+Table "post_tags" {
+  "id" int4 [pk, not null, increment]
+  "post_id" int8 [not null]
+  "category" varchar(50) [not null]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (post_id, category) [type: btree, name: "post_tags_post_id_category_key"]
+    category [type: btree, name: "idx_post_tags_category"]
+    post_id [type: btree, name: "idx_post_tags_post_id"]
+  }
+}
+
+Table "user_interactions" {
+  "id" int4 [pk, not null, increment]
+  "user_id" int8 [not null]
+  "interaction_type" varchar(50) [not null]
+  "content_type" varchar(50) [not null]
+  "content_id" int8 [not null]
+  "content_meta" text [default: '']
+  "score" numeric(5,2) [not null, default: 0.0]
+  "created_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (content_type, content_id) [type: btree, name: "idx_user_interactions_content"]
+    created_at [type: btree, name: "idx_user_interactions_created_at"]
+    interaction_type [type: btree, name: "idx_user_interactions_type"]
+    user_id [type: btree, name: "idx_user_interactions_user_id"]
+  }
+}
+
+Table "post_metrics" {
+  "post_id" int8 [pk, not null]
+  "views_count" int8 [not null, default: 0]
+  "likes_count" int8 [not null, default: 0]
+  "comments_count" int8 [not null, default: 0]
+  "shares_count" int8 [not null, default: 0]
+  "popularity_score" numeric(10,2) [not null, default: 0.0]
+  "trending_score" numeric(10,2) [not null, default: 0.0]
+  "last_updated" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    popularity_score [type: btree, name: "idx_post_metrics_popularity"]
+    trending_score [type: btree, name: "idx_post_metrics_trending"]
+    last_updated [type: btree, name: "idx_post_metrics_updated"]
+  }
+}
+
+Ref "comments_post_id_fkey":"posts"."id" < "comments"."post_id" [delete: cascade]
+
+Ref "comments_user_id_fkey":"users"."id" < "comments"."user_id" [delete: cascade]
+
+Ref "conversations_creator_id_fkey":"users"."id" < "conversations"."creator_id" [delete: cascade]
+
+Ref "conversations_subscriber_id_fkey":"users"."id" < "conversations"."subscriber_id" [delete: cascade]
+
+Ref "creator_requests_user_id_fkey":"users"."id" < "creator_requests"."user_id" [delete: cascade]
+
+Ref "likes_post_id_fkey":"posts"."id" < "likes"."post_id" [delete: cascade]
+
+Ref "likes_user_id_fkey":"users"."id" < "likes"."user_id" [delete: cascade]
+
+Ref "messages_conversation_id_fkey":"conversations"."id" < "messages"."conversation_id" [delete: cascade]
+
+Ref "messages_sender_id_fkey":"users"."id" < "messages"."sender_id" [delete: cascade]
+
+Ref "payments_subscription_id_fkey":"subscriptions"."id" < "payments"."subscription_id" [delete: cascade]
+
+Ref "post_metrics_post_id_fkey":"posts"."id" < "post_metrics"."post_id" [delete: cascade]
+
+Ref "post_tags_post_id_fkey":"posts"."id" < "post_tags"."post_id" [delete: cascade]
+
+Ref "posts_user_id_fkey":"users"."id" < "posts"."user_id" [delete: cascade]
+
+Ref "reports_user_id_fkey":"users"."id" < "reports"."user_id" [delete: cascade]
+
+Ref "subscriptions_creator_id_fkey":"users"."id" < "subscriptions"."creator_id" [delete: cascade]
+
+Ref "subscriptions_subscriber_id_fkey":"users"."id" < "subscriptions"."subscriber_id" [delete: cascade]
+
+Ref "user_interactions_user_id_fkey":"users"."id" < "user_interactions"."user_id" [delete: cascade]

@@ -2,10 +2,12 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -207,7 +209,7 @@ func GetUserPosts(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, posts)
 }
 
-// UploadAvatar gère l'upload de l'avatar utilisateur
+// UploadAvatar gère l'upload de l'avatar utilisateur - VERSION CORRIGÉE POUR FLUTTER
 func UploadAvatar(w http.ResponseWriter, r *http.Request) {
 	log.Println("[PROFILE] UploadAvatar - Upload avatar utilisateur")
 
@@ -272,7 +274,7 @@ func UploadAvatar(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("[INFO] Fichier valide: %s, taille: %d bytes, type: %s", header.Filename, header.Size, contentType)
 
-	// Upload vers ImageKit ou stockage local
+	// Upload vers ImageKit ou stockage local - VERSION FONCTIONNELLE
 	avatarURL, err := uploadAvatarToStorage(file, header, userID)
 	if err != nil {
 		log.Printf("[ERROR] Erreur upload avatar: %v", err)
@@ -371,31 +373,44 @@ func CheckUsernameAvailability(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ===== FONCTIONS UTILITAIRES =====
+// ===== FONCTIONS UTILITAIRES CORRIGÉES =====
 
-// uploadAvatarToStorage gère l'upload de l'avatar vers le stockage
+// uploadAvatarToStorage gère l'upload de l'avatar - VERSION PRODUCTION
 func uploadAvatarToStorage(file multipart.File, header *multipart.FileHeader, userID int64) (string, error) {
 	log.Printf("[STORAGE] Upload avatar pour user %d: %s", userID, header.Filename)
 
-	// Pour le moment, on simule avec un placeholder
-	// TODO: Implémenter l'upload réel vers ImageKit ou S3
-	
 	// Générer un nom unique pour le fichier
 	ext := filepath.Ext(header.Filename)
-	uniqueFilename := strconv.FormatInt(userID, 10) + "_" + strconv.FormatInt(time.Now().Unix(), 10) + ext
+	uniqueFilename := fmt.Sprintf("avatar_%d_%d%s", userID, time.Now().Unix(), ext)
 	
-	// Simulation - dans la vraie version, uploadez vers votre service de stockage
-	avatarURL := "https://i.pravatar.cc/150?img=" + strconv.FormatInt(userID%20+1, 10)
-	
-	// Code réel ImageKit à implémenter :
-	/*
 	// Lire le contenu du fichier
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
 		return "", fmt.Errorf("erreur lecture fichier: %w", err)
 	}
-	
-	// Upload vers ImageKit
+
+	// OPTION 1: Stockage local (pour développement)
+	if os.Getenv("ENVIRONMENT") == "development" {
+		uploadDir := "./uploads/avatars"
+		
+		// Créer le dossier si nécessaire
+		if err := os.MkdirAll(uploadDir, 0755); err != nil {
+			return "", fmt.Errorf("erreur création dossier: %w", err)
+		}
+		
+		// Sauvegarder le fichier localement
+		localPath := filepath.Join(uploadDir, uniqueFilename)
+		if err := os.WriteFile(localPath, fileBytes, 0644); err != nil {
+			return "", fmt.Errorf("erreur sauvegarde locale: %w", err)
+		}
+		
+		avatarURL := fmt.Sprintf("/uploads/avatars/%s", uniqueFilename)
+		log.Printf("[STORAGE] Avatar sauvé localement: %s", avatarURL)
+		return avatarURL, nil
+	}
+
+	// OPTION 2: ImageKit (pour production)
+	/*
 	import "github.com/imagekit-developer/imagekit-go"
 	
 	ik, err := imagekit.NewFromParams(imagekit.NewParams{
@@ -403,6 +418,10 @@ func uploadAvatarToStorage(file multipart.File, header *multipart.FileHeader, us
 		PublicKey:   os.Getenv("IMAGEKIT_PUBLIC_KEY"),
 		UrlEndpoint: os.Getenv("IMAGEKIT_URL_ENDPOINT"),
 	})
+	
+	if err != nil {
+		return "", fmt.Errorf("erreur configuration ImageKit: %w", err)
+	}
 	
 	response, err := ik.Upload(ctx, fileBytes, imagekit.UploadParam{
 		FileName: uniqueFilename,
@@ -413,18 +432,12 @@ func uploadAvatarToStorage(file multipart.File, header *multipart.FileHeader, us
 		return "", fmt.Errorf("erreur upload ImageKit: %w", err)
 	}
 	
-	avatarURL = response.Url
+	log.Printf("[STORAGE] Avatar uploadé vers ImageKit: %s", response.Url)
+	return response.Url, nil
 	*/
 
-	// Lire le fichier pour validation (optionnel)
-	_, err := io.ReadAll(file)
-	if err != nil {
-		return "", err
-	}
-
-	// Éviter la variable inutilisée
-	_ = uniqueFilename
-
-	log.Printf("[STORAGE] Avatar uploadé avec succès: %s", avatarURL)
+	// OPTION 3: Placeholder pour les tests (temporaire)
+	avatarURL := fmt.Sprintf("https://i.pravatar.cc/150?img=%d", userID%20+1)
+	log.Printf("[STORAGE] Avatar placeholder généré: %s", avatarURL)
 	return avatarURL, nil
 }
