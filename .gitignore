@@ -50,3 +50,6 @@ Thumbs.db
 
 # Dependency directories (optional, if using vendoring)
 vendor/
+
+
+neon_schema.sql
