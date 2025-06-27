@@ -42,36 +42,8 @@ func CreatePost(post *domain.Post) error {
 	return nil
 }
 
-// GetPostByID récupère un post spécifique par son ID.
-func GetPostByID(postID int64) (*domain.Post, error) {
-	log.Printf("[PostRepo] Récupération du post ID: %d", postID)
 
-	query := `
-		SELECT id, user_id, title, description, media_url, visibility, created_at, updated_at
-		FROM posts
-		WHERE id = $1
-	`
-	var post domain.Post
-	err := database.DB.QueryRow(query, postID).Scan(
-		&post.ID,
-		&post.UserID,
-		&post.Title,
-		&post.Description,
-		&post.MediaURL,
-		&post.Visibility,
-		&post.CreatedAt,
-		&post.UpdatedAt,
-	)
-	if err != nil {
-		log.Printf("[PostRepo][ERREUR] Impossible de récupérer le post ID %d : %v", postID, err)
-		return nil, fmt.Errorf("échec de la récupération du post : %w", err)
-	}
-
-	log.Printf("[PostRepo] Post récupéré : %s (ID: %d)", post.Title, post.ID)
-	return &post, nil
-}
-
-// ListPostsByUser retourne tous les posts d’un utilisateur donné.
+// ListPostsByUser retourne tous les posts d'un utilisateur donné.
 func ListPostsByUser(userID int64) ([]domain.Post, error) {
 	log.Printf("[PostRepo] Liste des posts pour l'utilisateur ID: %d", userID)
 
@@ -168,23 +140,86 @@ func UpdatePost(post *domain.Post) error {
 	return nil
 }
 
-// ListVisiblePosts retourne les posts visibles selon le rôle de l'utilisateur.
+
+// ===== FONCTION PRINCIPALE CORRIGÉE =====
+// ListVisiblePosts retourne les posts visibles selon le rôle avec informations utilisateur complètes.
 func ListVisiblePosts(userRole string) ([]domain.Post, error) {
 	log.Printf("[PostRepo] Listing des posts visibles pour le rôle : %s", userRole)
 
+	// ===== NOUVELLE REQUÊTE AVEC JOIN USERS =====
 	var query string
 	if userRole == "subscriber" || userRole == "creator" || userRole == "admin" {
 		query = `
-			SELECT id, user_id, title, description, media_url, visibility, created_at, updated_at
-			FROM posts
-			ORDER BY created_at DESC
+			SELECT 
+				p.id, 
+				p.user_id, 
+				p.title, 
+				p.description, 
+				p.media_url, 
+				COALESCE(p.file_id, '') as file_id,
+				p.visibility, 
+				p.created_at, 
+				p.updated_at,
+				-- Informations utilisateur depuis la table users
+				COALESCE(u.username, '') as username,
+				COALESCE(u.first_name, '') as first_name,
+				COALESCE(u.last_name, '') as last_name,
+				COALESCE(u.avatar_url, '') as avatar_url,
+				COALESCE(u.bio, '') as bio,
+				COALESCE(u.role, 'subscriber') as role,
+				-- Compteurs
+				COALESCE(likes_count.count, 0) as likes_count,
+				COALESCE(comments_count.count, 0) as comments_count
+			FROM posts p
+			LEFT JOIN users u ON p.user_id = u.id
+			LEFT JOIN (
+				SELECT post_id, COUNT(*) as count 
+				FROM likes 
+				GROUP BY post_id
+			) likes_count ON p.id = likes_count.post_id
+			LEFT JOIN (
+				SELECT post_id, COUNT(*) as count 
+				FROM comments 
+				GROUP BY post_id
+			) comments_count ON p.id = comments_count.post_id
+			ORDER BY p.created_at DESC
 		`
 	} else {
 		query = `
-			SELECT id, user_id, title, description, media_url, visibility, created_at, updated_at
-			FROM posts
-			WHERE visibility = 'public'
-			ORDER BY created_at DESC
+			SELECT 
+				p.id, 
+				p.user_id, 
+				p.title, 
+				p.description, 
+				p.media_url, 
+				COALESCE(p.file_id, '') as file_id,
+				p.visibility, 
+				p.created_at, 
+				p.updated_at,
+				-- Informations utilisateur depuis la table users
+				COALESCE(u.username, '') as username,
+				COALESCE(u.first_name, '') as first_name,
+				COALESCE(u.last_name, '') as last_name,
+				COALESCE(u.avatar_url, '') as avatar_url,
+				COALESCE(u.bio, '') as bio,
+				COALESCE(u.role, 'subscriber') as role,
+				-- Compteurs
+				COALESCE(likes_count.count, 0) as likes_count,
+				COALESCE(comments_count.count, 0) as comments_count
+			FROM posts p
+			LEFT JOIN users u ON p.user_id = u.id
+			LEFT JOIN (
+				SELECT post_id, COUNT(*) as count 
+				FROM likes 
+				GROUP BY post_id
+			) likes_count ON p.id = likes_count.post_id
+			LEFT JOIN (
+				SELECT post_id, COUNT(*) as count 
+				FROM comments 
+				GROUP BY post_id
+			) comments_count ON p.id = comments_count.post_id
+			WHERE p.visibility = 'public'
+			ORDER BY p.created_at DESC
 		`
 	}
 
@@ -198,19 +233,139 @@ func ListVisiblePosts(userRole string) ([]domain.Post, error) {
 	var posts []domain.Post
 	for rows.Next() {
 		var post domain.Post
+		// ===== VARIABLES POUR LES DONNÉES UTILISATEUR =====
+		var username, firstName, lastName, avatarUrl, bio, role string
+		var likesCount, commentsCount int
+		
+		// ===== SCAN AVEC GESTION DES NULL VALUES =====
 		if err := rows.Scan(
-			&post.ID, &post.UserID, &post.Title, &post.Description,
-			&post.MediaURL, &post.Visibility, &post.CreatedAt, &post.UpdatedAt,
+			&post.ID, 
+			&post.UserID, 
+			&post.Title, 
+			&post.Description,
+			&post.MediaURL, 
+			&post.FileID,        // ===== MAINTENANT COALESCE EN SQL =====
+			&post.Visibility, 
+			&post.CreatedAt, 
+			&post.UpdatedAt,
+			// Données utilisateur
+			&username,
+			&firstName,
+			&lastName,
+			&avatarUrl,
+			&bio,
+			&role,
+			// Compteurs
+			&likesCount,
+			&commentsCount,
 		); err != nil {
 			log.Printf("[PostRepo][ERREUR] Scan du post visible échoué : %v", err)
 			return nil, fmt.Errorf("échec du scan du post : %w", err)
 		}
+
+		// ===== AJOUT DES DONNÉES UTILISATEUR AU POST =====
+		post.Username = username
+		post.FirstName = firstName
+		post.LastName = lastName
+		post.AvatarUrl = avatarUrl
+		post.Bio = bio
+		post.Role = role
+		post.LikesCount = likesCount
+		post.CommentsCount = commentsCount
+
 		posts = append(posts, post)
 	}
 
-	log.Printf("[PostRepo] %d posts visibles trouvés", len(posts))
+	log.Printf("[PostRepo] %d posts visibles trouvés avec informations utilisateur", len(posts))
 	return posts, nil
 }
+
+// ===== FONCTION GetPostByID ÉGALEMENT CORRIGÉE =====
+func GetPostByID(postID int64) (*domain.Post, error) {
+	log.Printf("[PostRepo] Récupération du post ID: %d", postID)
+
+	query := `
+		SELECT 
+			p.id, 
+			p.user_id, 
+			p.title, 
+			p.description, 
+			p.media_url, 
+			COALESCE(p.file_id, '') as file_id,
+			p.visibility, 
+			p.created_at, 
+			p.updated_at,
+			-- Informations utilisateur
+			COALESCE(u.username, '') as username,
+			COALESCE(u.first_name, '') as first_name,
+			COALESCE(u.last_name, '') as last_name,
+			COALESCE(u.avatar_url, '') as avatar_url,
+			COALESCE(u.bio, '') as bio,
+			COALESCE(u.role, 'subscriber') as role,
+			-- Compteurs
+			COALESCE(likes_count.count, 0) as likes_count,
+			COALESCE(comments_count.count, 0) as comments_count
+		FROM posts p
+		LEFT JOIN users u ON p.user_id = u.id
+		LEFT JOIN (
+			SELECT post_id, COUNT(*) as count 
+			FROM likes 
+			GROUP BY post_id
+		) likes_count ON p.id = likes_count.post_id
+		LEFT JOIN (
+			SELECT post_id, COUNT(*) as count 
+			FROM comments 
+			GROUP BY post_id
+		) comments_count ON p.id = comments_count.post_id
+		WHERE p.id = $1
+	`
+	
+	var post domain.Post
+	var username, firstName, lastName, avatarUrl, bio, role string
+	var likesCount, commentsCount int
+	
+	err := database.DB.QueryRow(query, postID).Scan(
+		&post.ID,
+		&post.UserID,
+		&post.Title,
+		&post.Description,
+		&post.MediaURL,
+		&post.FileID,        // ===== MAINTENANT COALESCE EN SQL =====
+		&post.Visibility,
+		&post.CreatedAt,
+		&post.UpdatedAt,
+		// Données utilisateur
+		&username,
+		&firstName,
+		&lastName,
+		&avatarUrl,
+		&bio,
+		&role,
+		// Compteurs
+		&likesCount,
+		&commentsCount,
+	)
+	if err != nil {
+		log.Printf("[PostRepo][ERREUR] Impossible de récupérer le post ID %d : %v", postID, err)
+		return nil, fmt.Errorf("échec de la récupération du post : %w", err)
+	}
+
+	// Ajout des données utilisateur
+	post.Username = username
+	post.FirstName = firstName
+	post.LastName = lastName
+	post.AvatarUrl = avatarUrl
+	post.Bio = bio
+	post.Role = role
+	post.LikesCount = likesCount
+	post.CommentsCount = commentsCount
+
+	log.Printf("[PostRepo] Post récupéré : %s (ID: %d) par %s", post.Title, post.ID, post.Username)
+	return &post, nil
+}
+
+
+
 
 // ListPostsFromCreator retourne les posts d'un créateur, avec option pour inclure/exclure les posts privés.
 func ListPostsFromCreator(creatorID int64, includePrivate bool) ([]*domain.Post, error) {
@@ -280,7 +435,7 @@ func ListSubscriberOnlyPosts(creatorID int64) ([]*domain.Post, error) {
 	return posts, nil
 }
 
-
+// ListPostsRecommendedForUser retourne des posts recommandés pour un utilisateur.
 func ListPostsRecommendedForUser(userID int64) ([]*domain.Post, error) {
 	query := `
 		WITH liked_creators AS (
@@ -379,4 +534,3 @@ func ListPostsRecommendedForUser(userID int64) ([]*domain.Post, error) {
 	}
 	return posts, nil
 }
-
