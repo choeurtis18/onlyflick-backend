@@ -8,17 +8,18 @@ import "time"
 type TagCategory string
 
 const (
-	TagArt       TagCategory = "art"       // 🎨 Peinture, sculpture, street art
-	TagMusic     TagCategory = "music"     // 🎵 Concerts, instruments, compositions  
-	TagSport     TagCategory = "sport"     // ⚽ Fitness, compétitions, aventure
-	TagCinema    TagCategory = "cinema"    // 🎬 Films, séries, critiques
-	TagTech      TagCategory = "tech"      // 💻 Gadgets, innovations, dev
-	TagFashion   TagCategory = "fashion"   // 👗 Style, tendances, looks
-	TagFood      TagCategory = "food"      // 🍳 Recettes, restaurants, cuisine
-	TagTravel    TagCategory = "travel"    // ✈️ Destinations, culture, aventure
-	TagGaming    TagCategory = "gaming"    // 🎮 Jeux, esport, streaming
-	TagLifestyle TagCategory = "lifestyle" // 🏗️ Déco, architecture, bien-être
+	TagYoga         TagCategory = "yoga"         // 🧘 Pratique du yoga
+	TagWellness     TagCategory = "wellness"     // 🌿 Bien-être, équilibre
+	TagBeaute       TagCategory = "beaute"       // 💄 Beauté, soins, maquillage
+	TagDiy          TagCategory = "diy"          // 🛠️ Bricolage, fait-main
+	TagArt          TagCategory = "art"          // 🎨 Peinture, sculpture, création artistique
+	TagMusique      TagCategory = "musique"      // 🎵 Musique, instruments, chant
+	TagCuisine      TagCategory = "cuisine"      // 🍽️ Cuisine, recettes, plats
+	TagMusculation  TagCategory = "musculation"  // 🏋️ Musculation, entraînement
+	TagMode         TagCategory = "mode"         // 👗 Mode, vêtements, style
+	TagFitness      TagCategory = "fitness"      // 💪 Fitness, entraînement physique
 )
+
 
 // SortType représente les différents types de tri pour les posts
 type SortType string
@@ -195,28 +196,29 @@ func NewPostMetrics(postID int64) *PostMetrics {
 // ===== MÉTHODES UTILITAIRES POUR LES TAGS =====
 
 // GetTagDisplayName retourne le nom d'affichage d'un tag
+// GetTagDisplayName retourne le nom d'affichage d'un tag
 func (tc TagCategory) GetTagDisplayName() string {
 	switch tc {
+	case TagYoga:
+		return "Yoga"
+	case TagWellness:
+		return "Wellness"
+	case TagBeaute:
+		return "Beauté"
+	case TagDiy:
+		return "DIY"
 	case TagArt:
 		return "Art"
-	case TagMusic:
+	case TagMusique:
 		return "Musique"
-	case TagSport:
-		return "Sport"
-	case TagCinema:
-		return "Cinéma"
-	case TagTech:
-		return "Tech"
-	case TagFashion:
-		return "Mode"
-	case TagFood:
+	case TagCuisine:
 		return "Cuisine"
-	case TagTravel:
-		return "Voyage"
-	case TagGaming:
-		return "Gaming"
-	case TagLifestyle:
-		return "Lifestyle"
+	case TagMusculation:
+		return "Musculation"
+	case TagMode:
+		return "Mode"
+	case TagFitness:
+		return "Fitness"
 	default:
 		return string(tc)
 	}
@@ -225,30 +227,31 @@ func (tc TagCategory) GetTagDisplayName() string {
 // GetTagEmoji retourne l'emoji associé à un tag
 func (tc TagCategory) GetTagEmoji() string {
 	switch tc {
+	case TagYoga:
+		return "🧘"
+	case TagWellness:
+		return "🌿"
+	case TagBeaute:
+		return "💄"
+	case TagDiy:
+		return "🛠️"
 	case TagArt:
 		return "🎨"
-	case TagMusic:
+	case TagMusique:
 		return "🎵"
-	case TagSport:
-		return "⚽"
-	case TagCinema:
-		return "🎬"
-	case TagTech:
-		return "💻"
-	case TagFashion:
+	case TagCuisine:
+		return "🍽️"
+	case TagMusculation:
+		return "🏋️"
+	case TagMode:
 		return "👗"
-	case TagFood:
-		return "🍳"
-	case TagTravel:
-		return "✈️"
-	case TagGaming:
-		return "🎮"
-	case TagLifestyle:
-		return "🏗️"
+	case TagFitness:
+		return "💪"
 	default:
 		return "🏷️"
 	}
 }
+
 
 // ===== MÉTHODES UTILITAIRES POUR LES MÉTRIQUES =====
 

@@ -130,6 +130,9 @@ func SetupRoutes() http.Handler {
 		
 		// Statistiques de recherche
 		search.Get("/stats", handler.GetSearchStatsHandler)
+
+		search.Get("/posts", handler.SearchPostsHandler)
+
 	})
 
 	// ========================
