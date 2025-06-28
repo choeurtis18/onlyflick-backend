@@ -135,6 +135,15 @@ func SetupRoutes() http.Handler {
 
 	})
 
+
+	// ========================
+	// 🏷️ TAGS ET CATÉGORIES
+	// ========================
+	r.Route("/tags", func(tags chi.Router) {
+		// Endpoint public pour récupérer tous les tags disponibles
+		tags.Get("/available", handler.GetAvailableTagsHandler)
+	})
+
 	// ========================
 	// 📊 TRACKING DES INTERACTIONS
 	// ========================

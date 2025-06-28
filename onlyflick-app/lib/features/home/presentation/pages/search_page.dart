@@ -1,10 +1,11 @@
-// lib/features/search/presentation/pages/search_page.dart
+// lib/features/home/presentation/pages/search_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/models/search_models.dart';
 import '../../../../core/providers/search_provider.dart';
+import '../../../../core/services/tags_service.dart';
 import '../widgets/recommended_posts_section.dart';
 import '../widgets/tags_filter_widget.dart';
 import '../widgets/search_suggestions_widget.dart';
@@ -27,26 +28,18 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
   late AnimationController _backgroundAnimationController;
   late Animation<double> _backgroundAnimation;
 
-  // Variables pour les tags
+  // Variables pour les tags - maintenant chargés dynamiquement
   String _selectedTag = 'Tous';
-  final List<String> _tags = [
-    'Tous',
-    'Photography',
-    'Art', 
-    'Music',
-    'Fitness',
-    'Travel',
-    'Food',
-    'Fashion',
-    'Design',
-    'Tech'
-  ];
+  List<String> _tags = ['Tous']; // Commencer avec "Tous" par défaut
+  bool _isLoadingTags = true;
+  bool _hasTagsError = false;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchTextChanged);
     _setupScrollListener();
+    _loadAvailableTags(); // Charger les tags depuis l'API
     
     // Animation pour l'arrière-plan
     _backgroundAnimationController = AnimationController(
@@ -55,11 +48,51 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
     );
     _backgroundAnimation = Tween<double>(
       begin: 1.0,
-      end: 0.6, // Plus visible que 0.3
+      end: 0.6,
     ).animate(CurvedAnimation(
       parent: _backgroundAnimationController,
       curve: Curves.easeInOut,
     ));
+  }
+
+  // Charge les tags disponibles depuis l'API
+  Future<void> _loadAvailableTags() async {
+    try {
+      setState(() {
+        _isLoadingTags = true;
+        _hasTagsError = false;
+      });
+
+      final tags = await TagsService.getAvailableTags();
+      
+      if (mounted) {
+        setState(() {
+          _tags = tags;
+          _isLoadingTags = false;
+          _hasTagsError = false;
+        });
+        
+        debugPrint('✅ Tags chargés: $_tags');
+      }
+    } catch (e) {
+      debugPrint('❌ Erreur chargement tags: $e');
+      
+      if (mounted) {
+        setState(() {
+          _isLoadingTags = false;
+          _hasTagsError = true;
+          // Garder les tags par défaut en cas d'erreur
+          _tags = [
+            'Tous',
+            'Art',
+            'Fitness',
+            'Cuisine',
+            'Mode',
+            'Musique'
+          ];
+        });
+      }
+    }
   }
 
   void _setupScrollListener() {
@@ -84,7 +117,7 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
       provider.searchUsers(query).then((_) {
         setState(() {
           _suggestions = provider.searchResult.users;
-          _showSuggestions = true; // Toujours afficher la dropdown, même si vide
+          _showSuggestions = true;
         });
         _backgroundAnimationController.forward();
       });
@@ -96,18 +129,22 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
   }
 
   void _onTagSelected(String tag) async {
-  setState(() {
-    _selectedTag = tag;
-  });
+    setState(() {
+      _selectedTag = tag;
+    });
 
-  final provider = context.read<SearchProvider>();
-  final selectedTagParam = tag.toLowerCase() == 'tous' ? null : tag.toLowerCase();
+    final provider = context.read<SearchProvider>();
+    
+    // Convertir le nom d'affichage en clé backend
+    final tagKey = TagsService.getTagKey(tag);
+    
+    // Utiliser la clé backend pour la recherche
+    await provider.searchPosts(
+      tags: tagKey == 'tous' ? [] : [tagKey],
+    );
 
-  await provider.searchPosts(
-    tags: selectedTagParam != null ? [selectedTagParam] : [],
-  );
-}
-
+    debugPrint('Tag sélectionné: $tag -> clé backend: $tagKey');
+  }
 
   void _hideSuggestions() {
     if (_showSuggestions) {
@@ -134,8 +171,6 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
     
     _searchFocusNode.unfocus();
     _hideSuggestions();
-    
-    // Ne pas refaire une recherche, les suggestions ont déjà été chargées
   }
 
   void _clearSearch() {
@@ -174,11 +209,7 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
                     child: Column(
                       children: [
                         _buildSearchSection(),
-                        TagsFilterWidget(
-                          tags: _tags,
-                          selectedTag: _selectedTag,
-                          onTagSelected: _onTagSelected,
-                        ),
+                        _buildTagsSection(),
                         Expanded(child: _buildContent()),
                       ],
                     ),
@@ -190,7 +221,7 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
             // Overlay des suggestions
             if (_showSuggestions) ...[
               Positioned(
-                top: 80, // Légèrement plus bas pour éviter le chevauchement
+                top: 80,
                 left: 0,
                 right: 0,
                 bottom: 0,
@@ -199,7 +230,7 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
                         suggestions: _suggestions,
                         onUserTap: _onUserTap,
                         onDismiss: _hideSuggestions,
-                        maxHeight: MediaQuery.of(context).size.height * 0.5, // Un peu moins haut
+                        maxHeight: MediaQuery.of(context).size.height * 0.5,
                       )
                     : NoResultsSuggestionWidget(
                         query: _searchController.text,
@@ -250,10 +281,75 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
     );
   }
 
-  // Contenu principal : toujours afficher les posts recommandés
+  Widget _buildTagsSection() {
+    // Section des tags avec gestion du chargement
+    if (_isLoadingTags && _tags.length == 1) {
+      return Container(
+        height: 60,
+        child: const Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        // Afficher les tags même pendant le chargement si on a plus que "Tous"
+        if (_tags.length > 1)
+          TagsFilterWidget(
+            tags: _tags,
+            selectedTag: _selectedTag,
+            onTagSelected: _onTagSelected,
+          ),
+        
+        // Message d'erreur pour les tags
+        if (_hasTagsError)
+          Container(
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.warning, size: 16, color: Colors.orange[600]),
+                const SizedBox(width: 8),
+                Text(
+                  'Erreur de chargement des catégories',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.orange[600],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: _loadAvailableTags,
+                  child: Text(
+                    'Réessayer',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.blue[600],
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  // Contenu principal : afficher les posts recommandés avec le tag sélectionné
   Widget _buildContent() {
-    return const SingleChildScrollView(
-      child: RecommendedPostsSection(),
+    return SingleChildScrollView(
+      child: RecommendedPostsSection(
+        selectedTag: _selectedTag,
+      ),
     );
   }
 
@@ -277,6 +373,60 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
           borderRadius: BorderRadius.circular(8),
         ),
         duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+}
+
+// Widget pour les suggestions vides (si vous ne l'avez pas déjà)
+class NoResultsSuggestionWidget extends StatelessWidget {
+  final String query;
+  final VoidCallback onDismiss;
+
+  const NoResultsSuggestionWidget({
+    super.key,
+    required this.query,
+    required this.onDismiss,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onDismiss,
+      child: Container(
+        color: Colors.black54,
+        child: Center(
+          child: Container(
+            margin: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.search_off, size: 48, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                Text(
+                  'Aucun résultat pour "$query"',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Essayez avec un autre terme de recherche',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

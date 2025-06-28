@@ -44,65 +44,148 @@ class _RecommendedPostsSectionState extends State<RecommendedPostsSection> {
       _loadPosts(resetList: true);
     }
   }
-
-  Future<void> _loadPosts({bool resetList = false, bool loadMore = false}) async {
-    if (loadMore && _isLoadingMore) return;
-    
-    try {
-      if (resetList) {
-        setState(() {
-          _isLoading = true;
-          _hasError = false;
-          _currentPage = 0;
-        });
-      } else if (loadMore) {
-        setState(() {
-          _isLoadingMore = true;
-        });
-      }
-
-      final response = await TagsService.getPostsByTag(
-        widget.selectedTag,
-        limit: _pageSize,
-        offset: resetList ? 0 : (_currentPage + 1) * _pageSize,
-      );
-
-      if (response['posts'] != null) {
-        // Convertir les Map en objets Post
-        List<Post> newPosts = (response['posts'] as List).map((postData) {
-          return Post.fromJson(Map<String, dynamic>.from(postData));
-        }).toList();
-
-        setState(() {
-          if (resetList) {
-            _posts = newPosts;
-            _currentPage = 0;
-          } else {
-            _posts.addAll(newPosts);
-            _currentPage++;
-          }
-          
-          _hasMorePosts = response['has_more'] ?? false;
-          _isLoading = false;
-          _isLoadingMore = false;
-          _hasError = false;
-        });
-
-        print('Posts chargés: ${newPosts.length} (total: ${_posts.length})');
-      }
-    } catch (e) {
-      print('Erreur chargement posts: $e');
+Future<void> _loadPosts({bool resetList = false, bool loadMore = false}) async {
+  if (loadMore && _isLoadingMore) return;
+  
+  try {
+    if (resetList) {
       setState(() {
+        _isLoading = true;
+        _hasError = false;
+        _currentPage = 0;
+      });
+    } else if (loadMore) {
+      setState(() {
+        _isLoadingMore = true;
+      });
+    }
+
+    debugPrint('🔍 Chargement posts pour tag: ${widget.selectedTag}');
+
+    final response = await TagsService.getPostsByTag(
+      widget.selectedTag,
+      limit: _pageSize,
+      offset: resetList ? 0 : (_currentPage + 1) * _pageSize,
+    );
+
+    if (response['posts'] != null) {
+      // Convertir les Map en objets Post
+      List<Post> newPosts = (response['posts'] as List).map((postData) {
+        return Post.fromJson(Map<String, dynamic>.from(postData));
+      }).toList();
+
+      setState(() {
+        if (resetList) {
+          _posts = newPosts;
+          _currentPage = 0;
+        } else {
+          _posts.addAll(newPosts);
+          _currentPage++;
+        }
+        
+        _hasMorePosts = response['has_more'] ?? false;
         _isLoading = false;
         _isLoadingMore = false;
-        _hasError = true;
-        _errorMessage = 'Erreur de chargement des posts';
+        _hasError = false;
+      });
+
+      debugPrint('✅ Posts chargés: ${newPosts.length} (total: ${_posts.length})');
+    } else {
+      // Gérer le cas où 'posts' est null
+      debugPrint('⚠️ Réponse sans posts pour tag: ${widget.selectedTag}');
+      setState(() {
         if (resetList) {
           _posts = [];
         }
+        _isLoading = false;
+        _isLoadingMore = false;
+        _hasError = false;
       });
     }
+  } catch (e) {
+    debugPrint('❌ Erreur chargement posts: $e');
+    
+    // Gestion spécifique selon le type d'erreur
+    String errorMessage = 'Erreur de chargement des posts';
+    
+    if (e.toString().contains('Authentication required')) {
+      errorMessage = 'Veuillez vous reconnecter';
+    } else if (e.toString().contains('Failed to load posts')) {
+      errorMessage = 'Impossible de charger les posts pour cette catégorie';
+    } else if (e.toString().contains('Connection')) {
+      errorMessage = 'Problème de connexion internet';
+    }
+    
+    setState(() {
+      _isLoading = false;
+      _isLoadingMore = false;
+      _hasError = true;
+      _errorMessage = errorMessage;
+      if (resetList) {
+        _posts = [];
+      }
+    });
   }
+}
+
+Widget _buildErrorState() {
+  return Padding(
+    padding: const EdgeInsets.all(16),
+    child: Center(
+      child: Column(
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 48,
+            color: Colors.red[300],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _errorMessage,
+            style: GoogleFonts.inter(
+              color: Colors.grey[600],
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: _refreshPosts,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                ),
+                child: Text(
+                  'Réessayer',
+                  style: GoogleFonts.inter(fontSize: 14),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Bouton pour revenir aux posts généraux si on a un problème avec un tag spécifique
+              if (widget.selectedTag != 'Tous')
+                TextButton(
+                  onPressed: () {
+                    // Simuler la sélection du tag "Tous"
+                    debugPrint('Tentative de retour aux posts généraux');
+                  },
+                  child: Text(
+                    'Voir tous les posts',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Colors.blue[600],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
   Future<void> _refreshPosts() async {
     await _loadPosts(resetList: true);
@@ -141,43 +224,6 @@ class _RecommendedPostsSectionState extends State<RecommendedPostsSection> {
     );
   }
 
-  Widget _buildErrorState() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 48,
-              color: Colors.red[300],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _errorMessage,
-              style: GoogleFonts.inter(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _refreshPosts,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-              ),
-              child: Text(
-                'Réessayer',
-                style: GoogleFonts.inter(fontSize: 14),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildEmptyState() {
     return Padding(

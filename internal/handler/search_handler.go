@@ -530,6 +530,60 @@ func buildUserSuggestions(users []domain.UserSearchResult) []map[string]interfac
 	return suggestions
 }
 
+// Ajout dans internal/handler/search_handler.go
+
+// GetAvailableTagsHandler retourne la liste des tags disponibles
+func GetAvailableTagsHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("[GetAvailableTagsHandler] 🏷️ Récupération des tags disponibles")
+
+	// Récupérer tous les tags définis dans le système
+	tags := getAllAvailableTags()
+	
+	// Construire la réponse avec les noms d'affichage
+	var tagResponse []map[string]interface{}
+	
+	// Ajouter "Tous" en premier
+	tagResponse = append(tagResponse, map[string]interface{}{
+		"key":         "tous",
+		"displayName": "Tous",
+		"emoji":       "🏷️",
+	})
+
+	// Ajouter tous les autres tags
+	for _, tag := range tags {
+		tagResponse = append(tagResponse, map[string]interface{}{
+			"key":         string(tag),
+			"displayName": tag.GetTagDisplayName(),
+			"emoji":       tag.GetTagEmoji(),
+		})
+	}
+
+	result := map[string]interface{}{
+		"tags":       tagResponse,
+		"total":      len(tagResponse),
+		"categories": len(tags), // Nombre de catégories sans "Tous"
+	}
+
+	log.Printf("[GetAvailableTagsHandler] ✅ %d tags retournés", len(tagResponse))
+	response.RespondWithJSON(w, http.StatusOK, result)
+}
+
+// getAllAvailableTags retourne tous les tags disponibles dans le système
+func getAllAvailableTags() []domain.TagCategory {
+	return []domain.TagCategory{
+		domain.TagYoga,
+		domain.TagWellness,
+		domain.TagBeaute,
+		domain.TagDiy,
+		domain.TagArt,
+		domain.TagMusique,
+		domain.TagCuisine,
+		domain.TagMusculation,
+		domain.TagMode,
+		domain.TagFitness,
+	}
+}
+
 
 // trackSearchInteractions enregistre les interactions de recherche en arrière-plan
 func trackSearchInteractions(userID int64, query string, tags []domain.TagCategory) {
