@@ -10,6 +10,7 @@ import (
 	"onlyflick/internal/repository"
 	"onlyflick/internal/service"
 	"onlyflick/pkg/response"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -390,13 +391,61 @@ func GetRecommendedPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, err := repository.ListPostsRecommendedForUser(userID)
+	// ===== NOUVEAUX PARAMÈTRES =====
+	// Parser les tags depuis les paramètres de requête
+	tagsParam := r.URL.Query().Get("tags")
+	var tags []string
+	if tagsParam != "" {
+		// Diviser par virgule et nettoyer
+		rawTags := strings.Split(tagsParam, ",")
+		for _, tag := range rawTags {
+			cleanTag := strings.TrimSpace(tag)
+			if cleanTag != "" && strings.ToLower(cleanTag) != "tous" {
+				tags = append(tags, cleanTag)
+			}
+		}
+	}
+
+	// Parser limit et offset
+	limit := 20 // valeur par défaut
+	if limitParam := r.URL.Query().Get("limit"); limitParam != "" {
+		if l, err := strconv.Atoi(limitParam); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
+	offset := 0 // valeur par défaut
+	if offsetParam := r.URL.Query().Get("offset"); offsetParam != "" {
+		if o, err := strconv.Atoi(offsetParam); err == nil && o >= 0 {
+			offset = o
+		}
+	}
+
+	log.Printf("[GetRecommendedPosts] Paramètres: userID=%d, tags=%v, limit=%d, offset=%d", 
+		userID, tags, limit, offset)
+
+	// ===== APPEL REPOSITORY MODIFIÉ =====
+	posts, total, err := repository.ListPostsRecommendedForUserWithTags(userID, tags, limit, offset)
 	if err != nil {
 		response.RespondWithError(w, http.StatusInternalServerError, "Impossible de récupérer les posts recommandés")
 		log.Printf("[GetRecommendedPosts] Erreur pour l'utilisateur %d : %v", userID, err)
 		return
 	}
 
-	log.Printf("[GetRecommendedPosts] %d posts recommandés trouvés pour l'utilisateur %d", len(posts), userID)
-	response.RespondWithJSON(w, http.StatusOK, posts)
+	// ===== CONSTRUCTION DE LA RÉPONSE FORMATÉE =====
+	result := map[string]interface{}{
+		"posts":       posts,
+		"total":       total,
+		"has_more":    total > offset+len(posts),
+		"limit":       limit,
+		"offset":      offset,
+		"tags":        tags,
+		"query":       "", // Pas de query textuelle pour recommended
+		"search_type": "recommended",
+		"sort_by":     "recent", // Tri par défaut
+	}
+
+	log.Printf("[GetRecommendedPosts] ✅ %d posts recommandés trouvés (total: %d) pour l'utilisateur %d", 
+		len(posts), total, userID)
+	response.RespondWithJSON(w, http.StatusOK, result)
 }

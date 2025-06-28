@@ -8,6 +8,8 @@ import (
 	"onlyflick/internal/database"
 	"onlyflick/internal/domain"
 	"database/sql"
+	"strings"
+	"time"
 )
 
 // =====================
@@ -435,102 +437,242 @@ func ListSubscriberOnlyPosts(creatorID int64) ([]*domain.Post, error) {
 	return posts, nil
 }
 
-// ListPostsRecommendedForUser retourne des posts recommandés pour un utilisateur.
-func ListPostsRecommendedForUser(userID int64) ([]*domain.Post, error) {
+// ListPostsRecommendedForUserWithTags retourne des posts recommandés avec filtrage par tags optionnel
+func ListPostsRecommendedForUserWithTags(userID int64, tags []string, limit, offset int) ([]interface{}, int, error) {
+	log.Printf("[PostRepo] Posts recommandés avec tags pour user %d: tags=%v, limit=%d, offset=%d", 
+		userID, tags, limit, offset)
+
+	// Si aucun tag spécifié, utiliser la logique de recommandation normale
+	if len(tags) == 0 {
+		return getRecommendedPostsWithoutTags(userID, limit, offset)
+	}
+
+	// Sinon, filtrer par tags
+	return getRecommendedPostsWithTags(userID, tags, limit, offset)
+}
+
+// getRecommendedPostsWithoutTags - logique normale de recommandation
+func getRecommendedPostsWithoutTags(userID int64, limit, offset int) ([]interface{}, int, error) {
+	log.Printf("[PostRepo] Recommandations sans filtrage tags pour user %d", userID)
+
+	// Requête simplifiée basée sur l'activité récente et la popularité
 	query := `
-		WITH liked_creators AS (
-			SELECT DISTINCT p.user_id
-			FROM likes l
-			JOIN posts p ON l.post_id = p.id
-			WHERE l.user_id = $1
-		),
-		liked_tags AS (
-			SELECT DISTINCT pt.category
-			FROM likes l
-			JOIN post_tags pt ON pt.post_id = l.post_id
-			WHERE l.user_id = $1
-		),
-		seen_posts AS (
-			SELECT content_id FROM user_interactions
-			WHERE user_id = $1 AND content_type = 'post'
-			UNION
-			SELECT post_id FROM likes WHERE user_id = $1
-		),
-		recommended_from_creators AS (
-			SELECT p.* FROM posts p
-			WHERE p.user_id IN (SELECT user_id FROM liked_creators)
-			AND p.id NOT IN (SELECT content_id FROM seen_posts)
-			AND p.visibility = 'public'
-		),
-		recommended_from_tags AS (
-			SELECT p.* FROM posts p
-			JOIN post_tags pt ON p.id = pt.post_id
-			WHERE pt.category IN (SELECT category FROM liked_tags)
-			AND p.id NOT IN (SELECT content_id FROM seen_posts)
-			AND p.visibility = 'public'
-		),
-		popular_unseen_posts AS (
-			SELECT p.* FROM posts p
-			JOIN post_metrics pm ON p.id = pm.post_id
-			WHERE p.id NOT IN (SELECT content_id FROM seen_posts)
-			AND p.visibility = 'public'
-			ORDER BY pm.popularity_score DESC
-			LIMIT 20
-		),
-		all_recommended AS (
-			SELECT * FROM recommended_from_creators
-			UNION
-			SELECT * FROM recommended_from_tags
-			UNION
-			SELECT * FROM popular_unseen_posts
-		)
-		SELECT DISTINCT id, user_id, title, description, media_url,
-		                file_id, visibility, created_at, updated_at,
-		                image_url, video_url
-		FROM all_recommended
-		ORDER BY created_at DESC
-		LIMIT 30;
+		SELECT 
+			p.id,
+			p.title,
+			p.description,
+			p.media_url,
+			p.visibility,
+			p.created_at,
+			p.user_id AS author_id,
+			COALESCE(u.username, CONCAT(u.first_name, ' ', u.last_name)) as author_name,
+			COALESCE(COUNT(DISTINCT l.user_id), 0) as likes_count,
+			COALESCE(COUNT(DISTINCT c.id), 0) as comments_count,
+			ARRAY_AGG(DISTINCT pt.category) FILTER (WHERE pt.category IS NOT NULL) as tags
+		FROM posts p
+		JOIN users u ON p.user_id = u.id
+		LEFT JOIN likes l ON p.id = l.post_id
+		LEFT JOIN comments c ON p.id = c.post_id
+		LEFT JOIN post_tags pt ON p.id = pt.post_id
+		WHERE p.visibility = 'public'
+			AND p.user_id != $1  -- Exclure ses propres posts
+		GROUP BY p.id, u.id
+		ORDER BY 
+			-- Algorithme simple de scoring
+			COUNT(DISTINCT l.user_id) * 2 + COUNT(DISTINCT c.id) * 3 DESC,
+			p.created_at DESC
+		LIMIT $2 OFFSET $3
 	`
 
-	rows, err := database.DB.Query(query, userID)
+	rows, err := database.DB.Query(query, userID, limit, offset)
 	if err != nil {
-		return nil, err
+		log.Printf("[PostRepo][ERREUR] Erreur query posts recommandés : %v", err)
+		return nil, 0, err
 	}
 	defer rows.Close()
 
-	var posts []*domain.Post
+	posts, err := scanPostsResults(rows)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Compter le total
+	total, err := countRecommendedPosts(userID, []string{})
+	if err != nil {
+		log.Printf("[PostRepo][WARN] Erreur count total : %v", err)
+		total = len(posts)
+	}
+
+	log.Printf("[PostRepo] ✅ %d posts recommandés trouvés (total: %d)", len(posts), total)
+	return posts, total, nil
+}
+
+// getRecommendedPostsWithTags - logique avec filtrage par tags
+func getRecommendedPostsWithTags(userID int64, tags []string, limit, offset int) ([]interface{}, int, error) {
+	log.Printf("[PostRepo] Recommandations avec filtrage tags: %v pour user %d", tags, userID)
+
+	// Construire les placeholders pour les tags
+	var tagPlaceholders []string
+	var args []interface{}
+	argIndex := 1
+
+	// Ajouter userID
+	args = append(args, userID)
+	argIndex++
+
+	// Ajouter les tags
+	for _, tag := range tags {
+		tagPlaceholders = append(tagPlaceholders, fmt.Sprintf("$%d", argIndex))
+		args = append(args, tag)
+		argIndex++
+	}
+
+	// Ajouter limit et offset
+	args = append(args, limit, offset)
+	limitPlaceholder := fmt.Sprintf("$%d", argIndex)
+	offsetPlaceholder := fmt.Sprintf("$%d", argIndex+1)
+
+	query := fmt.Sprintf(`
+		SELECT 
+			p.id,
+			p.title,
+			p.description,
+			p.media_url,
+			p.visibility,
+			p.created_at,
+			p.user_id AS author_id,
+			COALESCE(u.username, CONCAT(u.first_name, ' ', u.last_name)) as author_name,
+			COALESCE(COUNT(DISTINCT l.user_id), 0) as likes_count,
+			COALESCE(COUNT(DISTINCT c.id), 0) as comments_count,
+			ARRAY_AGG(DISTINCT pt.category) FILTER (WHERE pt.category IS NOT NULL) as tags
+		FROM posts p
+		JOIN users u ON p.user_id = u.id
+		INNER JOIN post_tags pt ON p.id = pt.post_id
+		LEFT JOIN likes l ON p.id = l.post_id
+		LEFT JOIN comments c ON p.id = c.post_id
+		WHERE p.visibility = 'public'
+			AND p.user_id != $1
+			AND pt.category IN (%s)
+		GROUP BY p.id, u.id
+		ORDER BY 
+			COUNT(DISTINCT l.user_id) * 2 + COUNT(DISTINCT c.id) * 3 DESC,
+			p.created_at DESC
+		LIMIT %s OFFSET %s
+	`, strings.Join(tagPlaceholders, ","), limitPlaceholder, offsetPlaceholder)
+
+	rows, err := database.DB.Query(query, args...)
+	if err != nil {
+		log.Printf("[PostRepo][ERREUR] Erreur query posts recommandés avec tags : %v", err)
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	posts, err := scanPostsResults(rows)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Compter le total avec tags
+	total, err := countRecommendedPosts(userID, tags)
+	if err != nil {
+		log.Printf("[PostRepo][WARN] Erreur count total avec tags : %v", err)
+		total = len(posts)
+	}
+
+	log.Printf("[PostRepo] ✅ %d posts recommandés avec tags trouvés (total: %d)", len(posts), total)
+	return posts, total, nil
+}
+
+// scanPostsResults - fonction utilitaire pour scanner les résultats
+func scanPostsResults(rows *sql.Rows) ([]interface{}, error) {
+	var posts []interface{}
+
 	for rows.Next() {
-		var post domain.Post
-		var fileID, imageURL, videoURL sql.NullString
+		var post struct {
+			ID            int64     `json:"id"`
+			Title         string    `json:"title"`
+			Description   string    `json:"description"`
+			MediaURL      string    `json:"media_url"`
+			Visibility    string    `json:"visibility"`
+			CreatedAt     time.Time `json:"created_at"`
+			AuthorID      int64     `json:"author_id"`
+			AuthorName    string    `json:"author_name"`
+			LikesCount    int64     `json:"likes_count"`
+			CommentsCount int64     `json:"comments_count"`
+			Tags          []string  `json:"tags"`
+		}
+
+		var tagsArray sql.NullString
 
 		err := rows.Scan(
 			&post.ID,
-			&post.UserID,
 			&post.Title,
 			&post.Description,
 			&post.MediaURL,
-			&fileID,
 			&post.Visibility,
 			&post.CreatedAt,
-			&post.UpdatedAt,
-			&imageURL,
-			&videoURL,
+			&post.AuthorID,
+			&post.AuthorName,
+			&post.LikesCount,
+			&post.CommentsCount,
+			&tagsArray,
 		)
 		if err != nil {
-			return nil, err
+			log.Printf("[PostRepo][ERREUR] Erreur scan post : %v", err)
+			continue
 		}
 
-		if fileID.Valid {
-			post.FileID = fileID.String
-		}
-		if imageURL.Valid {
-			post.ImageURL = imageURL.String
-		}
-		if videoURL.Valid {
-			post.VideoURL = videoURL.String
+		// Parser les tags
+		if tagsArray.Valid && tagsArray.String != "" {
+			// Nettoyer la string des accolades PostgreSQL
+			tagsStr := strings.Trim(tagsArray.String, "{}")
+			if tagsStr != "" {
+				post.Tags = strings.Split(tagsStr, ",")
+			}
 		}
 
-		posts = append(posts, &post)
+		posts = append(posts, post)
 	}
+
 	return posts, nil
+}
+
+// countRecommendedPosts - compte le total de posts recommandés
+func countRecommendedPosts(userID int64, tags []string) (int, error) {
+	var query string
+	var args []interface{}
+
+	if len(tags) == 0 {
+		// Count sans filtrage tags
+		query = `
+			SELECT COUNT(DISTINCT p.id)
+			FROM posts p
+			WHERE p.visibility = 'public' AND p.user_id != $1
+		`
+		args = []interface{}{userID}
+	} else {
+		// Count avec filtrage tags
+		var tagPlaceholders []string
+		args = append(args, userID)
+		argIndex := 2
+
+		for _, tag := range tags {
+			tagPlaceholders = append(tagPlaceholders, fmt.Sprintf("$%d", argIndex))
+			args = append(args, tag)
+			argIndex++
+		}
+
+		query = fmt.Sprintf(`
+			SELECT COUNT(DISTINCT p.id)
+			FROM posts p
+			INNER JOIN post_tags pt ON p.id = pt.post_id
+			WHERE p.visibility = 'public' 
+				AND p.user_id != $1
+				AND pt.category IN (%s)
+		`, strings.Join(tagPlaceholders, ","))
+	}
+
+	var total int
+	err := database.DB.QueryRow(query, args...).Scan(&total)
+	return total, err
 }
