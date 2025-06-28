@@ -2,16 +2,16 @@ Write-Host "Setup du frontend Flutter OnlyFlick" -ForegroundColor Green
 
 # 1. Ajouter le sous-module frontend
 Write-Host "`n1. Ajout du sous-module Flutter..." -ForegroundColor Yellow
-if (Test-Path "frontend/onlyflick-app") {
+if (Test-Path "onlyflick-app") {
     Write-Host "Frontend deja present" -ForegroundColor Cyan
 } else {
-    git submodule add https://github.com/ibrahima-eemi/onlyflick.git frontend/onlyflick-app
+    git submodule add https://github.com/ibrahima-eemi/onlyflick.git onlyflick-app
     git commit -m "Ajout du frontend Flutter en sous-module"
 }
 
 # 2. Initialiser le frontend
 Write-Host "`n2. Initialisation du frontend..." -ForegroundColor Yellow
-cd frontend/onlyflick-app
+cd onlyflick-app
 flutter clean
 flutter pub get
 

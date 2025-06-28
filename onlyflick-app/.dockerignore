@@ -1,0 +1,14 @@
+build/
+.idea/
+.git/
+test/
+android/
+ios/
+windows/
+macos/
+linux/
+*.iml
+*.log
+*.tmp
+*.swp
+*.md

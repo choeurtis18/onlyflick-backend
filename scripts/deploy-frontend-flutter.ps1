@@ -2,9 +2,9 @@ Write-Host "Deploiement Frontend Flutter OnlyFlick" -ForegroundColor Green
 
 # 1. Vérifier si le frontend existe
 Write-Host "`n1. Verification sous-module frontend..." -ForegroundColor Yellow
-if (Test-Path "frontend/onlyflick-app") {
+if (Test-Path "onlyflick-app") {
     Write-Host "✅ Frontend Flutter trouvé" -ForegroundColor Green
-    cd frontend/onlyflick-app
+    cd onlyflick-app
     
     # 2. Build Flutter pour le web
     Write-Host "`n2. Build Flutter Web..." -ForegroundColor Yellow

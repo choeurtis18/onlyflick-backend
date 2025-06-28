@@ -112,17 +112,17 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        working-directory: frontend/onlyflick-app
+        working-directory: onlyflick-app
         run: |
           flutter clean
           flutter pub get
 
       - name: Run frontend tests
-        working-directory: frontend/onlyflick-app
+        working-directory: onlyflick-app
         run: flutter test
 
       - name: Analyze Flutter code
-        working-directory: frontend/onlyflick-app
+        working-directory: onlyflick-app
         run: flutter analyze
 
   # 🏗️ Build Backend
@@ -202,14 +202,14 @@ jobs:
           cache: true
 
       - name: Build Flutter web
-        working-directory: frontend/onlyflick-app
+        working-directory: onlyflick-app
         run: |
           flutter clean
           flutter pub get
           flutter build web --release
 
       - name: Create Dockerfile
-        working-directory: frontend/onlyflick-app
+        working-directory: onlyflick-app
         run: |
           cat > Dockerfile << 'EOF'
           FROM nginx:alpine
@@ -243,8 +243,8 @@ jobs:
         id: build
         uses: docker/build-push-action@v5
         with:
-          context: frontend/onlyflick-app
-          file: frontend/onlyflick-app/Dockerfile
+          context: onlyflick-app
+          file: onlyflick-app/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

@@ -22,7 +22,7 @@ print_step "Setup du frontend Flutter OnlyFlick"
 echo ""
 print_info "1. Ajout du sous-module Flutter..."
 
-if [ -d "frontend/onlyflick-app" ]; then
+if [ -d "onlyflick-app" ]; then
     print_cyan "Frontend déjà présent"
 else
     echo "📦 Ajout du sous-module Git..."
@@ -31,10 +31,10 @@ else
     mkdir -p frontend
     
     # Ajouter le sous-module
-    git submodule add https://github.com/ibrahima-eemi/onlyflick.git frontend/onlyflick-app
+    git submodule add https://github.com/ibrahima-eemi/onlyflick.git onlyflick-app
     
     # Commit le changement
-    git add .gitmodules frontend/onlyflick-app
+    git add .gitmodules onlyflick-app
     git commit -m "Ajout du frontend Flutter en sous-module" || true
     
     echo "✅ Sous-module ajouté"
@@ -55,7 +55,7 @@ fi
 echo "✅ Flutter détecté: $(flutter --version | head -1)"
 
 # Aller dans le répertoire du frontend
-cd frontend/onlyflick-app
+cd onlyflick-app
 
 echo "🧹 Nettoyage des dépendances..."
 flutter clean
@@ -79,11 +79,11 @@ cd ../..
 # Afficher des informations utiles
 echo ""
 print_info "📁 Structure créée:"
-echo "  frontend/onlyflick-app/          # Code source Flutter"
-echo "  frontend/onlyflick-app/build/web/ # Build web prêt pour déploiement"
+echo "  onlyflick-app/          # Code source Flutter"
+echo "  onlyflick-app/build/web/ # Build web prêt pour déploiement"
 echo ""
 print_info "🧪 Pour tester localement:"
-echo "  cd frontend/onlyflick-app"
+echo "  cd onlyflick-app"
 echo "  flutter run -d web-server --web-port 3000"
 echo ""
-print_info "🚀 Le build web est dans: frontend/onlyflick-app/build/web/"
+print_info "🚀 Le build web est dans: onlyflick-app/build/web/"

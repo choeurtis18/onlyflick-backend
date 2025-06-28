@@ -93,7 +93,7 @@ kubectl apply -f k8s/monitoring/grafana-ingress.yaml
 # 4. Importer les dashboards
 echo ""
 print_info "4. Import dashboards..."
-if [ -d "frontend/onlyflick-app/grafana/dashboards" ]; then
+if [ -d "onlyflick-app/grafana/dashboards" ]; then
     print_cyan "Dashboards frontend détectés"
 else
     print_info "Dashboards frontend manquants"

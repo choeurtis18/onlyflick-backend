@@ -1,0 +1,39 @@
+name: matchmaker
+description: "OnlyFlick - Plateforme de créateurs de contenu exclusif"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.1.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.1
+  shared_preferences: ^2.2.2
+  go_router: ^13.0.0
+  google_fonts: ^6.1.0
+  http: ^1.2.1
+  intl: any
+  cupertino_icons: ^1.0.6
+  image_picker: ^1.0.4
+  path: ^1.8.3
+  permission_handler: ^11.0.1
+  cached_network_image: ^3.2.3
+
+
+  flutter_localizations:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  mockito: ^5.4.4
+  build_runner: any
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/

@@ -29,7 +29,7 @@ kubectl apply -f k8s/monitoring/grafana-ingress.yaml
 
 # 4. Importer les dashboards
 Write-Host "`n4. Import dashboards..." -ForegroundColor Yellow
-if (Test-Path "frontend/onlyflick-app/grafana/dashboards") {
+if (Test-Path "onlyflick-app/grafana/dashboards") {
     Write-Host "Dashboards frontend detectes" -ForegroundColor Cyan
 } else {
     Write-Host "Dashboards frontend manquants" -ForegroundColor Yellow
