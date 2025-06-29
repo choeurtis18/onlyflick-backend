@@ -49,4 +49,6 @@ Thumbs.db
 vendor/
 
 
-neon_schema.sql
+neon_schema.sql# Go modules
+go.sum
+go.mod
