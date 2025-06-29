@@ -111,24 +111,60 @@ kubectl get pods -n onlyflick
 
 # 2. Tester l'API
 curl http://api.onlyflick.local/health
+curl http://api.onlyflick.local/api/v1/status
 
 # 3. Tester l'application
-curl http://onlyflick.local
+curl -I http://onlyflick.local
 
 # 4. Vérifier Grafana
-curl http://grafana.local
+curl -I http://grafana.local
 ```
 
 ### Tests fonctionnels
 
 ```bash
-# Tests automatisés
+# Configuration de l'environnement de test
 cd /home/barry/Documents/onlyflick-backend
-go test ./tests/... -v
+export SECRET_KEY="12345678901234567890123456789012"
+export DATABASE_URL="postgresql://onlyflick_db_owner:npg_GuDKP6U3gYtZ@ep-curly-sun-a2np1ifi-pooler.eu-central-1.aws.neon.tech/onlyflick_db?sslmode=require"
 
-# Test de l'interface
+# Tests des performances (plus fiables)
+go test ./tests/performance/... -v
+
+# Tests unitaires spécifiques
+go test ./tests/unit/auth_test.go -v
+go test ./tests/unit/encryption_test.go -v
+
+# Interface utilisateur
 # Ouvrir http://onlyflick.local dans le navigateur
 ```
+
+### Diagnostic des tests
+
+```bash
+# Vérifier la connexion à la base de données
+psql $DATABASE_URL -c "SELECT 'Connexion réussie';"
+
+# Identifier les problèmes spécifiques dans les tests
+go test ./tests/unit/auth_test.go -v -count=1
+
+# Vérifier les modèles de données
+go test ./tests/unit/... -run=TestHashPassword -v
+
+# Nettoyer le cache des tests
+go clean -testcache
+```
+
+### Résolution des problèmes de test courants
+
+| Problème | Solution |
+|---------|----------|
+| `Username est obligatoire` | Vérifier la structure JSON envoyée dans les tests d'inscription, ajouter le champ username |
+| `Token invalid` | SECRET_KEY mal configurée, vérifier la variable d'environnement |
+| Erreurs SQL | Les requêtes réelles ne correspondent pas aux attentes mockées, vérifier les mocks |
+| Panic avec `interface conversion` | Vérifier les valeurs nil dans les réponses JSON |
+| Erreur 401 Unauthorized | Vérifier la génération et la validation des JWT |
+| Échec de connexion DB | Confirmer les paramètres de connexion, vérifier que `sslmode=require` est présent |
 
 ## 🚨 **Résolution de problèmes courants**
 
