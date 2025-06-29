@@ -34,15 +34,12 @@ jobs:
 
       - name: Install dependencies
         run: go mod download
-        working-directory: ./cmd/server
 
       - name: Build
-        run: go build -v ./...
-        working-directory: ./cmd/server
+        run: go build -v ./cmd/server
 
       - name: Test
-        run: go test -v -race ./...
-        working-directory: ./cmd/server
+        run: go test -v -race ./cmd/server
         env:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/onlyflick_test?sslmode=disable"
