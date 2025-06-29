@@ -153,6 +153,12 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 - **API Backend** : <http://api.onlyflick.local>  
 - **Monitoring** : <http://grafana.local>
 
+### Déploiement Docker à la racine du projet
+
+```bash
+make reset
+```
+
 ### Grafana
 
 ```bash
