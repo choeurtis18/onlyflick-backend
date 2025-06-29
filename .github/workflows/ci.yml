@@ -2,13 +2,14 @@ name: OnlyFlick CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     services:
       postgres:
         image: postgres:16
@@ -25,7 +26,8 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -33,13 +35,39 @@ jobs:
           go-version: '1.22'
 
       - name: Install dependencies
-        run: go mod download
+        run: |
+          # Trouver le répertoire contenant go.mod
+          if [ -f "go.mod" ]; then
+            go mod download
+          elif [ -f "cmd/server/go.mod" ]; then
+            cd cmd/server && go mod download
+          else
+            echo "Could not find go.mod file"
+            find . -name "go.mod" -type f
+            exit 1
+          fi
 
       - name: Build
-        run: go build -v ./cmd/server
+        run: |
+          if [ -f "go.mod" ]; then
+            go build -v ./cmd/server
+          elif [ -f "cmd/server/go.mod" ]; then
+            cd cmd/server && go build -v .
+          else
+            echo "Could not find go.mod file"
+            exit 1
+          fi
 
       - name: Test
-        run: go test -v -race ./cmd/server
+        run: |
+          if [ -f "go.mod" ]; then
+            go test -v -race ./cmd/server
+          elif [ -f "cmd/server/go.mod" ]; then
+            cd cmd/server && go test -v -race .
+          else
+            echo "Could not find go.mod file"
+            exit 1
+          fi
         env:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/onlyflick_test?sslmode=disable"
