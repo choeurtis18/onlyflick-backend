@@ -156,11 +156,20 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 ### Grafana
 
 ```bash
-kubectl port-forward svc/grafana 3000:3000 -n monitoring
+kubectl port-forward svc/grafana 3000:3000 -n monitoringkubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090 -n monitoring
+
 ```
 
-Récupéer les identifiants : echo "User: admin"
+Récupéer les identifiants : 
+
+```bash
+echo "User: admin"
 echo "Password: $(kubectl get secret grafana-admin --namespace monitoring -o jsonpath="{.data.GF_SECURITY_ADMIN_PASSWORD}" | base64 -d)"
+```
+
+```bash
+kubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090 -n monitoring
+```
 
 ### FÉLICITATIONS
 
