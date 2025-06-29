@@ -23,9 +23,6 @@
 go.work
 go.work.sum
 
-# Go modules
-go.sum
-go.mod
 
 # Test binary, build output
 bin/
