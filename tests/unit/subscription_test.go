@@ -27,9 +27,14 @@ func TestSubscribeHandler(t *testing.T) {
 	userID := int64(123)
 	creatorID := int64(456)
 
-	// Mock pour l'abonnement - regex plus flexible
-	mock.ExpectExec("INSERT INTO subscriptions.*VALUES.*ON CONFLICT.*DO NOTHING").
+	// Vérifier si l'abonnement existe déjà
+	mock.ExpectQuery("SELECT id FROM subscriptions WHERE").
 		WithArgs(userID, creatorID).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
+
+	// Mock pour l'abonnement - utiliser ExpectExec plutôt que ExpectQuery pour INSERT
+	mock.ExpectExec("INSERT INTO subscriptions").
+		WithArgs(userID, creatorID, sqlmock.AnyArg(), sqlmock.AnyArg(), true).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	// Créer un routeur Chi pour tester les paramètres d'URL
@@ -42,6 +47,11 @@ func TestSubscribeHandler(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
+
+	// Vérifier que les attentes SQL ont été satisfaites
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Attentes SQL non satisfaites: %s", err)
+	}
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Abonnement réussi")

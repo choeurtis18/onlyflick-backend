@@ -1,34 +1,34 @@
 # ---------- Étape 1 : Build Go ----------
-FROM golang:1.24.4 AS builder
+FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
 
-# Étape 1.1 : Copie go.mod et go.sum pour le cache
+# Installer les dépendances pour la compilation
+RUN apk add --no-cache git gcc musl-dev
+
+# Copier et télécharger les dépendances
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Étape 1.2 : Copier le reste du code
+# Copier le code source
 COPY . .
 
-# Étape 1.3 : Build en statique (binaire Linux) - Chemin corrigé
-RUN CGO_ENABLED=0 GOOS=linux go build -o onlyflick-backend ./cmd/server
+# Compiler l'application
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o main cmd/api/main.go
 
 # ---------- Étape 2 : Image finale minimale ----------
-FROM alpine:latest
-
-# Installer ca-certificates pour les connexions HTTPS
-RUN apk --no-cache add ca-certificates
+FROM alpine:3.18
 
 WORKDIR /app
 
-# Étape 2.1 : Copier le binaire
-COPY --from=builder /app/onlyflick-backend .
+# Installer les certificats CA pour HTTPS
+RUN apk --no-cache add ca-certificates tzdata
 
-# Étape 2.2 : Copier fichiers utiles (facultatif)
-# COPY migrations ./migrations
+# Copier l'exécutable depuis l'étape de build
+COPY --from=builder /app/main .
 
-# Étape 2.3 : Exposer le port d'écoute
+# Exposer le port défini dans l'application
 EXPOSE 8080
 
-# Étape 2.4 : Commande de lancement
-CMD ["./onlyflick-backend"]
+# Exécuter l'application
+CMD ["./main"]

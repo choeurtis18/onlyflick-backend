@@ -7,16 +7,14 @@ import (
 	"onlyflick/internal/handler"
 	"onlyflick/internal/middleware"
 	"onlyflick/internal/utils"
-	"os"
 	"testing"
+	"time"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestProfileHandlerSuccess(t *testing.T) {
 	// Configuration
-	os.Setenv("SECRET_KEY", "12345678901234567890123456789012")
 	utils.SetSecretKeyForTesting("12345678901234567890123456789012")
 	defer utils.SetSecretKeyForTesting("")
 
@@ -24,13 +22,22 @@ func TestProfileHandlerSuccess(t *testing.T) {
 	defer cleanup()
 
 	userID := int64(123)
+	now := time.Now()
 
-	// Mock pour GetUserByID avec regex flexible
-	mock.ExpectQuery("SELECT.*FROM users WHERE.*id").
+	// Mock GetUserByID avec toutes les colonnes nécessaires
+	rows := mock.NewRows([]string{
+		"id", "first_name", "last_name", "email", "password", "role",
+		"created_at", "updated_at", "avatar_url", "bio", "username",
+	}).AddRow(
+		userID, "Test", "User", "encrypted_email", "hashed_password", "subscriber",
+		now, now, "avatar.jpg", "Test bio", "testuser",
+	)
+
+	mock.ExpectQuery("SELECT id, first_name, last_name, email, password, role, created_at, updated_at, avatar_url, bio, username FROM users WHERE").
 		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "first_name", "last_name", "email", "password", "role"}).
-			AddRow(userID, "encrypted_john", "encrypted_doe", "encrypted_john@test.com", "hashedpwd", "subscriber"))
+		WillReturnRows(rows)
 
+	// Créer la requête
 	req := httptest.NewRequest(http.MethodGet, "/profile", nil)
 	ctx := context.WithValue(req.Context(), middleware.ContextUserIDKey, userID)
 	req = req.WithContext(ctx)

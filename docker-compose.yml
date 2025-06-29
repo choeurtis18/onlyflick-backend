@@ -1,37 +1,45 @@
+version: '3.8'
+
 services:
   onlyflick-backend:
     build: .
+    container_name: onlyflick-api
+    restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/onlyflick?sslmode=disable
       - SECRET_KEY=${SECRET_KEY}
-      - DATABASE_URL=${DATABASE_URL}
       - IMAGEKIT_PRIVATE_KEY=${IMAGEKIT_PRIVATE_KEY}
       - IMAGEKIT_PUBLIC_KEY=${IMAGEKIT_PUBLIC_KEY}
       - IMAGEKIT_URL_ENDPOINT=${IMAGEKIT_URL_ENDPOINT}
+      - ENVIRONMENT=development
       - PORT=8080
-    env_file:
-      - .env
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    depends_on:
+      - postgres
+      - mailpit
 
-  # Service PostgreSQL pour développement local (optionnel)
   postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: onlyflick_db
-      POSTGRES_USER: onlyflick_user
-      POSTGRES_PASSWORD: onlyflick_password
+    image: postgres:16-alpine
+    container_name: onlyflick-postgres
+    restart: unless-stopped
     ports:
       - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=onlyflick
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: onlyflick-mailpit
     restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Interface web
 
 volumes:
-  postgres_data:
+  pgdata:

@@ -17,10 +17,10 @@ spec:
     spec:
       containers:
       - name: onlyflick-backend
-        image: onlyflick-backend:latest
-        imagePullPolicy: Never
+        image: barrydevops/onlyflick:latest
+        imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 8080
+        - containerPort: 80
           name: http
         envFrom:
         - secretRef:
@@ -28,13 +28,13 @@ spec:
         livenessProbe:
           httpGet:
             path: /health
-            port: 8080
+            port: 80
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /health
-            port: 8080
+            port: 80
           initialDelaySeconds: 5
           periodSeconds: 5
         resources:
@@ -56,8 +56,8 @@ spec:
   selector:
     app: onlyflick-backend
   ports:
-  - port: 8080
-    targetPort: 8080
+  - port: 80
+    targetPort: 80
     protocol: TCP
     name: http
   type: ClusterIP

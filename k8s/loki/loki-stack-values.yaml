@@ -1,0 +1,42 @@
+loki:
+  enabled: true
+
+promtail:
+  enabled: true
+  config:
+    snippets:
+      extraScrapeConfigs: |
+        - job_name: onlyflick-backend
+          static_configs:
+          - targets:
+              - localhost
+            labels:
+              job: onlyflick-backend
+              __path__: /var/log/onlyflick/*.log
+          pipeline_stages:
+            - json:
+                expressions:
+                  timestamp: timestamp
+                  level: level
+                  message: message
+                  method: method
+                  path: path
+                  status: status
+                  duration: duration
+                  request_id: request_id
+                  user_id: user_id
+            - labels:
+                level:
+                method:
+                path:
+                status:
+                request_id:
+
+grafana:
+  enabled: true
+  persistence:
+    enabled: true
+  dashboards:
+    default:
+      onlyflick-logs:
+        file: dashboards/onlyflick-logs.json

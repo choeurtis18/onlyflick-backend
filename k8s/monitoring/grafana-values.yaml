@@ -16,8 +16,8 @@ ingress:
     kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
   hosts:
-    - grafana.example.com
-  tls: []
+    - grafana.local
+  tls: false
 
 ## Persistence configuration
 persistence:
@@ -80,7 +80,7 @@ dashboards:
 ## Grafana configuration
 grafana.ini:
   server:
-    root_url: "%(protocol)s://%(domain)s/grafana"
+    root_url: "%(protocol)s://%(domain)s/"
   paths:
     data: /var/lib/grafana
     logs: /var/log/grafana

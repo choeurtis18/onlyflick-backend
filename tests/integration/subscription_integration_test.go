@@ -75,11 +75,18 @@ func TestSubscriptionFlow(t *testing.T) {
 	router.ServeHTTP(rr, req)
 
 	t.Logf("Subscribe response: %s", rr.Body.String())
-	t.Logf("Creator token was: %s", creatorToken) // Utiliser la variable pour éviter l'erreur
-	// Le test peut échouer si la route n'existe pas, mais teste l'intégration
+
+	// Accéder aux variables avec vérification pour éviter les nil pointer
+	if creatorToken != "" {
+		t.Logf("Creator token was: %s", creatorToken)
+	}
+
+	// Vérification du résultat de l'abonnement
+	assert.Contains(t, rr.Code, []int{http.StatusOK, http.StatusCreated})
 
 	// Nettoyage
 	if database.DB != nil {
+		database.DB.Exec("DELETE FROM subscriptions WHERE subscriber_id IN (SELECT id FROM users WHERE email = $1)", subscriberEmail)
 		database.DB.Exec("DELETE FROM users WHERE email = $1", creatorEmail)
 		database.DB.Exec("DELETE FROM users WHERE email = $1", subscriberEmail)
 	}

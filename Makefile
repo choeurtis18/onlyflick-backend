@@ -1,19 +1,32 @@
+# Variables
+DOCKER_USER=barrydevops
+
+# -------------------------
+#      DOCKER BUILD
+# -------------------------
+
 # Backend
 backend-image:
-	docker build -t barrydevops/onlyflick-backend:latest -f k8s/backend/Dockerfile .
+	docker build -t $(DOCKER_USER)/onlyflick-backend:latest -f k8s/backend/Dockerfile .
 
 # Frontend
 frontend-image:
-	docker build -t barrydevops/onlyflick-frontend:latest -f k8s/frontend/Dockerfile .
+	docker build -t $(DOCKER_USER)/onlyflick-frontend:latest -f k8s/frontend/Dockerfile .
 
-# Push to Docker Hub
+# -------------------------
+#      DOCKER PUSH
+# -------------------------
+
 push-backend:
-	docker push barrydevops/onlyflick-backend:latest
+	docker push $(DOCKER_USER)/onlyflick-backend:latest
 
 push-frontend:
-	docker push barrydevops/onlyflick-frontend:latest
+	docker push $(DOCKER_USER)/onlyflick-frontend:latest
 
-# Kubernetes Apply
+# -------------------------
+#     K8S DEPLOYMENTS
+# -------------------------
+
 apply-backend:
 	kubectl apply -f k8s/backend
 
@@ -23,7 +36,26 @@ apply-frontend:
 apply-ingress:
 	kubectl apply -f k8s/ingress
 
-apply-monitoring:
-	helm upgrade --install monitoring prometheus-community/kube-prometheus-stack -n monitoring --create-namespace -f k8s/monitoring/grafana-values.yaml
+apply-grafana:
+	helm upgrade --install grafana oci://registry-1.docker.io/bitnamicharts/grafana \
+	-n monitoring --create-namespace -f k8s/monitoring/grafana-values.yaml
+
+# -------------------------
+#     K8S CLEANUP
+# -------------------------
+
+clean:
+	kubectl delete -f k8s/backend --ignore-not-found
+	kubectl delete -f k8s/frontend --ignore-not-found
+	kubectl delete -f k8s/ingress --ignore-not-found
+
+delete-grafana:
+	helm uninstall grafana -n monitoring || true
+
+# -------------------------
+#       ALL-IN-ONE
+# -------------------------
 
 all: backend-image frontend-image push-backend push-frontend apply-backend apply-frontend apply-ingress
+
+reset: clean delete-grafana all apply-grafana

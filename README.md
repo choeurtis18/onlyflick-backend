@@ -153,6 +153,15 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 - **API Backend** : <http://api.onlyflick.local>  
 - **Monitoring** : <http://grafana.local>
 
+### Grafana
+
+```bash
+kubectl port-forward svc/grafana 3000:3000 -n monitoring
+```
+
+Récupéer les identifiants : echo "User: admin"
+echo "Password: $(kubectl get secret grafana-admin --namespace monitoring -o jsonpath="{.data.GF_SECURITY_ADMIN_PASSWORD}" | base64 -d)"
+
 ### FÉLICITATIONS
 
 Votre plateforme sociale **OnlyFlick/MatchMaker** est maintenant **100% déployée et opérationnelle** ! L'application combine une interface Flutter moderne avec un backend Go robuste, le tout orchestré sur Kubernetes avec monitoring intégré.
