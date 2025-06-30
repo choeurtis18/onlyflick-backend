@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"fmt"
+	"time"
 
 	"onlyflick/internal/domain"
 	"onlyflick/internal/middleware"
@@ -530,7 +531,6 @@ func buildUserSuggestions(users []domain.UserSearchResult) []map[string]interfac
 	return suggestions
 }
 
-// Ajout dans internal/handler/search_handler.go
 
 // GetAvailableTagsHandler retourne la liste des tags disponibles
 func GetAvailableTagsHandler(w http.ResponseWriter, r *http.Request) {
@@ -582,6 +582,59 @@ func getAllAvailableTags() []domain.TagCategory {
 		domain.TagMode,
 		domain.TagFitness,
 	}
+}
+
+func GetTagsStatsHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("[GetTagsStatsHandler] 📊 Récupération des statistiques de tags")
+
+	// Récupérer les statistiques depuis le repository
+	tagStats, err := repository.GetTagsStatistics()
+	if err != nil {
+		log.Printf("[GetTagsStatsHandler] Erreur lors de la récupération des stats : %v", err)
+		response.RespondWithError(w, http.StatusInternalServerError, "Impossible de récupérer les statistiques des tags")
+		return
+	}
+
+	// Récupérer tous les tags disponibles pour s'assurer qu'on a une entrée pour chaque tag
+	allTags := getAllAvailableTags()
+	
+	// Construire la réponse avec les statistiques
+	var statsResponse []map[string]interface{}
+	
+	// Ajouter "Tous" avec le total de tous les posts publics
+	totalPosts, err := repository.GetTotalPublicPosts()
+	if err != nil {
+		log.Printf("[GetTagsStatsHandler] Erreur récupération total posts : %v", err)
+		totalPosts = 0
+	}
+	
+	statsResponse = append(statsResponse, map[string]interface{}{
+		"key":         "tous",
+		"displayName": "Tous",
+		"emoji":       "🏷️",
+		"count":       totalPosts,
+	})
+
+	// Ajouter les stats pour chaque tag existant
+	for _, tag := range allTags {
+		count := tagStats[string(tag)] // 0 si le tag n'existe pas dans la map
+		
+		statsResponse = append(statsResponse, map[string]interface{}{
+			"key":         string(tag),
+			"displayName": tag.GetTagDisplayName(),
+			"emoji":       tag.GetTagEmoji(),
+			"count":       count,
+		})
+	}
+
+	result := map[string]interface{}{
+		"tags":        statsResponse,
+		"total":       len(statsResponse),
+		"last_update": time.Now().Format(time.RFC3339),
+	}
+
+	log.Printf("[GetTagsStatsHandler] ✅ Statistiques retournées pour %d tags", len(statsResponse))
+	response.RespondWithJSON(w, http.StatusOK, result)
 }
 
 

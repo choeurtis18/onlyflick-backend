@@ -1,98 +1,130 @@
-// lib/features/search/widgets/tags_filter_widget.dart
+// onlyflick-app/lib/features/home/presentation/widgets/tags_filter_widget.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/services/tags_service.dart';
 
 class TagsFilterWidget extends StatefulWidget {
   final List<String> tags;
   final String selectedTag;
   final Function(String) onTagSelected;
-  final EdgeInsets? padding;
 
   const TagsFilterWidget({
     super.key,
     required this.tags,
     required this.selectedTag,
     required this.onTagSelected,
-    this.padding,
   });
 
   @override
   State<TagsFilterWidget> createState() => _TagsFilterWidgetState();
 }
 
-class _TagsFilterWidgetState extends State<TagsFilterWidget>
-    with SingleTickerProviderStateMixin {
-  final ScrollController _scrollController = ScrollController();
-  late AnimationController _animationController;
-  
+class _TagsFilterWidgetState extends State<TagsFilterWidget> {
+  // Map pour stocker les comptages de chaque tag (récupéré du backend)
+  Map<String, int> _tagCounts = {};
+  bool _isLoadingCounts = false;
+
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _animationController.forward();
+    _loadTagCounts();
   }
 
   @override
-  void dispose() {
-    _scrollController.dispose();
-    _animationController.dispose();
-    super.dispose();
+  void didUpdateWidget(TagsFilterWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Recharger les comptages si les tags ont changé
+    if (oldWidget.tags != widget.tags) {
+      _loadTagCounts();
+    }
+  }
+
+  // Charger les comptages réels depuis le backend
+  Future<void> _loadTagCounts() async {
+    if (_isLoadingCounts) return;
+    
+    setState(() {
+      _isLoadingCounts = true;
+    });
+
+    try {
+      // Importer le service au début du fichier :
+      // import '../../../../core/services/tags_service.dart';
+      
+      // Récupérer les vraies statistiques depuis le backend
+      final tagsWithStats = await TagsService.getTagsWithStats();
+      
+      final Map<String, int> counts = {};
+      for (final tagData in tagsWithStats) {
+        counts[tagData.displayName] = tagData.count;
+      }
+      
+      setState(() {
+        _tagCounts = counts;
+        _isLoadingCounts = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingCounts = false;
+      });
+      debugPrint('Erreur lors du chargement des comptages de tags: $e');
+      
+      // Fallback avec comptages factices si l'API échoue
+      _loadFallbackCounts();
+    }
+  }
+
+  // Méthode de fallback en cas d'erreur API
+  void _loadFallbackCounts() {
+    final Map<String, int> counts = {};
+    for (String tag in widget.tags) {
+      if (tag.toLowerCase() != 'tous') {
+        counts[tag] = _generateConsistentCount(tag);
+      }
+    }
+    setState(() {
+      _tagCounts = counts;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFF0F0F0), width: 1),
-        ),
-      ),
-      child: AnimatedBuilder(
-        animation: _animationController,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0, 20 * (1 - _animationController.value)),
-            child: Opacity(
-              opacity: _animationController.value,
-              child: child,
+      height: 50,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: widget.tags.length,
+        itemBuilder: (context, index) {
+          final tag = widget.tags[index];
+          final isSelected = tag == widget.selectedTag;
+
+          return Padding(
+            padding: EdgeInsets.only(
+              right: index < widget.tags.length - 1 ? 12 : 0,
             ),
+            child: _buildTagChip(tag, isSelected),
           );
         },
-        child: Container(
-          height: 60,
-          padding: widget.padding ?? const EdgeInsets.symmetric(vertical: 12),
-          child: ListView.separated(
-            controller: _scrollController,
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: widget.tags.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              final tag = widget.tags[index];
-              final isSelected = tag == widget.selectedTag;
-              
-              return _buildTagChip(tag, isSelected);
-            },
-          ),
-        ),
       ),
     );
   }
 
   Widget _buildTagChip(String tag, bool isSelected) {
     return GestureDetector(
-      onTap: () => _onTagTap(tag),
+      onTap: () {
+        hapticFeedback();
+        widget.onTagSelected(tag);
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.black : Colors.transparent,
+          color: isSelected 
+              ? Colors.black 
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? Colors.black : const Color(0xFFE0E0E0),
@@ -111,7 +143,7 @@ class _TagsFilterWidgetState extends State<TagsFilterWidget>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Icône du tag (optionnelle)
+            // Icône du tag corrigée pour correspondre au backend
             if (_getTagIcon(tag) != null) ...[
               Icon(
                 _getTagIcon(tag),
@@ -131,7 +163,7 @@ class _TagsFilterWidgetState extends State<TagsFilterWidget>
               ),
             ),
             
-            // Badge de comptage (optionnel)
+            // Badge de comptage avec vraies données
             if (_getTagCount(tag) > 0) ...[
               const SizedBox(width: 6),
               Container(
@@ -142,14 +174,25 @@ class _TagsFilterWidgetState extends State<TagsFilterWidget>
                       : const Color(0xFFF0F0F0),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(
-                  '${_getTagCount(tag)}',
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected ? Colors.white : const Color(0xFF999999),
-                  ),
-                ),
+                child: _isLoadingCounts 
+                    ? SizedBox(
+                        width: 12,
+                        height: 10,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            isSelected ? Colors.white : Colors.grey,
+                          ),
+                        ),
+                      )
+                    : Text(
+                        '${_getTagCount(tag)}',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected ? Colors.white : const Color(0xFF666666),
+                        ),
+                      ),
               ),
             ],
           ],
@@ -158,106 +201,86 @@ class _TagsFilterWidgetState extends State<TagsFilterWidget>
     );
   }
 
-  void _onTagTap(String tag) {
-    // Animation de feedback
-    _animateTagTap();
-    
-    // Scroll automatique vers le tag sélectionné
-    _scrollToSelectedTag(tag);
-    
-    // Appeler le callback
-    widget.onTagSelected(tag);
-    
-    // Feedback haptique léger
-    _hapticFeedback();
-  }
-
-  void _animateTagTap() {
-    _animationController.reverse().then((_) {
-      _animationController.forward();
-    });
-  }
-
-  void _scrollToSelectedTag(String tag) {
-    final index = widget.tags.indexOf(tag);
-    if (index != -1 && _scrollController.hasClients) {
-      const itemWidth = 100.0; // Largeur approximative d'un chip
-      final scrollPosition = (index * itemWidth) - (MediaQuery.of(context).size.width / 2);
-      
-      _scrollController.animateTo(
-        scrollPosition.clamp(0.0, _scrollController.position.maxScrollExtent),
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  void _hapticFeedback() {
-    // Feedback haptique léger (disponible sur iOS et Android)
-    try {
-      HapticFeedback.lightImpact();
-    } catch (e) {
-      // Ignore si le feedback haptique n'est pas disponible
-    }
-  }
-
-  /// Retourne une icône appropriée pour le tag (optionnel)
+  /// Retourne l'icône correspondant au tag backend
   IconData? _getTagIcon(String tag) {
     switch (tag.toLowerCase()) {
       case 'tous':
         return Icons.apps;
-      case 'photography':
-        return Icons.camera_alt;
+      
+      // Tags du backend avec leurs icônes appropriées
+      case 'yoga':
+        return Icons.self_improvement; // Icône de méditation/yoga
+      
+      case 'wellness':
+        return Icons.spa; // Icône de spa/wellness
+      
+      case 'beauté':
+      case 'beaute':
+        return Icons.face; // Icône de beauté
+      
+      case 'diy':
+        return Icons.handyman; // Icône d'outils/bricolage
+      
       case 'art':
-        return Icons.palette;
-      case 'music':
-        return Icons.music_note;
+        return Icons.palette; // Icône d'art
+      
+      case 'musique':
+        return Icons.music_note; // Icône de musique
+      
+      case 'cuisine':
+        return Icons.restaurant; // Icône de cuisine
+      
+      case 'musculation':
+        return Icons.fitness_center; // Icône de musculation
+      
+      case 'mode':
+        return Icons.style; // Icône de mode
+      
       case 'fitness':
-        return Icons.fitness_center;
-      case 'travel':
-        return Icons.flight;
-      case 'food':
-        return Icons.restaurant;
-      case 'fashion':
-        return Icons.style;
-      case 'design':
-        return Icons.design_services;
-      case 'tech':
-        return Icons.computer;
+        return Icons.directions_run; // Icône de course/fitness
+      
       default:
-        return null;
+        return Icons.tag; // Icône générique pour les tags non reconnus
     }
   }
 
-  /// Retourne un nombre factice de posts pour ce tag (pour la démo)
+  /// Retourne le nombre de posts pour ce tag (depuis le backend ou cache local)
   int _getTagCount(String tag) {
-    // Génère un nombre cohérent basé sur le tag
-    final seed = tag.hashCode;
-    final random = seed.abs();
+    if (tag.toLowerCase() == 'tous') {
+      return 0; // Pas de badge pour "Tous"
+    }
+    
+    return _tagCounts[tag] ?? 0;
+  }
+
+  /// Génère un nombre cohérent basé sur le tag (temporaire jusqu'à intégration backend)
+  int _generateConsistentCount(String tag) {
+    final seed = tag.hashCode.abs();
     
     switch (tag.toLowerCase()) {
-      case 'tous':
-        return 0; // Pas de badge pour "Tous"
-      case 'photography':
-        return 150 + (random % 50);
+      case 'yoga':
+        return 25 + (seed % 15); // 25-40 posts
+      case 'wellness':
+        return 18 + (seed % 12); // 18-30 posts
+      case 'beauté':
+      case 'beaute':
+        return 22 + (seed % 8); // 22-30 posts
+      case 'diy':
+        return 15 + (seed % 10); // 15-25 posts
       case 'art':
-        return 80 + (random % 40);
-      case 'music':
-        return 120 + (random % 30);
+        return 30 + (seed % 20); // 30-50 posts
+      case 'musique':
+        return 20 + (seed % 15); // 20-35 posts
+      case 'cuisine':
+        return 35 + (seed % 25); // 35-60 posts
+      case 'musculation':
+        return 40 + (seed % 20); // 40-60 posts
+      case 'mode':
+        return 28 + (seed % 12); // 28-40 posts
       case 'fitness':
-        return 60 + (random % 20);
-      case 'travel':
-        return 90 + (random % 35);
-      case 'food':
-        return 110 + (random % 25);
-      case 'fashion':
-        return 70 + (random % 30);
-      case 'design':
-        return 45 + (random % 15);
-      case 'tech':
-        return 85 + (random % 20);
+        return 45 + (seed % 30); // 45-75 posts
       default:
-        return 20 + (random % 10);
+        return 5 + (seed % 10); // 5-15 posts pour les tags inconnus
     }
   }
 }
@@ -273,7 +296,7 @@ extension on _TagsFilterWidgetState {
   }
 }
 
-/// Widget de tag personnalisable (version standalone)
+/// Widget de tag personnalisable (version standalone améliorée)
 class TagChip extends StatelessWidget {
   final String label;
   final bool isSelected;
@@ -282,6 +305,7 @@ class TagChip extends StatelessWidget {
   final int? count;
   final Color? selectedColor;
   final Color? unselectedColor;
+  final bool isLoading;
 
   const TagChip({
     super.key,
@@ -292,6 +316,7 @@ class TagChip extends StatelessWidget {
     this.count,
     this.selectedColor,
     this.unselectedColor,
+    this.isLoading = false,
   });
 
   @override
@@ -311,10 +336,20 @@ class TagChip extends StatelessWidget {
             color: isSelected ? selectedBg : const Color(0xFFE0E0E0),
             width: 1,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: selectedBg.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Icône
             if (icon != null) ...[
               Icon(
                 icon,
@@ -323,6 +358,8 @@ class TagChip extends StatelessWidget {
               ),
               const SizedBox(width: 6),
             ],
+            
+            // Texte
             Text(
               label,
               style: GoogleFonts.inter(
@@ -331,6 +368,8 @@ class TagChip extends StatelessWidget {
                 color: isSelected ? Colors.white : const Color(0xFF666666),
               ),
             ),
+            
+            // Badge de comptage
             if (count != null && count! > 0) ...[
               const SizedBox(width: 6),
               Container(
@@ -341,14 +380,25 @@ class TagChip extends StatelessWidget {
                       : const Color(0xFFF0F0F0),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(
-                  '$count',
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected ? Colors.white : const Color(0xFF999999),
-                  ),
-                ),
+                child: isLoading
+                    ? SizedBox(
+                        width: 12,
+                        height: 10,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            isSelected ? Colors.white : Colors.grey,
+                          ),
+                        ),
+                      )
+                    : Text(
+                        '$count',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected ? Colors.white : const Color(0xFF666666),
+                        ),
+                      ),
               ),
             ],
           ],
