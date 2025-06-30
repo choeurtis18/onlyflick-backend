@@ -227,5 +227,3 @@ Checklist de validation :
 - [ ] Logs backend sans erreur
 - [ ] Pods backend et frontend en status Running
 - [ ] Base de données PostgreSQL connectée et fonctionnelle
-
-**🚀 Si tous les points sont validés, le déploiement est réussi !**
