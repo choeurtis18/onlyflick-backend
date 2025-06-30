@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/models/post_models.dart';
-import '../../../../core/services/tags_service.dart';
+import '../../../../core/services/api_service.dart';
 
 class RecommendedPostsSection extends StatefulWidget {
   final String selectedTag;
@@ -17,6 +17,8 @@ class RecommendedPostsSection extends StatefulWidget {
 }
 
 class _RecommendedPostsSectionState extends State<RecommendedPostsSection> {
+  final ApiService _apiService = ApiService();
+  
   List<Post> _posts = [];
   bool _isLoading = true;
   bool _hasError = false;
@@ -27,6 +29,7 @@ class _RecommendedPostsSectionState extends State<RecommendedPostsSection> {
   final int _pageSize = 20;
   bool _hasMorePosts = false;
   bool _isLoadingMore = false;
+  int _totalPosts = 0;
 
   @override
   void initState() {
@@ -40,152 +43,218 @@ class _RecommendedPostsSectionState extends State<RecommendedPostsSection> {
     
     // Si le tag a changé, recharger les posts
     if (oldWidget.selectedTag != widget.selectedTag) {
-      print('Tag changé: ${oldWidget.selectedTag} → ${widget.selectedTag}');
+      debugPrint('Tag changé: ${oldWidget.selectedTag} → ${widget.selectedTag}');
       _loadPosts(resetList: true);
     }
   }
-Future<void> _loadPosts({bool resetList = false, bool loadMore = false}) async {
-  if (loadMore && _isLoadingMore) return;
-  
-  try {
-    if (resetList) {
-      setState(() {
-        _isLoading = true;
-        _hasError = false;
-        _currentPage = 0;
-      });
-    } else if (loadMore) {
-      setState(() {
-        _isLoadingMore = true;
-      });
-    }
 
-    debugPrint('🔍 Chargement posts pour tag: ${widget.selectedTag}');
-
-    final response = await TagsService.getPostsByTag(
-      widget.selectedTag,
-      limit: _pageSize,
-      offset: resetList ? 0 : (_currentPage + 1) * _pageSize,
-    );
-
-    if (response['posts'] != null) {
-      // Convertir les Map en objets Post
-      List<Post> newPosts = (response['posts'] as List).map((postData) {
-        return Post.fromJson(Map<String, dynamic>.from(postData));
-      }).toList();
-
-      setState(() {
-        if (resetList) {
-          _posts = newPosts;
+  /// Charge les posts recommandés depuis l'API
+  Future<void> _loadPosts({bool resetList = false, bool loadMore = false}) async {
+    if (loadMore && _isLoadingMore) return;
+    
+    try {
+      if (resetList) {
+        setState(() {
+          _isLoading = true;
+          _hasError = false;
           _currentPage = 0;
-        } else {
-          _posts.addAll(newPosts);
-          _currentPage++;
-        }
+        });
+      } else if (loadMore) {
+        setState(() {
+          _isLoadingMore = true;
+        });
+      }
+
+      debugPrint('🔍 Chargement posts recommandés pour tag: ${widget.selectedTag}');
+
+      // Déterminer l'offset
+      final offset = resetList ? 0 : (_currentPage + 1) * _pageSize;
+      
+      // Appeler l'API des posts recommandés
+      final response = await _getRecommendedPosts(
+        tags: widget.selectedTag != 'Tous' ? [_convertTagToBackend(widget.selectedTag)] : [],
+        limit: _pageSize,
+        offset: offset,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!;
         
-        _hasMorePosts = response['has_more'] ?? false;
+        // Extraire les posts de la réponse
+        final postsData = data['posts'] as List? ?? [];
+        List<Post> newPosts = postsData.map((postData) {
+          return Post.fromJson(Map<String, dynamic>.from(postData));
+        }).toList();
+
+        // Mettre à jour les métadonnées
+        final total = data['total'] ?? 0;
+        final hasMore = data['has_more'] ?? false;
+
+        setState(() {
+          if (resetList) {
+            _posts = newPosts;
+            _currentPage = 0;
+          } else {
+            _posts.addAll(newPosts);
+            _currentPage++;
+          }
+          
+          _totalPosts = total;
+          _hasMorePosts = hasMore;
+          _isLoading = false;
+          _isLoadingMore = false;
+          _hasError = false;
+        });
+
+        debugPrint('✅ Posts recommandés chargés: ${newPosts.length} (total: ${_posts.length}/${total})');
+      } else {
+        throw Exception(response.error ?? 'Erreur inconnue');
+      }
+    } catch (e) {
+      debugPrint('❌ Erreur chargement posts recommandés: $e');
+      
+      // Gestion spécifique selon le type d'erreur
+      String errorMessage = _getErrorMessage(e.toString());
+      
+      setState(() {
         _isLoading = false;
         _isLoadingMore = false;
-        _hasError = false;
-      });
-
-      debugPrint('✅ Posts chargés: ${newPosts.length} (total: ${_posts.length})');
-    } else {
-      // Gérer le cas où 'posts' est null
-      debugPrint('⚠️ Réponse sans posts pour tag: ${widget.selectedTag}');
-      setState(() {
+        _hasError = true;
+        _errorMessage = errorMessage;
         if (resetList) {
           _posts = [];
         }
-        _isLoading = false;
-        _isLoadingMore = false;
-        _hasError = false;
       });
     }
-  } catch (e) {
-    debugPrint('❌ Erreur chargement posts: $e');
+  }
+
+  /// Appelle l'endpoint des posts recommandés
+  Future<ApiResponse<Map<String, dynamic>>> _getRecommendedPosts({
+    List<String> tags = const [],
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    try {
+      // Construire les paramètres de la requête
+      final Map<String, String> queryParams = {
+        'limit': limit.toString(),
+        'offset': offset.toString(),
+      };
+
+      // Ajouter les tags s'ils sont spécifiés
+      if (tags.isNotEmpty) {
+        queryParams['tags'] = tags.join(',');
+      }
+
+      debugPrint('📡 Requête posts recommandés: /posts/recommended avec params: $queryParams');
+
+      return await _apiService.get<Map<String, dynamic>>(
+        '/posts/recommended',
+        queryParams: queryParams,
+      );
+    } catch (e) {
+      debugPrint('❌ Erreur API posts recommandés: $e');
+      return ApiResponse.error('Erreur de connexion: $e');
+    }
+  }
+
+  /// Convertit un nom de tag d'affichage en clé backend
+  String _convertTagToBackend(String displayTag) {
+    const Map<String, String> tagMapping = {
+      'Tous': 'tous',
+      'Yoga': 'yoga',
+      'Wellness': 'wellness',
+      'Beauté': 'beaute',
+      'DIY': 'diy',
+      'Art': 'art',
+      'Musique': 'musique',
+      'Cuisine': 'cuisine',
+      'Musculation': 'musculation',
+      'Mode': 'mode',
+      'Fitness': 'fitness',
+    };
     
-    // Gestion spécifique selon le type d'erreur
-    String errorMessage = 'Erreur de chargement des posts';
-    
-    if (e.toString().contains('Authentication required')) {
-      errorMessage = 'Veuillez vous reconnecter';
-    } else if (e.toString().contains('Failed to load posts')) {
-      errorMessage = 'Impossible de charger les posts pour cette catégorie';
-    } else if (e.toString().contains('Connection')) {
-      errorMessage = 'Problème de connexion internet';
+    return tagMapping[displayTag] ?? displayTag.toLowerCase();
+  }
+
+  /// Retourne un message d'erreur user-friendly
+  String _getErrorMessage(String error) {
+    if (error.contains('401') || error.contains('Authentication required')) {
+      return 'Veuillez vous reconnecter';
+    } else if (error.contains('404')) {
+      return 'Aucun contenu trouvé pour cette catégorie';
+    } else if (error.contains('500') || error.contains('Internal Server Error')) {
+      return 'Problème temporaire du serveur';
+    } else if (error.contains('Connection') || error.contains('Network')) {
+      return 'Problème de connexion internet';
+    } else if (error.contains('Failed to load posts')) {
+      return 'Impossible de charger les posts pour cette catégorie';
     }
     
-    setState(() {
-      _isLoading = false;
-      _isLoadingMore = false;
-      _hasError = true;
-      _errorMessage = errorMessage;
-      if (resetList) {
-        _posts = [];
-      }
-    });
+    return 'Erreur de chargement des posts';
   }
-}
 
-Widget _buildErrorState() {
-  return Padding(
-    padding: const EdgeInsets.all(16),
-    child: Center(
-      child: Column(
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 48,
-            color: Colors.red[300],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _errorMessage,
-            style: GoogleFonts.inter(
-              color: Colors.grey[600],
-              fontSize: 14,
+  /// État d'erreur avec options de récupération
+  Widget _buildErrorState() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: Colors.red[300],
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton(
-                onPressed: _refreshPosts,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                ),
-                child: Text(
-                  'Réessayer',
-                  style: GoogleFonts.inter(fontSize: 14),
-                ),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage,
+              style: GoogleFonts.inter(
+                color: Colors.grey[600],
+                fontSize: 14,
               ),
-              const SizedBox(width: 12),
-              // Bouton pour revenir aux posts généraux si on a un problème avec un tag spécifique
-              if (widget.selectedTag != 'Tous')
-                TextButton(
-                  onPressed: () {
-                    // Simuler la sélection du tag "Tous"
-                    debugPrint('Tentative de retour aux posts généraux');
-                  },
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: _refreshPosts,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                  ),
                   child: Text(
-                    'Voir tous les posts',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Colors.blue[600],
-                    ),
+                    'Réessayer',
+                    style: GoogleFonts.inter(fontSize: 14),
                   ),
                 ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 12),
+                // Bouton pour revenir aux posts généraux si on a un problème avec un tag spécifique
+                if (widget.selectedTag != 'Tous')
+                  TextButton(
+                    onPressed: () {
+                      // Simuler la sélection du tag "Tous"
+                      debugPrint('Tentative de retour aux posts généraux');
+                      // Note: En réalité, ceci devrait déclencher un callback vers le parent
+                      // pour changer le tag sélectionné
+                    },
+                    child: Text(
+                      'Voir tous les posts',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.blue[600],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Future<void> _refreshPosts() async {
     await _loadPosts(resetList: true);
@@ -202,6 +271,10 @@ Widget _buildErrorState() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Header avec informations sur le tag sélectionné
+        if (widget.selectedTag != 'Tous' && !_isLoading && !_hasError)
+          _buildTagHeader(),
+        
         // Contenu principal
         if (_isLoading && _posts.isEmpty)
           _buildLoadingState()
@@ -215,6 +288,49 @@ Widget _buildErrorState() {
     );
   }
 
+  /// Header informatif pour les tags spécifiques
+  Widget _buildTagHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(
+            Icons.filter_list,
+            size: 16,
+            color: Colors.grey[600],
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Posts recommandés en ${widget.selectedTag}',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (_totalPosts > 0) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$_totalPosts',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildLoadingState() {
     return const Padding(
       padding: EdgeInsets.all(32),
@@ -223,7 +339,6 @@ Widget _buildErrorState() {
       ),
     );
   }
-
 
   Widget _buildEmptyState() {
     return Padding(
@@ -240,10 +355,21 @@ Widget _buildErrorState() {
             Text(
               widget.selectedTag == 'Tous' 
                   ? "Aucune recommandation disponible pour le moment."
-                  : "Aucune publication pour ce tag.",
+                  : "Aucune publication recommandée pour ce tag.",
               style: GoogleFonts.inter(
                 color: Colors.grey[600],
                 fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              widget.selectedTag == 'Tous'
+                  ? "Essayez de sélectionner une catégorie spécifique."
+                  : "Essayez de sélectionner une autre catégorie.",
+              style: GoogleFonts.inter(
+                color: Colors.grey[500],
+                fontSize: 12,
               ),
               textAlign: TextAlign.center,
             ),
@@ -278,6 +404,20 @@ Widget _buildErrorState() {
                   ),
                 ),
               
+              // Message fin de liste si plus de posts
+              if (!_hasMorePosts && _posts.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Vous avez vu tous les posts recommandés',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              
               // Espace final
               const SizedBox(height: 100),
             ],
@@ -295,6 +435,7 @@ Widget _buildErrorState() {
   }
 }
 
+/// Layout en grille masonry pour afficher les posts
 class _MasonryGridLayout extends StatelessWidget {
   final List<Post> posts;
   
@@ -481,11 +622,15 @@ class _MasonryGridLayout extends StatelessWidget {
               // Overlay sombre pour la lisibilité
               _buildOverlay(),
               
-              // Indicateur de type de contenu
+              // Indicateur de type de contenu BASÉ SUR LES TAGS
               _buildContentIndicator(post),
               
               // Titre du post
               _buildPostTitle(post, isLarge),
+              
+              // Badge pour posts recommandés
+              if (isLarge)
+                _buildRecommendedBadge(),
             ],
           ),
         ),
@@ -571,23 +716,13 @@ class _MasonryGridLayout extends StatelessWidget {
     );
   }
 
+  /// NOUVELLE MÉTHODE : Indicateur basé sur les TAGS du post
   Widget _buildContentIndicator(Post post) {
     IconData icon;
-    String contentType = _getContentType(post);
+    Color iconColor = Colors.white;
     
-    switch (contentType) {
-      case 'video':
-        icon = Icons.videocam;
-        break;
-      case 'carousel':
-        icon = Icons.collections;
-        break;
-      case 'audio':
-        icon = Icons.music_note;
-        break;
-      default:
-        icon = Icons.camera_alt;
-    }
+    // Déterminer l'icône basée sur les TAGS du post au lieu du type de média
+    icon = _getIconFromTags(post, post.tags);
 
     return Positioned(
       top: 6,
@@ -600,8 +735,167 @@ class _MasonryGridLayout extends StatelessWidget {
         ),
         child: Icon(
           icon,
-          color: Colors.white,
+          color: iconColor,
           size: 12,
+        ),
+      ),
+    );
+  }
+
+  /// NOUVELLE MÉTHODE : Détermine l'icône à afficher selon les tags du post
+  IconData _getIconFromTags(Post post, List<String> tags) {
+    // Si pas de tags, utiliser une icône générique
+    if (tags.isEmpty) {
+      return Icons.camera_alt;
+    }
+
+    // Parcourir les tags et retourner la première icône correspondante
+    for (String tag in tags) {
+      switch (tag.toLowerCase()) {
+        // Tags fitness et sport
+        case 'fitness':
+        case 'musculation':
+          return Icons.fitness_center;
+        
+        case 'yoga':
+          return Icons.self_improvement;
+        
+        // Tags bien-être
+        case 'wellness':
+          return Icons.spa;
+        
+        // Tags créatifs
+        case 'art':
+          return Icons.palette;
+        
+        case 'musique':
+        case 'music':
+          return Icons.music_note;
+        
+        case 'diy':
+          return Icons.handyman;
+        
+        // Tags lifestyle
+        case 'cuisine':
+        case 'food':
+          return Icons.restaurant;
+        
+        case 'mode':
+        case 'fashion':
+          return Icons.style;
+        
+        case 'beaute':
+        case 'beauté':
+        case 'beauty':
+          return Icons.face;
+        
+        // Tags génériques
+        case 'photo':
+        case 'photography':
+          return Icons.camera_alt;
+        
+        case 'video':
+          return Icons.videocam;
+        
+        case 'travel':
+          return Icons.flight;
+        
+        default:
+          continue; // Continuer vers le tag suivant
+      }
+    }
+
+    // Si aucun tag reconnu, essayer de deviner depuis le titre
+    return _getIconFromTitle(post.title, tags.isNotEmpty ? tags.first : '');
+  }
+
+  /// NOUVELLE MÉTHODE : Fallback - essayer de deviner l'icône depuis le titre
+  IconData _getIconFromTitle(String title, String firstTag) {
+    final lowerText = (title + ' ' + firstTag).toLowerCase();
+    
+    if (lowerText.contains('workout') || 
+        lowerText.contains('fitness') || 
+        lowerText.contains('exercise') ||
+        lowerText.contains('training') ||
+        lowerText.contains('push') ||
+        lowerText.contains('squat') ||
+        lowerText.contains('transformation')) {
+      return Icons.fitness_center;
+    }
+    
+    if (lowerText.contains('yoga') || 
+        lowerText.contains('meditation') ||
+        lowerText.contains('zen')) {
+      return Icons.self_improvement;
+    }
+    
+    if (lowerText.contains('music') || 
+        lowerText.contains('studio') ||
+        lowerText.contains('song') ||
+        lowerText.contains('sound')) {
+      return Icons.music_note;
+    }
+    
+    if (lowerText.contains('food') || 
+        lowerText.contains('recipe') ||
+        lowerText.contains('cook') ||
+        lowerText.contains('boeuf') ||
+        lowerText.contains('cuisine')) {
+      return Icons.restaurant;
+    }
+    
+    if (lowerText.contains('style') || 
+        lowerText.contains('dress') ||
+        lowerText.contains('look') ||
+        lowerText.contains('outfit')) {
+      return Icons.style;
+    }
+    
+    if (lowerText.contains('morning') || 
+        lowerText.contains('routine') ||
+        lowerText.contains('wellness') ||
+        lowerText.contains('equilibre')) {
+      return Icons.spa;
+    }
+    
+    if (lowerText.contains('art') || 
+        lowerText.contains('paint') ||
+        lowerText.contains('creative')) {
+      return Icons.palette;
+    }
+    
+    // Icône par défaut
+    return Icons.camera_alt;
+  }
+
+  Widget _buildRecommendedBadge() {
+    return Positioned(
+      top: 6,
+      left: 6,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.orange.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.star,
+              color: Colors.white,
+              size: 10,
+            ),
+            const SizedBox(width: 2),
+            Text(
+              'Recommandé',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 8,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -632,24 +926,8 @@ class _MasonryGridLayout extends StatelessWidget {
     );
   }
 
-  String _getContentType(Post post) {
-    // Logique simple pour déterminer le type de contenu
-    if (post.mediaUrl.contains('.mp4') || 
-        post.mediaUrl.contains('video')) {
-      return 'video';
-    } else if (post.mediaUrl.contains('carousel') ||
-               post.title.toLowerCase().contains('carousel')) {
-      return 'carousel';
-    } else if (post.mediaUrl.contains('.mp3') ||
-               post.title.toLowerCase().contains('music') ||
-               post.title.toLowerCase().contains('audio')) {
-      return 'audio';
-    }
-    return 'image';
-  }
-
   void _onPostTap(Post post) {
     // TODO: Naviguer vers le détail du post
-    debugPrint('Tap sur le post: ${post.title}');
+    debugPrint('Tap sur le post recommandé: ${post.title} avec tags: ${post.tags}');
   }
 }

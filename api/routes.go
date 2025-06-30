@@ -142,6 +142,9 @@ func SetupRoutes() http.Handler {
 	r.Route("/tags", func(tags chi.Router) {
 		// Endpoint public pour récupérer tous les tags disponibles
 		tags.Get("/available", handler.GetAvailableTagsHandler)
+		
+		// Endpoint public pour récupérer les statistiques des tags
+		tags.Get("/stats", handler.GetTagsStatsHandler)
 	})
 
 	// ========================
