@@ -124,9 +124,9 @@ curl -I http://grafana.local
 
 ```bash
 # Configuration de l'environnement de test
-cd /home/barry/Documents/onlyflick-backend
-export SECRET_KEY="12345678901234567890123456789012"
-export DATABASE_URL="postgresql://onlyflick_db_owner:npg_GuDKP6U3gYtZ@ep-curly-sun-a2np1ifi-pooler.eu-central-1.aws.neon.tech/onlyflick_db?sslmode=require"
+cd /onlyflick-backend
+export SECRET_KEY=""
+export DATABASE_URL="postgresql://"
 
 # Tests des performances (plus fiables)
 go test ./tests/performance/... -v
