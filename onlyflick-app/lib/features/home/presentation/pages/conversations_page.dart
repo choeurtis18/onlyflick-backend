@@ -50,64 +50,73 @@ class _ConversationsPageState extends State<ConversationsPage> {
 
   /// AppBar moderne style OnlyFlick
   PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      leading: IconButton(
-        onPressed: () => Navigator.of(context).pop(),
-        icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
+  return AppBar(
+    backgroundColor: Colors.white,
+    elevation: 0,
+    leading: IconButton(
+      onPressed: () => Navigator.of(context).pop(),
+      icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
+    ),
+    title: const Text(
+      'Messages',
+      style: TextStyle(
+        color: Colors.black,
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
       ),
-      title: const Text(
-        'Messages',
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-        ),
+    ),
+    actions: [
+      // Indicateur WebSocket
+      Consumer<MessagingProvider>(
+        builder: (context, messagingProvider, child) {
+          return Container(
+            margin: const EdgeInsets.only(right: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: messagingProvider.isWebSocketConnected 
+                        ? Colors.green 
+                        : Colors.orange,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  messagingProvider.isWebSocketConnected ? 'En ligne' : 'Hors ligne',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
-      actions: [
-        // Indicateur WebSocket
-        Consumer<MessagingProvider>(
-          builder: (context, messagingProvider, child) {
-            return Container(
-              margin: const EdgeInsets.only(right: 8),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: messagingProvider.isWebSocketConnected 
-                          ? Colors.green 
-                          : Colors.orange,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    messagingProvider.isWebSocketConnected ? 'En ligne' : 'Hors ligne',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-        // Bouton nouvelle conversation
-        IconButton(
-          onPressed: _showNewConversationDialog,
-          icon: const Icon(Icons.edit_square, color: Colors.black, size: 22),
-        ),
-        const SizedBox(width: 8),
-      ],
-    );
-  }
-
+      
+      // 🧪 Bouton Test WebSocket (pour développement)
+      IconButton(
+        onPressed: () {
+          Navigator.of(context).pushNamed('websocketTest');
+        },
+        icon: const Icon(Icons.wifi_tethering, color: Colors.blue, size: 20),
+        tooltip: 'Test WebSocket',
+      ),
+      
+      // Bouton nouvelle conversation
+      IconButton(
+        onPressed: _showNewConversationDialog,
+        icon: const Icon(Icons.edit_square, color: Colors.black, size: 22),
+      ),
+      const SizedBox(width: 8),
+    ],
+  );
+}
   /// Corps principal de la page
   Widget _buildBody(MessagingProvider messagingProvider) {
     // État de chargement initial
