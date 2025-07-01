@@ -9,6 +9,8 @@ import 'package:matchmaker/core/services/app_initializer.dart';
 import 'package:matchmaker/core/services/api_service.dart';
 import 'package:matchmaker/core/providers/app_providers_wrapper.dart';
 import './core/providers/profile_provider.dart';
+import 'package:matchmaker/core/providers/messaging_provider.dart';
+
 // ===== AJOUT DE L'IMPORT DU SEARCH PROVIDER =====
 import 'package:matchmaker/core/providers/search_provider.dart';
 
@@ -56,6 +58,12 @@ class OnlyFlickBootstrap extends StatelessWidget {
             // 🔍 Provider de recherche et découverte
             ChangeNotifierProvider(
               create: (_) => SearchProvider(),
+            ),
+            
+            // ✅ NOUVEAU: Provider de messagerie
+            // 💬 Provider de messagerie (pour le chat temps réel)
+            ChangeNotifierProvider(
+              create: (_) => MessagingProvider(),
             ),
           ],
           child: const AppProvidersWrapper(

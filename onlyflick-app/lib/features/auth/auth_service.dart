@@ -6,7 +6,7 @@ import 'models/auth_models.dart';
 class AuthService {
   final ApiService _apiService = ApiService();
 
-  /// Connexion utilisateur
+  /// Connexion utilisateur avec sauvegarde de l'ID
   Future<AuthResult> login(LoginRequest request) async {
     try {
       debugPrint('🔐 Attempting login for: ${request.email}');
@@ -23,7 +23,10 @@ class AuthService {
         // Sauvegarder le token automatiquement
         await _apiService.setToken(authData.token);
         
-        debugPrint('🔐 Login successful for user ID: ${authData.userId}');
+        // ✅ NOUVEAU: Sauvegarder l'ID utilisateur
+        await _apiService.setCurrentUser(authData.userId);
+        
+        debugPrint('🔐 Login successful for user ID: ${authData.userId} (${authData.username})');
         return AuthResult.success(authData);
       } else {
         debugPrint('❌ Login failed: ${response.error}');
@@ -40,7 +43,7 @@ class AuthService {
     }
   }
 
-  /// Inscription utilisateur AVEC USERNAME
+  /// Inscription utilisateur avec sauvegarde de l'ID
   Future<AuthResult> register(RegisterRequest request) async {
     try {
       debugPrint('🔐 Attempting registration for: ${request.email} with username: ${request.username}');
@@ -56,6 +59,9 @@ class AuthService {
         
         // Sauvegarder le token automatiquement
         await _apiService.setToken(authData.token);
+        
+        // ✅ NOUVEAU: Sauvegarder l'ID utilisateur
+        await _apiService.setCurrentUser(authData.userId);
         
         debugPrint('🔐 Registration successful for user ID: ${authData.userId}, username: ${authData.username}');
         return AuthResult.success(authData);
@@ -74,13 +80,13 @@ class AuthService {
     }
   }
 
-  /// ===== VÉRIFICATION DISPONIBILITÉ USERNAME =====
+  /// Vérification de la disponibilité du username
   Future<UsernameCheckResult> checkUsernameAvailability(String username) async {
     try {
       debugPrint('🔐 Checking username availability: $username');
       
       final response = await _apiService.get<UsernameCheckResponse>(
-        '/auth/check-username?username=${Uri.encodeComponent(username)}',  // Route corrigée
+        '/auth/check-username?username=${Uri.encodeComponent(username)}',
         fromJson: (json) => UsernameCheckResponse.fromJson(json),
       );
 
@@ -108,7 +114,7 @@ class AuthService {
       debugPrint('🔐 Fetching user profile');
       
       final response = await _apiService.get<User>(
-        '/profile',  // Endpoint de votre backend Go
+        '/profile',
         fromJson: (json) => User.fromJson(json),
       );
 
@@ -118,7 +124,7 @@ class AuthService {
       } else {
         debugPrint('❌ Failed to fetch profile: ${response.error}');
         
-        // Si c'est une erreur d'auth, on déconnecte
+        // Si c'est une erreur d'auth, on déconnecte complètement
         if (response.isAuthError) {
           await logout();
         }
@@ -136,13 +142,13 @@ class AuthService {
     }
   }
 
-  /// Mise à jour du profil utilisateur (AVEC SUPPORT USERNAME)
+  /// Mise à jour du profil utilisateur
   Future<UserResult> updateProfile(UpdateProfileRequest request) async {
     try {
       debugPrint('🔐 Updating user profile');
       
       final response = await _apiService.patch<Map<String, dynamic>>(
-        '/profile',  // Endpoint de votre backend Go
+        '/profile',
         body: request.toJson(),
       );
 
@@ -172,7 +178,7 @@ class AuthService {
       debugPrint('🔐 Requesting creator upgrade');
       
       final response = await _apiService.post<Map<String, dynamic>>(
-        '/profile/request-upgrade',  // Endpoint de votre backend Go
+        '/profile/request-upgrade',
       );
 
       if (response.isSuccess) {
@@ -199,14 +205,14 @@ class AuthService {
       debugPrint('🔐 Deleting user account');
       
       final response = await _apiService.delete<Map<String, dynamic>>(
-        '/profile',  // Endpoint de votre backend Go
+        '/profile',
       );
 
       if (response.isSuccess) {
         debugPrint('🔐 Account deleted successfully');
         
-        // Supprimer le token
-        await _apiService.setToken(null);
+        // ✅ MODIFIÉ: Utiliser la méthode logout complète
+        await logout();
         
         return AuthResult.success(null);
       } else {
@@ -224,35 +230,216 @@ class AuthService {
     }
   }
 
-  /// Déconnexion utilisateur
+  /// ✅ NOUVEAU: Déconnexion complète (token + ID utilisateur)
   Future<void> logout() async {
-    debugPrint('🔐 Logging out user');
-    
-    // Supprimer le token localement
-    await _apiService.setToken(null);
-    
-    debugPrint('🔐 User logged out');
-  }
-
-  /// Vérification de l'état de connexion
-  Future<bool> isLoggedIn() async {
-    final token = _apiService.token;
-    if (token == null) {
-      return false;
-    }
-
-    // Vérifier la validité du token avec le serveur
     try {
-      final result = await getProfile();
-      return result.isSuccess;
+      debugPrint('🔐 Logging out user...');
+      
+      // Optionnel: Appeler endpoint de logout sur le serveur
+      try {
+        await _apiService.post('/logout');
+        debugPrint('🔐 Server logout successful');
+      } catch (e) {
+        debugPrint('⚠️ Server logout failed (non-critical): $e');
+        // Ne pas faire échouer la déconnexion locale pour autant
+      }
+      
+      // Nettoyer la session locale (token + ID utilisateur)
+      await _apiService.logout();
+      
+      debugPrint('🔐 Complete logout successful');
     } catch (e) {
-      debugPrint('❌ Token validation failed: $e');
+      debugPrint('❌ Logout error: $e');
+      // Même en cas d'erreur, forcer le nettoyage local
+      await _apiService.logout();
+    }
+  }
+
+  /// ✅ NOUVEAU: Vérification complète de la session
+  Future<bool> isLoggedIn() async {
+    // Vérifier d'abord les données locales
+    if (!_apiService.isAuthenticated) {
+      debugPrint('🔐 No valid local session');
+      return false;
+    }
+
+    // Vérifier avec le serveur que la session est toujours valide
+    try {
+      debugPrint('🔐 Validating session with server...');
+      final result = await getProfile();
+      
+      if (result.isSuccess) {
+        debugPrint('🔐 Session is valid for user ${_apiService.currentUserId}');
+        return true;
+      } else {
+        debugPrint('🔐 Session expired, cleaning up...');
+        await logout();
+        return false;
+      }
+    } catch (e) {
+      debugPrint('❌ Session validation failed: $e');
+      await logout();
       return false;
     }
   }
 
+  /// ✅ AMÉLIORÉ: Vérification de session au démarrage de l'app
+  Future<bool> checkSession() async {
+    try {
+      debugPrint('🔐 Checking session at app startup...');
+      
+      // Si pas de session locale, pas besoin de vérifier
+      if (!_apiService.isAuthenticated) {
+        debugPrint('🔐 No local session found');
+        return false;
+      }
+
+      // Vérifier que la session est toujours valide
+      final isValid = await isLoggedIn();
+      
+      if (isValid) {
+        debugPrint('🔐 Session check successful for user ${_apiService.currentUserId}');
+      } else {
+        debugPrint('🔐 Session check failed, user logged out');
+      }
+      
+      return isValid;
+    } catch (e) {
+      debugPrint('❌ Session check error: $e');
+      await logout();
+      return false;
+    }
+  }
+
+  /// ✅ NOUVEAU: Rafraîchissement du token (si supporté par votre backend)
+  Future<bool> refreshToken() async {
+    try {
+      debugPrint('🔐 Attempting to refresh token...');
+      
+      final response = await _apiService.post<Map<String, dynamic>>(
+        '/auth/refresh-token',
+      );
+      
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!;
+        
+        if (data['token'] != null) {
+          final newToken = data['token'] as String;
+          await _apiService.setToken(newToken);
+          
+          // Si un nouvel ID utilisateur est fourni, le mettre à jour
+          if (data['user_id'] != null) {
+            final userId = data['user_id'] as int;
+            await _apiService.setCurrentUser(userId);
+          }
+          
+          debugPrint('🔐 Token refreshed successfully');
+          return true;
+        }
+      }
+      
+      debugPrint('❌ Token refresh failed');
+      await logout();
+      return false;
+    } catch (e) {
+      debugPrint('❌ Token refresh error: $e');
+      await logout();
+      return false;
+    }
+  }
+
+  /// ✅ NOUVEAU: Getters pour les informations de session
+  
   /// Vérifie si un token est stocké localement
-  bool hasToken() {
-    return _apiService.token != null;
+  bool hasToken() => _apiService.hasToken;
+  
+  /// Vérifie si un ID utilisateur est stocké localement
+  bool hasCurrentUser() => _apiService.hasCurrentUser;
+  
+  /// Vérifie si la session est complète (token + ID)
+  bool get isAuthenticated => _apiService.isAuthenticated;
+  
+  /// Obtient l'ID de l'utilisateur connecté
+  int? get currentUserId => _apiService.currentUserId;
+  
+  /// Obtient les informations complètes de session
+  Map<String, dynamic> get sessionInfo => _apiService.sessionInfo;
+
+  /// ✅ NOUVEAU: Gestion des erreurs d'authentification
+  void _handleAuthError() {
+    debugPrint('⚠️ Authentication error detected, logging out...');
+    logout();
+  }
+
+  /// ✅ NOUVEAU: Validation d'email (utilitaire)
+  bool isValidEmail(String email) {
+    return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email);
+  }
+
+  /// ✅ NOUVEAU: Validation de mot de passe (utilitaire)
+  bool isValidPassword(String password) {
+    // Au moins 8 caractères
+    return password.length >= 8;
+  }
+
+  /// ✅ NOUVEAU: Validation d'username (utilitaire)
+  bool isValidUsername(String username) {
+    // Entre 3 et 20 caractères, lettres, chiffres, tiret et underscore
+    return RegExp(r'^[a-zA-Z0-9_-]{3,20}$').hasMatch(username);
+  }
+
+  /// ✅ NOUVEAU: Méthode pour obtenir l'état complet de l'authentification
+  Future<AuthenticationState> getAuthenticationState() async {
+    if (!isAuthenticated) {
+      return AuthenticationState.notAuthenticated;
+    }
+
+    try {
+      // Vérifier la validité avec le serveur
+      final profileResult = await getProfile();
+      
+      if (profileResult.isSuccess) {
+        return AuthenticationState.authenticated;
+      } else {
+        return AuthenticationState.expired;
+      }
+    } catch (e) {
+      debugPrint('❌ Error checking authentication state: $e');
+      return AuthenticationState.error;
+    }
+  }
+
+  /// ✅ NOUVEAU: Nettoyage des ressources
+  void dispose() {
+    // Si vous avez des streams ou timers à nettoyer
+    debugPrint('🔐 AuthService disposed');
+  }
+}
+
+/// ✅ NOUVEAU: Énumération pour l'état d'authentification
+enum AuthenticationState {
+  notAuthenticated,  // Pas de session locale
+  authenticated,     // Session valide
+  expired,          // Session expirée
+  error,            // Erreur de vérification
+}
+
+/// ✅ NOUVEAU: Extension pour des méthodes utilitaires
+extension AuthenticationStateExtension on AuthenticationState {
+  bool get isAuthenticated => this == AuthenticationState.authenticated;
+  bool get needsLogin => this == AuthenticationState.notAuthenticated || this == AuthenticationState.expired;
+  bool get hasError => this == AuthenticationState.error;
+  
+  String get description {
+    switch (this) {
+      case AuthenticationState.notAuthenticated:
+        return 'Non connecté';
+      case AuthenticationState.authenticated:
+        return 'Connecté';
+      case AuthenticationState.expired:
+        return 'Session expirée';
+      case AuthenticationState.error:
+        return 'Erreur d\'authentification';
+    }
   }
 }

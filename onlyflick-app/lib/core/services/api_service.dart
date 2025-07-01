@@ -27,6 +27,9 @@ class ApiService {
 
   final http.Client _client = http.Client();
   String? _token;
+  
+  // ✅ NOUVEAU: Gestion de l'ID utilisateur connecté
+  int? _currentUserId;
 
   // Headers par défaut pour les requêtes JSON
   Map<String, String> get _defaultHeaders => {
@@ -43,11 +46,24 @@ class ApiService {
   /// Getter public pour accéder à l'URL de base
   String get baseUrl => _baseUrl;
 
-  /// Initialise le service avec le token stocké
+  /// ✅ NOUVEAU: Getter pour obtenir l'ID de l'utilisateur connecté
+  int? get currentUserId => _currentUserId;
+
+  /// ✅ NOUVEAU: Vérifie si un utilisateur est connecté
+  bool get hasCurrentUser => _currentUserId != null;
+
+  /// Initialise le service avec le token et l'ID utilisateur stockés
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
+    
+    // Charger le token
     _token = prefs.getString('auth_token');
+    
+    // ✅ NOUVEAU: Charger l'ID utilisateur
+    _currentUserId = prefs.getInt('current_user_id');
+    
     debugPrint('🔐 ApiService initialized with token: ${_token != null}');
+    debugPrint('🔐 Current user ID: $_currentUserId');
     debugPrint('🌍 Base URL: $_baseUrl');
   }
 
@@ -62,6 +78,29 @@ class ApiService {
       await prefs.remove('auth_token');
       debugPrint('🔐 Token cleared');
     }
+  }
+
+  /// ✅ NOUVEAU: Met à jour l'ID de l'utilisateur connecté (appelé après login)
+  Future<void> setCurrentUser(int userId) async {
+    _currentUserId = userId;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('current_user_id', userId);
+    debugPrint('🔐 Current user ID saved: $userId');
+  }
+
+  /// ✅ NOUVEAU: Efface l'ID de l'utilisateur (appelé lors du logout)
+  Future<void> clearCurrentUser() async {
+    _currentUserId = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('current_user_id');
+    debugPrint('🔐 Current user ID cleared');
+  }
+
+  /// ✅ NOUVEAU: Déconnexion complète (token + user)
+  Future<void> logout() async {
+    await setToken(null);
+    await clearCurrentUser();
+    debugPrint('🔐 Complete logout performed');
   }
 
   /// Récupère le token actuel
@@ -355,8 +394,9 @@ class ApiService {
 
   /// Gère les erreurs d'authentification (401)
   void _handleUnauthorized() {
-    debugPrint('⚠️ Unauthorized access - clearing token');
-    setToken(null);
+    debugPrint('⚠️ Unauthorized access - clearing session');
+    // ✅ MODIFIÉ: Nettoyer complètement la session
+    logout();
   }
 
   Future<ApiResponse<Map<String, dynamic>>> searchPosts({
@@ -381,7 +421,6 @@ class ApiService {
     );
   }
 
-
   /// Test de connectivité avec le serveur
   Future<bool> testConnection() async {
     try {
@@ -392,6 +431,17 @@ class ApiService {
       return false;
     }
   }
+
+  /// ✅ NOUVEAU: Vérifie si l'utilisateur est authentifié et valide
+  bool get isAuthenticated => hasToken && hasCurrentUser;
+
+  /// ✅ NOUVEAU: Obtient les informations de session
+  Map<String, dynamic> get sessionInfo => {
+        'hasToken': hasToken,
+        'hasUser': hasCurrentUser,
+        'userId': currentUserId,
+        'isAuthenticated': isAuthenticated,
+      };
 
   /// Nettoyage des ressources
   void dispose() {
