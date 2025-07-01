@@ -29,6 +29,9 @@ class WebSocketService {
   bool _isConnecting = false;
   bool _shouldReconnect = true;
   
+  // Conversation actuelle
+  int? _currentConversationId;
+  
   // Streams pour les événements
   final StreamController<Message> _messageController = StreamController<Message>.broadcast();
   final StreamController<WebSocketEvent> _eventController = StreamController<WebSocketEvent>.broadcast();
@@ -36,21 +39,27 @@ class WebSocketService {
   // Getters publics
   bool get isConnected => _isConnected;
   bool get isConnecting => _isConnecting;
+  int? get currentConversationId => _currentConversationId;
   Stream<Message> get messageStream => _messageController.stream;
   Stream<WebSocketEvent> get eventStream => _eventController.stream;
 
-  /// URL WebSocket en fonction de l'environnement
-  String get _websocketUrl {
+  /// URL WebSocket pour une conversation spécifique
+  String _websocketUrlForConversation(int conversationId) {
     final baseUrl = ApiService().baseUrl;
     final wsUrl = baseUrl.replaceFirst('http://', 'ws://').replaceFirst('https://', 'wss://');
-    return '$wsUrl/ws';
+    return '$wsUrl/ws/messages/$conversationId';
   }
 
-  /// Se connecte au WebSocket
-  Future<void> connect() async {
-    if (_isConnected || _isConnecting) {
-      debugPrint('🔌 WebSocket: Already connected or connecting');
+  /// Se connecte au WebSocket pour une conversation spécifique
+  Future<void> connectToConversation(int conversationId) async {
+    if (_isConnected && _currentConversationId == conversationId) {
+      debugPrint('🔌 WebSocket: Already connected to conversation $conversationId');
       return;
+    }
+
+    // Déconnecter la conversation précédente si elle existe
+    if (_isConnected && _currentConversationId != conversationId) {
+      await disconnect();
     }
 
     final token = ApiService().token;
@@ -61,15 +70,23 @@ class WebSocketService {
     }
 
     _isConnecting = true;
+    _currentConversationId = conversationId;
     _eventController.add(WebSocketEvent.connecting());
     
     try {
-      debugPrint('🔌 WebSocket: Connecting to $_websocketUrl');
+      // Construire l'URL WebSocket avec le token en query parameter
+      // Ceci est plus compatible avec les navigateurs web
+      final baseWsUrl = _websocketUrlForConversation(conversationId);
+      final wsUrlWithToken = '$baseWsUrl?token=$token';
       
-      // Créer la connexion WebSocket avec authentification
+      debugPrint('🔌 WebSocket: Connecting to $baseWsUrl (with auth token)');
+      
       _channel = WebSocketChannel.connect(
-        Uri.parse('$_websocketUrl?token=$token'),
+        Uri.parse(wsUrlWithToken),
+        protocols: null,
       );
+
+      debugPrint('🔧 WebSocket: Using query parameter authentication for better browser compatibility');
 
       // Écouter les messages
       _subscription = _channel!.stream.listen(
@@ -86,15 +103,23 @@ class WebSocketService {
       // Démarrer le ping pour maintenir la connexion
       _startPing();
       
-      debugPrint('✅ WebSocket: Connected successfully');
+      debugPrint('✅ WebSocket: Connected successfully to conversation $conversationId');
       _eventController.add(WebSocketEvent.connected());
       
     } catch (e) {
       _isConnecting = false;
+      _currentConversationId = null;
       debugPrint('❌ WebSocket: Connection failed: $e');
       _eventController.add(WebSocketEvent.error('Échec de connexion: $e'));
       _scheduleReconnect();
     }
+  }
+
+  /// Se connecte au WebSocket (méthode legacy, utilise connectToConversation maintenant)
+  @Deprecated('Utilisez connectToConversation(int conversationId) à la place')
+  Future<void> connect() async {
+    debugPrint('⚠️ WebSocket: connect() est obsolète, utilisez connectToConversation(int conversationId)');
+    _eventController.add(WebSocketEvent.error('ID de conversation requis pour la connexion'));
   }
 
   /// Déconnecte le WebSocket
@@ -104,7 +129,7 @@ class WebSocketService {
     _stopReconnectTimer();
     
     if (_channel != null) {
-      debugPrint('🔌 WebSocket: Disconnecting...');
+      debugPrint('🔌 WebSocket: Disconnecting from conversation $_currentConversationId...');
       await _channel!.sink.close(status.normalClosure);
       _channel = null;
     }
@@ -113,41 +138,67 @@ class WebSocketService {
     _subscription = null;
     _isConnected = false;
     _isConnecting = false;
+    _currentConversationId = null;
     
     debugPrint('✅ WebSocket: Disconnected');
     _eventController.add(WebSocketEvent.disconnected());
   }
 
   /// Rejoint une conversation pour recevoir ses messages en temps réel
+  /// Note: Cette méthode est maintenant automatique lors de connectToConversation
   void joinConversation(int conversationId) {
     if (!_isConnected) {
       debugPrint('❌ WebSocket: Cannot join conversation, not connected');
       return;
     }
 
-    debugPrint('🔌 WebSocket: Joining conversation $conversationId');
-    _sendMessage({
-      'type': 'join_conversation',
-      'conversation_id': conversationId,
-    });
+    if (_currentConversationId != conversationId) {
+      debugPrint('⚠️ WebSocket: Requesting join for different conversation. Use connectToConversation instead.');
+      return;
+    }
+
+    debugPrint('🔌 WebSocket: Already in conversation $conversationId');
   }
 
   /// Quitte une conversation
   void leaveConversation(int conversationId) {
-    if (!_isConnected) return;
+    if (!_isConnected || _currentConversationId != conversationId) return;
 
     debugPrint('🔌 WebSocket: Leaving conversation $conversationId');
-    _sendMessage({
-      'type': 'leave_conversation',
-      'conversation_id': conversationId,
-    });
+    disconnect();
+  }
+
+  /// Envoie un message dans la conversation actuelle
+  Future<void> sendMessage(String content) async {
+    if (!_isConnected || _currentConversationId == null) {
+      debugPrint('❌ WebSocket: Cannot send message, not connected to any conversation');
+      return;
+    }
+
+    try {
+      final message = {
+        'content': content,
+      };
+      
+      _channel!.sink.add(jsonEncode(message));
+      debugPrint('📤 WebSocket: Message sent: $content');
+    } catch (e) {
+      debugPrint('❌ WebSocket: Error sending message: $e');
+      _eventController.add(WebSocketEvent.error('Erreur envoi message: $e'));
+    }
   }
 
   /// Gère les messages reçus du WebSocket
   void _handleMessage(dynamic data) {
     try {
       final jsonData = jsonDecode(data as String);
-      debugPrint('🔌 WebSocket: Received message: ${jsonData['type']}');
+      debugPrint('🔌 WebSocket: Received message type: ${jsonData['type'] ?? 'unknown'}');
+      
+      // Si c'est un message direct (pas d'envelope avec type)
+      if (!jsonData.containsKey('type')) {
+        _handleDirectMessage(jsonData);
+        return;
+      }
       
       switch (jsonData['type']) {
         case 'new_message':
@@ -172,6 +223,7 @@ class WebSocketService {
           
         case 'pong':
           // Réponse au ping, connexion OK
+          debugPrint('🏓 WebSocket: Pong received');
           break;
           
         default:
@@ -179,10 +231,26 @@ class WebSocketService {
       }
     } catch (e) {
       debugPrint('❌ WebSocket: Error parsing message: $e');
+      debugPrint('📄 WebSocket: Raw data: $data');
     }
   }
 
-  /// Gère les nouveaux messages reçus
+  /// Gère les messages directs (format du serveur Go actuel)
+  void _handleDirectMessage(Map<String, dynamic> data) {
+    try {
+      // Le serveur Go envoie directement le message, pas dans une envelope
+      final message = Message.fromJson(data);
+      
+      debugPrint('💬 WebSocket: Direct message received from user ${message.senderId}');
+      _messageController.add(message);
+      
+    } catch (e) {
+      debugPrint('❌ WebSocket: Error handling direct message: $e');
+      debugPrint('📄 WebSocket: Data: $data');
+    }
+  }
+
+  /// Gère les nouveaux messages reçus (format avec envelope)
   void _handleNewMessage(Map<String, dynamic> data) {
     try {
       final messageData = data['message'] as Map<String, dynamic>;
@@ -250,7 +318,7 @@ class WebSocketService {
     
     _eventController.add(WebSocketEvent.disconnected());
     
-    if (_shouldReconnect) {
+    if (_shouldReconnect && _currentConversationId != null) {
       _scheduleReconnect();
     }
   }
@@ -283,9 +351,11 @@ class WebSocketService {
 
   /// Programme une tentative de reconnexion
   void _scheduleReconnect() {
-    if (!_shouldReconnect || _reconnectAttempts >= maxReconnectAttempts) {
-      debugPrint('❌ WebSocket: Max reconnection attempts reached');
-      _eventController.add(WebSocketEvent.error('Impossible de se reconnecter'));
+    if (!_shouldReconnect || _reconnectAttempts >= maxReconnectAttempts || _currentConversationId == null) {
+      if (_reconnectAttempts >= maxReconnectAttempts) {
+        debugPrint('❌ WebSocket: Max reconnection attempts reached');
+        _eventController.add(WebSocketEvent.error('Impossible de se reconnecter'));
+      }
       return;
     }
 
@@ -295,8 +365,8 @@ class WebSocketService {
     debugPrint('🔄 WebSocket: Scheduling reconnection attempt $_reconnectAttempts in ${reconnectDelay.inSeconds}s');
     
     _reconnectTimer = Timer(reconnectDelay, () {
-      if (_shouldReconnect) {
-        connect();
+      if (_shouldReconnect && _currentConversationId != null) {
+        connectToConversation(_currentConversationId!);
       }
     });
   }
@@ -309,7 +379,7 @@ class WebSocketService {
 
   /// Envoie un indicateur de frappe
   void sendTypingIndicator(int conversationId, bool isTyping) {
-    if (!_isConnected) return;
+    if (!_isConnected || _currentConversationId != conversationId) return;
     
     _sendMessage({
       'type': 'typing',

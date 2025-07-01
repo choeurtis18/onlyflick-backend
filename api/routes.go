@@ -223,7 +223,7 @@ func SetupRoutes() http.Handler {
 	// WebSocket pour la messagerie privée
 	// ========================
 	r.Route("/ws", func(wsRouter chi.Router) {
-		wsRouter.Use(middleware.JWTMiddleware)
+		wsRouter.Use(middleware.WebSocketJWTMiddleware)
 		wsRouter.Get("/messages/{conversation_id}", handler.HandleMessagesWebSocket)
 	})
 

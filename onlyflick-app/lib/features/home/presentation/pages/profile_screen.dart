@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:go_router/go_router.dart';  // ✅ Ajout de l'import GoRouter
 import '../../../auth/auth_provider.dart';
 import '../../../../core/providers/profile_provider.dart';
 
@@ -792,6 +793,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  // ✅ MÉTHODE MODIFIÉE : Menu des paramètres avec option WebSocket Test
   void _showSettingsMenu() {
     final user = context.read<AuthProvider>().user;
     
@@ -806,11 +808,40 @@ class _ProfileScreenState extends State<ProfileScreen>
             if (user?.username?.isNotEmpty == true) ...[
               ListTile(
                 leading: const Icon(Icons.person),
-                title: Text('Connecté en tant que'),
+                title: const Text('Connecté en tant que'),
                 subtitle: Text(user!.displayName),  // @username
               ),
               const Divider(),
             ],
+            
+            // ===== 🧪 OPTION TEST WEBSOCKET (DÉVELOPPEMENT) =====
+            ListTile(
+              leading: const Icon(Icons.wifi_tethering, color: Colors.blue),
+              title: const Text('Test WebSocket'),
+              subtitle: const Text('Tester la messagerie en temps réel'),
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.blue[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'DEV',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue[800],
+                  ),
+                ),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.pushNamed('websocketTest');  // ✅ Navigation avec GoRouter
+              },
+            ),
+            
+            const Divider(),
+            
             ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Paramètres'),

@@ -9,6 +9,7 @@ import 'package:matchmaker/features/auth/presentation/pages/login_page.dart';
 import 'package:matchmaker/features/auth/presentation/pages/register_page.dart';
 import 'package:matchmaker/features/auth/auth_provider.dart';
 import 'package:matchmaker/features/home/presentation/pages/search_page.dart';
+import 'package:matchmaker/features/home/presentation/pages/websocket_test_page.dart';
 
 final GoRouter router = GoRouter(
   initialLocation: '/login',
@@ -71,6 +72,12 @@ final GoRouter router = GoRouter(
       path: '/search',
       name: 'search',
       builder: (BuildContext context, GoRouterState state) => const SearchPage(),
+    ),
+
+    GoRoute(
+      path: '/websocket-test',
+      name: 'websocketTest',
+      builder: (BuildContext context, GoRouterState state) => const WebSocketTestPage(),
     ),
   ],
 );
