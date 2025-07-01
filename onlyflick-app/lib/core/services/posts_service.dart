@@ -9,29 +9,29 @@ class PostsService {
   /// Récupère tous les posts visibles pour l'utilisateur connecté
   Future<PostsResult> getAllPosts() async {
     try {
-      debugPrint('📱 Fetching all visible posts');
+      // debugPrint('📱 Fetching all visible posts');
       
       final response = await _apiService.get<dynamic>('/posts/all');
 
       if (response.isSuccess && response.data != null) {
         // ===== DEBUG : AFFICHER LA STRUCTURE JSON BRUTE =====
-        debugPrint('🔍 RAW JSON RESPONSE:');
-        if (response.data is List && (response.data as List).isNotEmpty) {
-          final firstPost = (response.data as List).first;
-          debugPrint('🔍 Premier post JSON: $firstPost');
-          debugPrint('🔍 Clés disponibles: ${firstPost.keys.toList()}');
-        }
+        // debugPrint('🔍 RAW JSON RESPONSE:');
+        // if (response.data is List && (response.data as List).isNotEmpty) {
+        //   final firstPost = (response.data as List).first;
+        //   // debugPrint('🔍 Premier post JSON: $firstPost');
+        //   // debugPrint('🔍 Clés disponibles: ${firstPost.keys.toList()}');
+        // }
         
         final posts = (response.data as List)
             .map((json) => Post.fromJson(json))
             .toList();
         
-        debugPrint('📱 ${posts.length} posts fetched successfully');
+        // debugPrint('📱 ${posts.length} posts fetched successfully');
         
         // ===== DEBUG DES USERNAMES =====
-        for (final post in posts) {
-          debugPrint('📊 Post ${post.id}: ${post.initialLikesCount} likes, author: ${post.authorDisplayName} (username: ${post.authorUsername})');
-        }
+        // for (final post in posts) {
+        //   debugPrint('📊 Post ${post.id}: ${post.initialLikesCount} likes, author: ${post.authorDisplayName} (username: ${post.authorUsername})');
+        // }
         
         return PostsResult.success(posts);
       } else {
@@ -47,7 +47,7 @@ class PostsService {
   /// Récupère les posts d'un créateur spécifique
   Future<PostsResult> getCreatorPosts(int creatorId, {bool subscriberOnly = false}) async {
     try {
-      debugPrint('📱 Fetching posts from creator: $creatorId');
+      // debugPrint('📱 Fetching posts from creator: $creatorId');
       
       String endpoint;
       if (subscriberOnly) {
@@ -63,7 +63,7 @@ class PostsService {
             .map((json) => Post.fromJson(json))
             .toList();
         
-        debugPrint('📱 ${posts.length} posts from creator $creatorId fetched successfully');
+        // debugPrint('📱 ${posts.length} posts from creator $creatorId fetched successfully');
         return PostsResult.success(posts);
       } else {
         debugPrint('❌ Failed to fetch creator posts: ${response.error}');
@@ -78,7 +78,7 @@ class PostsService {
   /// Like/Unlike un post
   Future<LikeToggleResult> toggleLike(int postId) async {
     try {
-      debugPrint('❤️ Toggling like for post: $postId');
+      // debugPrint('❤️ Toggling like for post: $postId');
       
       final response = await _apiService.post<Map<String, dynamic>>(
         '/posts/$postId/likes',
@@ -102,7 +102,7 @@ class PostsService {
   /// Récupère le nombre de likes d'un post
   Future<LikesCountResult> getPostLikes(int postId) async {
     try {
-      debugPrint('📊 Fetching likes count for post: $postId');
+      // debugPrint('📊 Fetching likes count for post: $postId');
       
       final response = await _apiService.get<Map<String, dynamic>>(
         '/posts/$postId/likes',
@@ -111,10 +111,10 @@ class PostsService {
 
       if (response.isSuccess && response.data != null) {
         final likesCount = response.data!['likes_count'] ?? 0;
-        debugPrint('📊 Post $postId has $likesCount likes');
+        // debugPrint('📊 Post $postId has $likesCount likes');
         return LikesCountResult.success(likesCount);
       } else {
-        debugPrint('❌ Failed to fetch likes count: ${response.error}');
+        // debugPrint('❌ Failed to fetch likes count: ${response.error}');
         return LikesCountResult.failure(response.error ?? 'Erreur de récupération des likes');
       }
     } catch (e) {
@@ -126,7 +126,7 @@ class PostsService {
   /// Récupère les commentaires d'un post
   Future<CommentsResult> getPostComments(int postId) async {
     try {
-      debugPrint('💬 Fetching comments for post: $postId');
+      // debugPrint('💬 Fetching comments for post: $postId');
       
       final response = await _apiService.get<dynamic>('/comments/post/$postId');
 
@@ -135,16 +135,13 @@ class PostsService {
             .map((json) => Comment.fromJson(json))
             .toList();
         
-        debugPrint('💬 ${comments.length} comments fetched for post $postId');
+        // debugPrint('💬 ${comments.length} comments fetched for post $postId');
         
-        // ===== DEBUG DES USERNAMES DES COMMENTAIRES =====
-        for (final comment in comments) {
-          debugPrint('💬 Comment ${comment.id}: by ${comment.authorDisplayName} (username: ${comment.authorUsername})');
-        }
+        
         
         return CommentsResult.success(comments);
       } else {
-        debugPrint('❌ Failed to fetch comments: ${response.error}');
+        // debugPrint('❌ Failed to fetch comments: ${response.error}');
         return CommentsResult.failure(response.error ?? 'Erreur de récupération des commentaires');
       }
     } catch (e) {

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../services/messaging_service.dart';
 import '../services/websocket_service.dart';
-import '../models/message_models.dart';
+import '../models/message_models.dart' as models;
 
 /// Provider pour gérer l'état de la messagerie avec WebSocket temps réel
 class MessagingProvider extends ChangeNotifier {
@@ -11,26 +11,26 @@ class MessagingProvider extends ChangeNotifier {
   final WebSocketService _webSocketService = WebSocketService();
 
   // Subscriptions pour les streams WebSocket
-  StreamSubscription<Message>? _messageSubscription;
-  StreamSubscription<WebSocketEvent>? _eventSubscription;
+  StreamSubscription<models.Message>? _messageSubscription;
+  StreamSubscription<WebSocketEvent>? _eventSubscription; // Utilise le type du WebSocketService
 
   // État des conversations
-  List<Conversation> _conversations = [];
+  List<models.Conversation> _conversations = [];
   bool _isLoadingConversations = false;
-  MessagingError? _conversationsError;
+  models.MessagingError? _conversationsError;
 
   // État des messages pour la conversation active
-  Map<int, List<Message>> _messagesCache = {};
+  Map<int, List<models.Message>> _messagesCache = {};
   int? _activeConversationId;
   bool _isLoadingMessages = false;
-  MessagingError? _messagesError;
+  models.MessagingError? _messagesError;
 
   // État de l'envoi de messages
   bool _isSendingMessage = false;
-  MessagingError? _sendMessageError;
+  models.MessagingError? _sendMessageError;
 
   // État de la recherche d'utilisateurs
-  List<User> _searchResults = [];
+  List<models.User> _searchResults = [];
   bool _isSearchingUsers = false;
   String _lastSearchQuery = '';
 
@@ -40,24 +40,24 @@ class MessagingProvider extends ChangeNotifier {
   Timer? _typingTimer;
 
   // Getters pour l'état des conversations
-  List<Conversation> get conversations => List.unmodifiable(_conversations);
+  List<models.Conversation> get conversations => List.unmodifiable(_conversations);
   bool get isLoadingConversations => _isLoadingConversations;
-  MessagingError? get conversationsError => _conversationsError;
+  models.MessagingError? get conversationsError => _conversationsError;
 
   // Getters pour l'état des messages
-  List<Message> get activeMessages {
+  List<models.Message> get activeMessages {
     if (_activeConversationId == null) return [];
     return List.unmodifiable(_messagesCache[_activeConversationId] ?? []);
   }
   
   int? get activeConversationId => _activeConversationId;
   bool get isLoadingMessages => _isLoadingMessages;
-  MessagingError? get messagesError => _messagesError;
+  models.MessagingError? get messagesError => _messagesError;
   bool get isSendingMessage => _isSendingMessage;
-  MessagingError? get sendMessageError => _sendMessageError;
+  models.MessagingError? get sendMessageError => _sendMessageError;
 
   // Getters pour la recherche
-  List<User> get searchResults => List.unmodifiable(_searchResults);
+  List<models.User> get searchResults => List.unmodifiable(_searchResults);
   bool get isSearchingUsers => _isSearchingUsers;
   String get lastSearchQuery => _lastSearchQuery;
 
@@ -90,7 +90,7 @@ class MessagingProvider extends ChangeNotifier {
   }
 
   /// Gère les messages reçus en temps réel
-  void _handleRealtimeMessage(Message message) {
+  void _handleRealtimeMessage(models.Message message) {
     debugPrint('💬 Realtime message received for conversation ${message.conversationId}');
     
     // Ajouter le message à la cache locale
@@ -126,6 +126,18 @@ class MessagingProvider extends ChangeNotifier {
         }
         break;
         
+      case WebSocketEventType.messageDelivered:
+        if (event.messageId != null) {
+          debugPrint('✅ Message ${event.messageId} delivered');
+        }
+        break;
+        
+      case WebSocketEventType.messageRead:
+        if (event.messageId != null) {
+          debugPrint('👁️ Message ${event.messageId} read');
+        }
+        break;
+        
       case WebSocketEventType.error:
         debugPrint('❌ WebSocket error: ${event.message}');
         break;
@@ -133,6 +145,7 @@ class MessagingProvider extends ChangeNotifier {
       default:
         debugPrint('📡 WebSocket event: ${event.type}');
     }
+    
     notifyListeners();
   }
 
@@ -155,6 +168,8 @@ class MessagingProvider extends ChangeNotifier {
   Future<void> connectWebSocket() async {
     debugPrint('🔌 Connecting WebSocket...');
     await _webSocketService.connect();
+    _isWebSocketConnected = true;
+    notifyListeners();
   }
 
   /// Déconnecte le WebSocket (appelé lors du logout)
@@ -165,6 +180,8 @@ class MessagingProvider extends ChangeNotifier {
     _typingUsers.clear();
     notifyListeners();
   }
+
+  /// Charge les conversations de l'utilisateur
   Future<void> loadConversations() async {
     if (_isLoadingConversations) return;
 
@@ -184,9 +201,9 @@ class MessagingProvider extends ChangeNotifier {
         debugPrint('❌ Failed to load conversations: ${result.error?.message}');
       }
     } catch (e) {
-      _conversationsError = MessagingError(
+      _conversationsError = models.MessagingError(
         message: 'Erreur inattendue lors du chargement des conversations',
-        type: MessagingErrorType.unknown,
+        type: models.MessagingErrorType.unknown,
       );
       debugPrint('❌ Unexpected error loading conversations: $e');
     } finally {
@@ -229,9 +246,9 @@ class MessagingProvider extends ChangeNotifier {
         debugPrint('❌ Failed to load messages: ${result.error?.message}');
       }
     } catch (e) {
-      _messagesError = MessagingError(
+      _messagesError = models.MessagingError(
         message: 'Erreur inattendue lors du chargement des messages',
-        type: MessagingErrorType.unknown,
+        type: models.MessagingErrorType.unknown,
       );
       debugPrint('❌ Unexpected error loading messages: $e');
     } finally {
@@ -270,9 +287,9 @@ class MessagingProvider extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _sendMessageError = MessagingError(
+      _sendMessageError = models.MessagingError(
         message: 'Erreur inattendue lors de l\'envoi du message',
-        type: MessagingErrorType.unknown,
+        type: models.MessagingErrorType.unknown,
       );
       debugPrint('❌ Unexpected error sending message: $e');
       notifyListeners();
@@ -384,7 +401,7 @@ class MessagingProvider extends ChangeNotifier {
   }
 
   /// Obtient une conversation par son ID
-  Conversation? getConversationById(int conversationId) {
+  models.Conversation? getConversationById(int conversationId) {
     try {
       return _conversations.firstWhere((conv) => conv.id == conversationId);
     } catch (e) {
@@ -398,14 +415,14 @@ class MessagingProvider extends ChangeNotifier {
   }
 
   /// Met à jour une conversation avec un nouveau message
-  void _updateConversationWithNewMessage(Message message) {
+  void _updateConversationWithNewMessage(models.Message message) {
     final conversationIndex = _conversations.indexWhere(
       (conv) => conv.id == message.conversationId,
     );
     
     if (conversationIndex != -1) {
       final conversation = _conversations[conversationIndex];
-      final updatedConversation = Conversation(
+      final updatedConversation = models.Conversation(
         id: conversation.id,
         user1Id: conversation.user1Id,
         user2Id: conversation.user2Id,
@@ -438,7 +455,7 @@ class MessagingProvider extends ChangeNotifier {
       if (conversationIndex != -1) {
         final conversation = _conversations[conversationIndex];
         if (conversation.unreadCount > 0) {
-          final updatedConversation = Conversation(
+          final updatedConversation = models.Conversation(
             id: conversation.id,
             user1Id: conversation.user1Id,
             user2Id: conversation.user2Id,

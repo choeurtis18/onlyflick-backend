@@ -23,7 +23,7 @@ class UserLikesCacheService {
       final prefs = await SharedPreferences.getInstance();
       final key = '${_keyPrefix}${userId}_$postId';
       final isLiked = prefs.getBool(key) ?? false;
-      debugPrint('📖 Like state loaded: user $userId, post $postId, liked: $isLiked');
+      // debugPrint('📖 Like state loaded: user $userId, post $postId, liked: $isLiked');
       return isLiked;
     } catch (e) {
       debugPrint('❌ Error loading like state: $e');

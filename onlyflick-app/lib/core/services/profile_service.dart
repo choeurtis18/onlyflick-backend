@@ -84,7 +84,7 @@ class ProfileService {
         debugPrint('📝 User posts fetched successfully (${posts.length} posts)');
         return UserPostsResult.success(posts);
       } else {
-        debugPrint('❌ Failed to fetch user posts: ${response.error}');
+        // debugPrint('❌ Failed to fetch user posts: ${response.error}');
         return UserPostsResult.failure(
           auth_models.AuthError.fromApiResponse(  // ===== CORRECTION ALIAS =====
             response.error ?? 'Erreur de récupération des posts',

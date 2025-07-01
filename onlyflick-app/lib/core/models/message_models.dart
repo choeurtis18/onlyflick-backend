@@ -33,9 +33,11 @@ class Message {
       id: json['id'] as int,
       conversationId: json['conversation_id'] as int,
       senderId: json['sender_id'] as int,
-      content: json['content'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      // FIX: Gestion des valeurs null pour content
+      content: (json['content'] as String?) ?? '',
+      // FIX: Gestion des valeurs null pour les dates
+      createdAt: DateTime.parse((json['created_at'] as String?) ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse((json['updated_at'] as String?) ?? DateTime.now().toIso8601String()),
       senderUsername: json['sender_username'] as String?,
       senderFirstName: json['sender_first_name'] as String?,
       senderLastName: json['sender_last_name'] as String?,
@@ -110,8 +112,9 @@ class Conversation {
       id: json['id'] as int,
       user1Id: json['user1_id'] as int,
       user2Id: json['user2_id'] as int,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      // FIX: Gestion des valeurs null pour les dates
+      createdAt: DateTime.parse((json['created_at'] as String?) ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse((json['updated_at'] as String?) ?? DateTime.now().toIso8601String()),
       otherUserUsername: json['other_user_username'] as String?,
       otherUserFirstName: json['other_user_first_name'] as String?,
       otherUserLastName: json['other_user_last_name'] as String?,
@@ -185,10 +188,11 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'] as int,
-      username: json['username'] as String,
-      firstName: json['first_name'] as String,
-      lastName: json['last_name'] as String,
-      email: json['email'] as String,
+      // FIX: Gestion des valeurs null pour les champs obligatoires
+      username: (json['username'] as String?) ?? '',
+      firstName: (json['first_name'] as String?) ?? '',
+      lastName: (json['last_name'] as String?) ?? '',
+      email: (json['email'] as String?) ?? '',
       avatar: json['avatar'] as String?,
       isCreator: json['is_creator'] as bool? ?? false,
     );
@@ -335,4 +339,38 @@ enum MessagingErrorType {
   notFound,
   server,
   unknown,
+}
+
+/// Classes d'événements WebSocket
+abstract class WebSocketEvent {
+  const WebSocketEvent();
+
+  factory WebSocketEvent.messageDelivered(int messageId) => MessageDeliveredEvent(messageId);
+  factory WebSocketEvent.messageRead(int messageId) => MessageReadEvent(messageId);
+  factory WebSocketEvent.userTyping(int conversationId, int userId, bool isTyping) =>
+      UserTypingEvent(conversationId, userId, isTyping);
+  factory WebSocketEvent.conversationUpdated(int conversationId) =>
+      ConversationUpdatedEvent(conversationId);
+}
+
+class MessageDeliveredEvent extends WebSocketEvent {
+  final int messageId;
+  const MessageDeliveredEvent(this.messageId);
+}
+
+class MessageReadEvent extends WebSocketEvent {
+  final int messageId;
+  const MessageReadEvent(this.messageId);
+}
+
+class UserTypingEvent extends WebSocketEvent {
+  final int conversationId;
+  final int userId;
+  final bool isTyping;
+  const UserTypingEvent(this.conversationId, this.userId, this.isTyping);
+}
+
+class ConversationUpdatedEvent extends WebSocketEvent {
+  final int conversationId;
+  const ConversationUpdatedEvent(this.conversationId);
 }

@@ -58,10 +58,9 @@ class ProfileProvider with ChangeNotifier {
 
   // ===== MÉTHODES PUBLIQUES =====
 
-  /// 🔥 NOUVELLE MÉTHODE : Force l'initialisation si nécessaire
   void ensureInitialized() {
     if (!_isInitialized && _authProvider.isAuthenticated) {
-      debugPrint('🔄 [ProfileProvider] Force initialization requested');
+      // debugPrint('🔄 [ProfileProvider] Force initialization requested');
       _scheduleInitialLoad();
     }
   }
@@ -70,7 +69,7 @@ class ProfileProvider with ChangeNotifier {
   Future<void> loadProfileData() async {
     if (!_authProvider.isAuthenticated) return;
     
-    debugPrint('🔄 [ProfileProvider] Loading complete profile data');
+    // debugPrint('🔄 [ProfileProvider] Loading complete profile data');
     await _loadInitialData();
   }
 
@@ -78,7 +77,7 @@ class ProfileProvider with ChangeNotifier {
   Future<void> refreshAllData() async {
     if (!_authProvider.isAuthenticated) return;
     
-    debugPrint('🔄 [ProfileProvider] Refreshing all profile data');
+    // debugPrint('🔄 [ProfileProvider] Refreshing all profile data');
     _clearError();
     
     // Chargement séquentiel 
@@ -106,13 +105,12 @@ class ProfileProvider with ChangeNotifier {
 
   // ===== MÉTHODES PRIVÉES =====
 
-  /// 🔥 SOLUTION PRINCIPALE : Planification du chargement initial
   void _scheduleInitialLoad() {
     // Triple délai pour s'assurer que tout est monté
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 50), () {
         if (_authProvider.isAuthenticated && !_isInitialized) {
-          debugPrint('🚀 [ProfileProvider] Starting scheduled initial load');
+          // debugPrint('🚀 [ProfileProvider] Starting scheduled initial load');
           _loadInitialData();
         }
       });
@@ -123,7 +121,7 @@ class ProfileProvider with ChangeNotifier {
   Future<void> _loadInitialData() async {
     if (!_authProvider.isAuthenticated || _isInitialized) return;
 
-    debugPrint('🔄 [ProfileProvider] Loading initial profile data');
+    // debugPrint('🔄 [ProfileProvider] Loading initial profile data');
     _isInitialized = true; // 🔥 Marquer comme initialisé
     
     try {
@@ -131,7 +129,7 @@ class ProfileProvider with ChangeNotifier {
       await _loadStats();
       await _loadUserPosts(refresh: true);
       
-      debugPrint('✅ [ProfileProvider] Initial profile data loaded successfully');
+      // debugPrint('✅ [ProfileProvider] Initial profile data loaded successfully');
       
     } catch (e) {
       debugPrint('❌ [ProfileProvider] Error in _loadInitialData: $e');
@@ -151,7 +149,7 @@ class ProfileProvider with ChangeNotifier {
       
       if (result.isSuccess && result.data != null) {
         _stats = result.data;
-        debugPrint('📊 [ProfileProvider] Stats loaded: ${_stats.toString()}');
+        // debugPrint('📊 [ProfileProvider] Stats loaded: ${_stats.toString()}');
       } else {
         _setError(result.error?.message ?? 'Erreur de chargement des statistiques');
       }
@@ -163,11 +161,10 @@ class ProfileProvider with ChangeNotifier {
     }
   }
 
-  /// 🔥 MÉTHODE SIMPLIFIÉE : Charge les posts de l'utilisateur
   Future<void> _loadUserPosts({bool refresh = false, String? type}) async {
     if (!_authProvider.isAuthenticated) return;
     
-    debugPrint('📝 [ProfileProvider] Starting loadUserPosts (refresh: $refresh, type: $type)');
+    // debugPrint('📝 [ProfileProvider] Starting loadUserPosts (refresh: $refresh, type: $type)');
     
     // Si on refresh ou change de type, réinitialiser
     if (refresh || (type != null && type != _currentPostsType)) {
@@ -179,7 +176,7 @@ class ProfileProvider with ChangeNotifier {
     
     // Si plus de posts disponibles, arrêter
     if (!_hasMorePosts) {
-      debugPrint('📝 [ProfileProvider] No more posts available');
+      // debugPrint('📝 [ProfileProvider] No more posts available');
       return;
     }
     
@@ -187,7 +184,7 @@ class ProfileProvider with ChangeNotifier {
     if (refresh) _clearError();
     
     try {
-      debugPrint('📝 [ProfileProvider] Calling API for posts (page: $_currentPage, type: $_currentPostsType)');
+      // debugPrint('📝 [ProfileProvider] Calling API for posts (page: $_currentPage, type: $_currentPostsType)');
       
       final result = await _profileService.getUserPosts(
         page: _currentPage,
@@ -197,21 +194,21 @@ class ProfileProvider with ChangeNotifier {
       
       if (result.isSuccess && result.data != null) {
         final newPosts = result.data!;
-        debugPrint('📝 [ProfileProvider] API returned ${newPosts.length} posts');
+        // debugPrint('📝 [ProfileProvider] API returned ${newPosts.length} posts');
         
         if (refresh || _currentPage == 1) {
           _userPosts = newPosts;
-          debugPrint('📝 [ProfileProvider] Posts replaced (total: ${_userPosts.length})');
+          // debugPrint('📝 [ProfileProvider] Posts replaced (total: ${_userPosts.length})');
         } else {
           _userPosts.addAll(newPosts);
-          debugPrint('📝 [ProfileProvider] Posts added (total: ${_userPosts.length})');
+          // debugPrint('📝 [ProfileProvider] Posts added (total: ${_userPosts.length})');
         }
         
         // Vérifier s'il y a plus de posts
         _hasMorePosts = newPosts.length >= 20;
         _currentPage++;
         
-        debugPrint('📝 [ProfileProvider] Posts loaded successfully: ${newPosts.length} (total: ${_userPosts.length})');
+        // debugPrint('📝 [ProfileProvider] Posts loaded successfully: ${newPosts.length} (total: ${_userPosts.length})');
         
       } else {
         debugPrint('❌ [ProfileProvider] Failed to load posts: ${result.error?.message}');
@@ -230,10 +227,10 @@ class ProfileProvider with ChangeNotifier {
   /// Listener pour les changements d'authentification
   void _onAuthChanged() {
     if (_authProvider.isAuthenticated && !_isInitialized) {
-      debugPrint('👤 [ProfileProvider] User authenticated - scheduling profile data load');
+      // debugPrint('👤 [ProfileProvider] User authenticated - scheduling profile data load');
       _scheduleInitialLoad();
     } else if (!_authProvider.isAuthenticated) {
-      debugPrint('👤 [ProfileProvider] User logged out - clearing profile data');
+      // debugPrint('👤 [ProfileProvider] User logged out - clearing profile data');
       _clearAllData();
     }
   }
@@ -330,14 +327,14 @@ class ProfileProvider with ChangeNotifier {
       final result = await _profileService.uploadAvatar(imageFile);
       
       if (result.isSuccess && result.data != null) {
-        debugPrint('📸 [ProfileProvider] Avatar uploaded successfully: ${result.data!.avatarUrl}');
+        // debugPrint('📸 [ProfileProvider] Avatar uploaded successfully: ${result.data!.avatarUrl}');
         
         // Recharger le profil utilisateur pour obtenir la nouvelle URL
         await _authProvider.refreshProfile();
         
         return true;
       } else {
-        debugPrint('❌ [ProfileProvider] Failed to upload avatar: ${result.error?.message}');
+        // debugPrint('❌ [ProfileProvider] Failed to upload avatar: ${result.error?.message}');
         _setError(result.error?.message ?? 'Erreur lors de l\'upload de l\'avatar');
         return false;
       }
@@ -358,12 +355,12 @@ class ProfileProvider with ChangeNotifier {
     _clearError();
     
     try {
-      debugPrint('📝 [ProfileProvider] Updating bio: $newBio');
+      // debugPrint('📝 [ProfileProvider] Updating bio: $newBio');
       
       final result = await _profileService.updateBio(newBio);
       
       if (result.isSuccess) {
-        debugPrint('📝 [ProfileProvider] Bio updated successfully');
+        // debugPrint('📝 [ProfileProvider] Bio updated successfully');
         
         // Recharger le profil utilisateur pour obtenir la nouvelle bio
         await _authProvider.refreshProfile();
@@ -393,10 +390,10 @@ class ProfileProvider with ChangeNotifier {
       final result = await _profileService.checkUsernameAvailability(username);
       
       if (result.isSuccess && result.data != null) {
-        debugPrint('🔍 [ProfileProvider] Username check: ${result.data!.username} available: ${result.data!.available}');
+        // debugPrint('🔍 [ProfileProvider] Username check: ${result.data!.username} available: ${result.data!.available}');
         return result.data!.available;
       } else {
-        debugPrint('❌ [ProfileProvider] Username check failed: ${result.error?.message}');
+        // debugPrint('❌ [ProfileProvider] Username check failed: ${result.error?.message}');
         return null;
       }
     } catch (e) {
@@ -413,14 +410,14 @@ class ProfileProvider with ChangeNotifier {
       return;
     }
     
-    debugPrint('📝 [ProfileProvider] Loading more posts (page: $_currentPage)');
+    // debugPrint('📝 [ProfileProvider] Loading more posts (page: $_currentPage)');
     await _loadUserPosts();
   }
 
   /// Changer le type de posts affiché
   Future<void> changePostsType(String type) async {
     if (type != _currentPostsType) {
-      debugPrint('📝 [ProfileProvider] Changing posts type to: $type');
+      // debugPrint('📝 [ProfileProvider] Changing posts type to: $type');
       await _loadUserPosts(refresh: true, type: type);
     }
   }

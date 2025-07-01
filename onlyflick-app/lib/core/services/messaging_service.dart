@@ -9,52 +9,108 @@ class MessagingService {
 
   /// Récupérer toutes les conversations de l'utilisateur connecté
   /// Backend: GET /conversations -> handler.GetMyConversations
-  Future<MessagingResult<List<Conversation>>> getMyConversations() async {
-    try {
-      debugPrint('💬 Fetching user conversations...');
-      
-      final response = await _apiService.get('/conversations');
+Future<MessagingResult<List<Conversation>>> getMyConversations() async {
+  try {
+    debugPrint('💬 Fetching user conversations...');
+    
+    final response = await _apiService.get('/conversations');
 
-      if (response.isSuccess && response.data != null) {
-        final responseData = response.data;
-        List<Conversation> conversations = [];
+    debugPrint('🔍 RESPONSE DEBUG:');
+    debugPrint('Success: ${response.isSuccess}');
+    debugPrint('Status Code: ${response.statusCode}');
+    debugPrint('Data Type: ${response.data?.runtimeType}');
+    debugPrint('Data Content: ${response.data}');
+
+    if (response.isSuccess && response.data != null) {
+      final responseData = response.data;
+      List<Conversation> conversations = [];
+      
+      debugPrint('🔍 PARSING CONVERSATIONS:');
+      
+      // Votre backend retourne probablement directement une liste de conversations
+      if (responseData is List) {
+        debugPrint('✅ Response is List with ${responseData.length} items');
         
-        // Votre backend retourne probablement directement une liste de conversations
-        if (responseData is List) {
-          conversations = responseData
-              .map((item) => Conversation.fromJson(item as Map<String, dynamic>))
-              .toList();
-        } else if (responseData is Map<String, dynamic>) {
-          // Si emballé dans un objet
-          if (responseData['conversations'] is List) {
-            final conversationsList = responseData['conversations'] as List;
-            conversations = conversationsList
-                .map((item) => Conversation.fromJson(item as Map<String, dynamic>))
-                .toList();
-          } else if (responseData['data'] is List) {
-            final conversationsList = responseData['data'] as List;
-            conversations = conversationsList
-                .map((item) => Conversation.fromJson(item as Map<String, dynamic>))
-                .toList();
+        for (int i = 0; i < responseData.length; i++) {
+          final item = responseData[i];
+          debugPrint('--- CONVERSATION $i ---');
+          debugPrint('Type: ${item.runtimeType}');
+          
+          if (item is Map<String, dynamic>) {
+            debugPrint('Keys available: ${item.keys.toList()}');
+            
+            // Debug chaque champ important
+            debugPrint('  id: ${item['id']} (${item['id']?.runtimeType})');
+            debugPrint('  user1_id: ${item['user1_id']} (${item['user1_id']?.runtimeType})');
+            debugPrint('  user2_id: ${item['user2_id']} (${item['user2_id']?.runtimeType})');
+            debugPrint('  created_at: ${item['created_at']} (${item['created_at']?.runtimeType})');
+            debugPrint('  updated_at: ${item['updated_at']} (${item['updated_at']?.runtimeType})');
+            
+            // Champs utilisateur (probablement manquants)
+            debugPrint('  other_user_username: ${item['other_user_username']} (${item['other_user_username']?.runtimeType})');
+            debugPrint('  other_user_first_name: ${item['other_user_first_name']} (${item['other_user_first_name']?.runtimeType})');
+            debugPrint('  other_user_last_name: ${item['other_user_last_name']} (${item['other_user_last_name']?.runtimeType})');
+            debugPrint('  other_user_avatar: ${item['other_user_avatar']} (${item['other_user_avatar']?.runtimeType})');
+            
+            // Dernier message (probablement manquant)
+            debugPrint('  last_message: ${item['last_message']} (${item['last_message']?.runtimeType})');
+            debugPrint('  unread_count: ${item['unread_count']} (${item['unread_count']?.runtimeType})');
+            
+            // Autres champs possibles
+            item.forEach((key, value) {
+              if (!['id', 'user1_id', 'user2_id', 'created_at', 'updated_at', 
+                    'other_user_username', 'other_user_first_name', 'other_user_last_name', 
+                    'other_user_avatar', 'last_message', 'unread_count'].contains(key)) {
+                debugPrint('  $key: $value (${value?.runtimeType})');
+              }
+            });
+            
+            try {
+              final conversation = Conversation.fromJson(item);
+              conversations.add(conversation);
+              debugPrint('✅ Conversation $i parsed successfully');
+              debugPrint('    Display name: ${conversation.otherUserDisplayName}');
+              debugPrint('    Has last message: ${conversation.lastMessage != null}');
+              debugPrint('    Unread count: ${conversation.unreadCount}');
+            } catch (e) {
+              debugPrint('❌ Failed to parse conversation $i: $e');
+            }
+          } else {
+            debugPrint('❌ Item $i is not a Map: ${item.runtimeType}');
           }
         }
-        
-        debugPrint('💬 Successfully fetched ${conversations.length} conversations');
-        return MessagingResult.success(conversations);
-      } else {
-        debugPrint('❌ Failed to fetch conversations: ${response.error}');
-        return MessagingResult.failure(
-          MessagingError.fromApiResponse(
-            response.error ?? 'Erreur lors de la récupération des conversations',
-            response.statusCode,
-          ),
-        );
+      } else if (responseData is Map<String, dynamic>) {
+        debugPrint('Response is Map, looking for conversations inside...');
+        // Si emballé dans un objet
+        if (responseData['conversations'] is List) {
+          final conversationsList = responseData['conversations'] as List;
+          conversations = conversationsList
+              .map((item) => Conversation.fromJson(item as Map<String, dynamic>))
+              .toList();
+        } else if (responseData['data'] is List) {
+          final conversationsList = responseData['data'] as List;
+          conversations = conversationsList
+              .map((item) => Conversation.fromJson(item as Map<String, dynamic>))
+              .toList();
+        }
       }
-    } catch (e) {
-      debugPrint('❌ Error fetching conversations: $e');
-      return MessagingResult.failure(MessagingError.network());
+      
+      debugPrint('💬 Successfully parsed ${conversations.length} conversations');
+      return MessagingResult.success(conversations);
+    } else {
+      debugPrint('❌ Failed to fetch conversations: ${response.error}');
+      return MessagingResult.failure(
+        MessagingError.fromApiResponse(
+          response.error ?? 'Erreur lors de la récupération des conversations',
+          response.statusCode,
+        ),
+      );
     }
+  } catch (e) {
+    debugPrint('❌ Error fetching conversations: $e');
+    return MessagingResult.failure(MessagingError.network());
   }
+}
 
   /// Récupérer les messages d'une conversation spécifique
   /// Backend: GET /conversations/{id}/messages -> handler.GetMessagesInConversation
