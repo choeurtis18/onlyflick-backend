@@ -189,66 +189,144 @@ class WebSocketService {
   }
 
   /// Gère les messages reçus du WebSocket
-  void _handleMessage(dynamic data) {
-    try {
-      final jsonData = jsonDecode(data as String);
-      debugPrint('🔌 WebSocket: Received message type: ${jsonData['type'] ?? 'unknown'}');
+ void _handleMessage(dynamic data) {
+  try {
+    debugPrint('🔌 WebSocket: Raw message received');
+    debugPrint('📡 WebSocket: Data type: ${data.runtimeType}');
+    debugPrint('📡 WebSocket: Data content: $data');
+    
+    if (data is String) {
+      final json = jsonDecode(data);
+      debugPrint('📡 WebSocket: Parsed JSON: $json');
       
-      // Si c'est un message direct (pas d'envelope avec type)
-      if (!jsonData.containsKey('type')) {
-        _handleDirectMessage(jsonData);
-        return;
-      }
+      final type = json['type'] as String?;
+      debugPrint('📡 WebSocket: Message type: $type');
       
-      switch (jsonData['type']) {
-        case 'new_message':
-          _handleNewMessage(jsonData);
-          break;
-          
-        case 'message_delivered':
-          _handleMessageDelivered(jsonData);
-          break;
-          
-        case 'message_read':
-          _handleMessageRead(jsonData);
+      switch (type) {
+        case 'message':
+          debugPrint('💬 WebSocket: Processing message event');
+          _handleMessageEvent(json);
           break;
           
         case 'user_typing':
-          _handleUserTyping(jsonData);
+          debugPrint('⌨️ WebSocket: Processing typing event');
+          _handleTypingEvent(json);
           break;
           
         case 'error':
-          _handleWebSocketError(jsonData);
+          debugPrint('❌ WebSocket: Processing error event');
+          _handleWebSocketError(json);
           break;
           
         case 'pong':
-          // Réponse au ping, connexion OK
           debugPrint('🏓 WebSocket: Pong received');
+          // Réponse au ping, ne rien faire
           break;
           
         default:
-          debugPrint('🔌 WebSocket: Unknown message type: ${jsonData['type']}');
+          debugPrint('❓ WebSocket: Unknown message type: $type');
+          debugPrint('❓ WebSocket: Full message: $json');
+          
+          // Essayer de traiter comme un message direct
+          if (json.containsKey('id') && json.containsKey('content')) {
+            debugPrint('💬 WebSocket: Treating unknown type as direct message');
+            _handleDirectMessage(json);
+          }
       }
-    } catch (e) {
-      debugPrint('❌ WebSocket: Error parsing message: $e');
-      debugPrint('📄 WebSocket: Raw data: $data');
+    } else {
+      debugPrint('❌ WebSocket: Received non-string data: $data');
     }
+  } catch (e) {
+    debugPrint('❌ WebSocket: Error parsing message: $e');
+    debugPrint('❌ WebSocket: Raw data was: $data');
   }
+}
+
 
   /// Gère les messages directs (format du serveur Go actuel)
-  void _handleDirectMessage(Map<String, dynamic> data) {
-    try {
-      // Le serveur Go envoie directement le message, pas dans une envelope
-      final message = Message.fromJson(data);
-      
-      debugPrint('💬 WebSocket: Direct message received from user ${message.senderId}');
-      _messageController.add(message);
-      
-    } catch (e) {
-      debugPrint('❌ WebSocket: Error handling direct message: $e');
-      debugPrint('📄 WebSocket: Data: $data');
+ void _handleDirectMessage(Map<String, dynamic> json) {
+  try {
+    debugPrint('💬 WebSocket: Processing direct message');
+    
+    // Vérifier les champs obligatoires
+    if (!json.containsKey('id') || !json.containsKey('conversation_id') || !json.containsKey('sender_id')) {
+      debugPrint('❌ WebSocket: Missing required fields in message');
+      debugPrint('❌ WebSocket: Available fields: ${json.keys.toList()}');
+      return;
     }
+    
+    final messageData = {
+      'id': json['id'],
+      'conversation_id': json['conversation_id'],
+      'sender_id': json['sender_id'],
+      'content': json['content'] ?? '',
+      'created_at': json['created_at'] ?? DateTime.now().toIso8601String(),
+      'updated_at': json['updated_at'] ?? DateTime.now().toIso8601String(),
+      // Informations utilisateur si disponibles
+      'sender_username': json['sender_username'],
+      'sender_first_name': json['sender_first_name'],
+      'sender_last_name': json['sender_last_name'],
+      'sender_avatar': json['sender_avatar'],
+    };
+    
+    debugPrint('💬 WebSocket: Creating message object from: $messageData');
+    
+    final message = Message.fromJson(messageData);
+    
+    debugPrint('💬 WebSocket: Message created successfully');
+    debugPrint('💬 WebSocket: Message ID: ${message.id}');
+    debugPrint('💬 WebSocket: Message content: "${message.content}"');
+    debugPrint('💬 WebSocket: Message sender: ${message.senderId}');
+    debugPrint('💬 WebSocket: Message conversation: ${message.conversationId}');
+    
+    // Envoyer aux listeners
+    _messageController.add(message);
+    
+  } catch (e) {
+    debugPrint('❌ WebSocket: Error creating message from direct data: $e');
+    debugPrint('❌ WebSocket: Data was: $json');
   }
+}
+
+/// Gère les événements de messages typés
+void _handleMessageEvent(Map<String, dynamic> json) {
+  try {
+    debugPrint('💬 WebSocket: Processing typed message event');
+    
+    final messageData = json['data'] ?? json['message'] ?? json;
+    debugPrint('💬 WebSocket: Message data: $messageData');
+    
+    if (messageData is Map<String, dynamic>) {
+      _handleDirectMessage(messageData);
+    } else {
+      debugPrint('❌ WebSocket: Invalid message data format');
+    }
+    
+  } catch (e) {
+    debugPrint('❌ WebSocket: Error processing message event: $e');
+  }
+}
+
+/// Gère les événements de frappe
+void _handleTypingEvent(Map<String, dynamic> json) {
+  try {
+    debugPrint('⌨️ WebSocket: Processing typing event');
+    
+    final conversationId = json['conversation_id'] as int?;
+    final userId = json['user_id'] as int?;
+    final isTyping = json['is_typing'] as bool?;
+    
+    if (conversationId != null && userId != null && isTyping != null) {
+      debugPrint('⌨️ WebSocket: User $userId ${isTyping ? 'started' : 'stopped'} typing in conversation $conversationId');
+      _eventController.add(WebSocketEvent.userTyping(conversationId, userId, isTyping));
+    } else {
+      debugPrint('❌ WebSocket: Invalid typing event data');
+    }
+    
+  } catch (e) {
+    debugPrint('❌ WebSocket: Error processing typing event: $e');
+  }
+}
 
   /// Gère les nouveaux messages reçus (format avec envelope)
   void _handleNewMessage(Map<String, dynamic> data) {

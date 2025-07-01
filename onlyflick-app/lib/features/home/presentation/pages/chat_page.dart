@@ -1,6 +1,7 @@
 // onlyflick-app/lib/features/messaging/pages/chat_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/providers/messaging_provider.dart';
 import '../../../../core/models/message_models.dart';
@@ -8,7 +9,7 @@ import '../widgets/message_bubble.dart';
 import '../widgets/typing_indicator.dart';
 import '../../../../core/services/api_service.dart';
 
-/// Page de chat pour une conversation spécifique
+/// Page de chat premium pour OnlyFlick avec design moderne
 class ChatPage extends StatefulWidget {
   final Conversation conversation;
 
@@ -21,10 +22,16 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
+class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _messageFocusNode = FocusNode();
+  
+  // Animation controllers
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
   
   // Gestion des indicateurs de frappe
   Timer? _typingTimer;
@@ -33,362 +40,809 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
-    // Charger les messages de cette conversation
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MessagingProvider>().loadMessages(widget.conversation.id);
+    
+    // Initialiser les animations
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
+    
+    // Démarrer les animations
+    _fadeController.forward();
+    _slideController.forward();
+    
+    // Charger les messages et connecter le WebSocket
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final messagingProvider = context.read<MessagingProvider>();
+      
+      try {
+        // 1. D'abord charger les messages
+        debugPrint('📋 ChatPage: Loading messages for conversation ${widget.conversation.id}...');
+        await messagingProvider.loadMessages(widget.conversation.id);
+        
+        // 2. Puis connecter le WebSocket pour les messages temps réel
+        debugPrint('🔌 ChatPage: Connecting WebSocket...');
+        await _connectToWebSocket();
+        
+      } catch (e) {
+        debugPrint('❌ ChatPage: Error in initialization: $e');
+      }
     });
     
     // Écouter les changements de texte pour les indicateurs de frappe
     _messageController.addListener(_onTextChanged);
   }
 
+  /// Connecte le WebSocket à la conversation actuelle
+  Future<void> _connectToWebSocket() async {
+    try {
+      debugPrint('🚀 ChatPage: Tentative de connexion WebSocket...');
+      debugPrint('📋 ChatPage: ID de conversation: ${widget.conversation.id}');
+      debugPrint('👤 ChatPage: Autre utilisateur: ${widget.conversation.otherUserDisplayName}');
+      
+      final messagingProvider = context.read<MessagingProvider>();
+      
+      // Vérifier si on a un ID de conversation valide
+      if (widget.conversation.id <= 0) {
+        debugPrint('❌ ChatPage: ID de conversation invalide: ${widget.conversation.id}');
+        return;
+      }
+      
+      // Se connecter au WebSocket pour cette conversation spécifique
+      await messagingProvider.connectToConversation(widget.conversation.id);
+      
+      debugPrint('✅ ChatPage: WebSocket connecté à la conversation ${widget.conversation.id}');
+      
+      // Petite pause puis vérifier l'état
+      await Future.delayed(const Duration(milliseconds: 500));
+      debugPrint('🔍 ChatPage: État WebSocket après connexion: ${messagingProvider.isWebSocketConnected}');
+      
+    } catch (e) {
+      debugPrint('❌ ChatPage: Erreur connexion WebSocket: $e');
+      
+      // Afficher un snackbar en cas d'erreur
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Connexion temps réel indisponible: $e'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
+    debugPrint('🧹 ChatPage: Disposing...');
+    
     _messageController.removeListener(_onTextChanged);
     _messageController.dispose();
     _scrollController.dispose();
     _messageFocusNode.dispose();
     _typingTimer?.cancel();
+    _fadeController.dispose();
+    _slideController.dispose();
+    
+    // Nettoyer l'état de frappe
+    _isTypingIndicatorSent = false;
+    
+    // Nettoyer la connexion WebSocket si on quitte la page
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final messagingProvider = context.read<MessagingProvider>();
+        messagingProvider.clearActiveConversation();
+      } catch (e) {
+        debugPrint('⚠️ ChatPage: Could not clear active conversation: $e');
+      }
+    });
+    
+    debugPrint('✅ ChatPage: Disposed');
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            // Avatar de l'autre utilisateur
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: Theme.of(context).primaryColor,
-              backgroundImage: widget.conversation.otherUserAvatar != null
-                  ? NetworkImage(widget.conversation.otherUserAvatar!)
-                  : null,
-              child: widget.conversation.otherUserAvatar == null
-                  ? Text(
-                      _getInitials(widget.conversation.otherUserDisplayName),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            // Nom de l'autre utilisateur
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.conversation.otherUserDisplayName,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+      backgroundColor: const Color(0xFFF8F9FA),
+      // AppBar avec design premium
+      appBar: _buildPremiumAppBar(theme),
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: SlideTransition(
+          position: _slideAnimation,
+          child: Column(
+            children: [
+              // Zone des messages
+              Expanded(
+                child: Consumer<MessagingProvider>(
+                  builder: (context, messagingProvider, child) {
+                    return _buildMessagesSection(messagingProvider, theme);
+                  },
+                ),
+              ),
+              
+              // Zone de saisie des messages avec design premium
+              _buildMessageInputSection(theme),
+              
+              // Erreur d'envoi
+              _buildErrorSection(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// AppBar avec design premium OnlyFlick
+  PreferredSizeWidget _buildPremiumAppBar(ThemeData theme) {
+    return AppBar(
+      elevation: 0,
+      backgroundColor: Colors.white,
+      systemOverlayStyle: SystemUiOverlayStyle.dark,
+      leading: IconButton(
+        onPressed: () => Navigator.of(context).pop(),
+        icon: Container(
+          decoration: BoxDecoration(
+            color: theme.primaryColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.all(8),
+          child: Icon(
+            Icons.arrow_back_ios_new,
+            color: theme.primaryColor,
+            size: 18,
+          ),
+        ),
+      ),
+      title: Row(
+        children: [
+          // Avatar de l'autre utilisateur avec effet de glow
+          Hero(
+            tag: 'avatar_${widget.conversation.id}',
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.primaryColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    spreadRadius: 1,
                   ),
-                  if (widget.conversation.otherUserUsername != null)
-                    Text(
-                      '@${widget.conversation.otherUserUsername}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.white70,
-                      ),
-                    ),
                 ],
               ),
+              child: CircleAvatar(
+                radius: 20,
+                backgroundColor: theme.primaryColor,
+                backgroundImage: widget.conversation.otherUserAvatar != null
+                    ? NetworkImage(widget.conversation.otherUserAvatar!)
+                    : null,
+                child: widget.conversation.otherUserAvatar == null
+                    ? Text(
+                        _getInitials(widget.conversation.otherUserDisplayName),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : null,
+              ),
             ),
-          ],
-        ),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          // Bouton rafraîchir
-          IconButton(
-            onPressed: () => context.read<MessagingProvider>().loadMessages(widget.conversation.id),
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Actualiser',
+          ),
+          const SizedBox(width: 12),
+          // Informations utilisateur
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.conversation.otherUserDisplayName,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1A1A1A),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (widget.conversation.otherUserUsername != null)
+                  Text(
+                    '@${widget.conversation.otherUserUsername}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Zone des messages
-          Expanded(
-            child: Consumer<MessagingProvider>(
-              builder: (context, messagingProvider, child) {
-                // Chargement initial
-                if (messagingProvider.isLoadingMessages && 
-                    messagingProvider.activeMessages.isEmpty) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text('Chargement des messages...'),
-                      ],
+      actions: [
+        // Indicateur de connexion WebSocket
+        Consumer<MessagingProvider>(
+          builder: (context, messagingProvider, child) {
+            return Container(
+              margin: const EdgeInsets.only(right: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: messagingProvider.isWebSocketConnected 
+                          ? Colors.green 
+                          : Colors.red,
+                      shape: BoxShape.circle,
                     ),
-                  );
-                }
-
-                // Erreur de chargement
-                if (messagingProvider.messagesError != null && 
-                    messagingProvider.activeMessages.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          messagingProvider.messagesError!.message,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => messagingProvider.loadMessages(widget.conversation.id),
-                          child: const Text('Réessayer'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                // Aucun message
-                if (messagingProvider.activeMessages.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.chat_bubble_outline,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Aucun message',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Commencez la conversation en envoyant un message',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                // Liste des messages
-                return RefreshIndicator(
-                  onRefresh: () => messagingProvider.loadMessages(widget.conversation.id),
-                  child: Column(
-                    children: [
-                      // Indicateur de chargement si refresh en cours
-                      if (messagingProvider.isLoadingMessages)
-                        const LinearProgressIndicator(),
-                      
-                      // Liste des messages avec indicateur de frappe
-                      Expanded(
-                        child: ListView.builder(
-                          controller: _scrollController,
-                          reverse: true, // Affichage en bas vers le haut
-                          padding: const EdgeInsets.all(8),
-                          itemCount: messagingProvider.activeMessages.length + _getTypingIndicatorCount(),
-                          itemBuilder: (context, index) {
-                            // Afficher d'abord l'indicateur de frappe si nécessaire
-                            if (index < _getTypingIndicatorCount()) {
-                              return _buildTypingIndicator(messagingProvider);
-                            }
-                            
-                            // Index ajusté pour les messages
-                            final messageIndex = index - _getTypingIndicatorCount();
-                            final reversedIndex = messagingProvider.activeMessages.length - 1 - messageIndex;
-                            final message = messagingProvider.activeMessages[reversedIndex];
-                            
-                            return MessageBubble(
-                              message: message,
-                              isCurrentUser: _isCurrentUserMessage(message),
-                              showAvatar: _shouldShowAvatar(messagingProvider.activeMessages, reversedIndex),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
                   ),
-                );
-              },
-            ),
-          ),
-          
-          // Zone de saisie des messages
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              border: Border(
-                top: BorderSide(
-                  color: Colors.grey[300]!,
-                  width: 0.5,
-                ),
+                  const SizedBox(width: 4),
+                  Text(
+                    messagingProvider.isWebSocketConnected ? 'En ligne' : 'Hors ligne',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        
+        // Bouton debug WebSocket (temporaire)
+        Container(
+          margin: const EdgeInsets.only(right: 8),
+          child: IconButton(
+            onPressed: () async {
+              debugPrint('🔧 ChatPage: Manual WebSocket reconnection...');
+              final messagingProvider = context.read<MessagingProvider>();
+              
+              // Déconnecter puis reconnecter
+              await messagingProvider.disconnectFromConversation();
+              await Future.delayed(const Duration(milliseconds: 500));
+              await messagingProvider.connectToConversation(widget.conversation.id);
+              
+              debugPrint('🔧 ChatPage: Manual reconnection completed');
+            },
+            icon: Container(
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.all(8),
+              child: const Icon(
+                Icons.wifi_tethering,
+                color: Colors.orange,
+                size: 16,
               ),
             ),
-            child: Consumer<MessagingProvider>(
-              builder: (context, messagingProvider, child) {
-                return Row(
-                  children: [
-                    // Champ de saisie
-                    Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        focusNode: _messageFocusNode,
-                        decoration: InputDecoration(
-                          hintText: 'Tapez votre message...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          suffixIcon: messagingProvider.sendMessageError != null
-                              ? Icon(Icons.error, color: Colors.red[400])
-                              : null,
-                        ),
-                        maxLines: null,
-                        textCapitalization: TextCapitalization.sentences,
-                        onSubmitted: (value) => _sendMessage(context),
-                        onChanged: (value) {
-                          // Déjà géré par le listener dans _onTextChanged
-                        },
-                      ),
-                    ),
-                    
-                    const SizedBox(width: 8),
-                    
-                    // Bouton d'envoi
-                    Container(
-                      decoration: BoxDecoration(
-                        color: _messageController.text.trim().isNotEmpty && !messagingProvider.isSendingMessage
-                            ? Theme.of(context).primaryColor
-                            : Colors.grey[300],
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        onPressed: _messageController.text.trim().isNotEmpty && !messagingProvider.isSendingMessage
-                            ? () => _sendMessage(context)
-                            : null,
-                        icon: messagingProvider.isSendingMessage
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : const Icon(Icons.send),
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                );
-              },
+          ),
+        ),
+        
+        // Bouton rafraîchir avec style moderne
+        Container(
+          margin: const EdgeInsets.only(right: 16),
+          child: IconButton(
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              debugPrint('🔄 ChatPage: Manual refresh triggered');
+              context.read<MessagingProvider>().loadMessages(widget.conversation.id);
+            },
+            icon: Container(
+              decoration: BoxDecoration(
+                color: theme.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.all(8),
+              child: Icon(
+                Icons.refresh_rounded,
+                color: theme.primaryColor,
+                size: 20,
+              ),
             ),
           ),
-          
-          // Erreur d'envoi
-          Consumer<MessagingProvider>(
-            builder: (context, messagingProvider, child) {
-              if (messagingProvider.sendMessageError != null) {
-                return Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  color: Colors.red[50],
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline, color: Colors.red[400], size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          messagingProvider.sendMessageError!.message,
-                          style: TextStyle(
-                            color: Colors.red[700],
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () => _sendMessage(context),
-                        child: const Text('Réessayer'),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
+        ),
+      ],
+    );
+  }
+
+  /// Section des messages avec gestion des états
+  Widget _buildMessagesSection(MessagingProvider messagingProvider, ThemeData theme) {
+    // Chargement initial
+    if (messagingProvider.isLoadingMessages && 
+        messagingProvider.activeMessages.isEmpty) {
+      return _buildLoadingState();
+    }
+
+    // Erreur de chargement
+    if (messagingProvider.messagesError != null && 
+        messagingProvider.activeMessages.isEmpty) {
+      return _buildErrorState(messagingProvider);
+    }
+
+    // Aucun message
+    if (messagingProvider.activeMessages.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    // Liste des messages
+    return _buildMessagesList(messagingProvider);
+  }
+
+  /// État de chargement avec animation
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: const CircularProgressIndicator(
+              strokeWidth: 3,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Chargement des messages...',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Envoie un message
+  /// État d'erreur avec design moderne
+  Widget _buildErrorState(MessagingProvider messagingProvider) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.error_outline_rounded,
+                size: 48,
+                color: Colors.red[400],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Oups !',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              messagingProvider.messagesError!.message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                messagingProvider.loadMessages(widget.conversation.id);
+              },
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+              ),
+              child: const Text(
+                'Réessayer',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// État vide avec illustration
+  Widget _buildEmptyState() {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).primaryColor.withOpacity(0.1),
+                    Theme.of(context).primaryColor.withOpacity(0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 64,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Commencez la conversation',
+              style: TextStyle(
+                color: Colors.grey[800],
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Envoyez votre premier message pour\nentamer cette conversation premium',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 16,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Liste des messages avec indicateur de frappe
+  Widget _buildMessagesList(MessagingProvider messagingProvider) {
+    return RefreshIndicator(
+      onRefresh: () => messagingProvider.loadMessages(widget.conversation.id),
+      child: Column(
+        children: [
+          // Indicateur de chargement si refresh en cours
+          if (messagingProvider.isLoadingMessages)
+            Container(
+              height: 3,
+              child: const LinearProgressIndicator(),
+            ),
+          
+          // Liste des messages avec indicateur de frappe
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              reverse: true, // Affichage en bas vers le haut
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              itemCount: messagingProvider.activeMessages.length + _getTypingIndicatorCount(),
+              itemBuilder: (context, index) {
+                // Afficher d'abord l'indicateur de frappe si nécessaire
+                if (index < _getTypingIndicatorCount()) {
+                  return _buildTypingIndicator(messagingProvider);
+                }
+                
+                // Index ajusté pour les messages
+                final messageIndex = index - _getTypingIndicatorCount();
+                final reversedIndex = messagingProvider.activeMessages.length - 1 - messageIndex;
+                final message = messagingProvider.activeMessages[reversedIndex];
+                
+                // DEBUG: Vérifier si le message est vide
+                if (message.content.trim().isEmpty) {
+                  debugPrint('⚠️ ChatPage: Empty message detected in UI! ID: ${message.id}, Content: "${message.content}"');
+                  return const SizedBox.shrink(); // Ne pas afficher les messages vides
+                }
+                
+                // Enrichir le message avec les données de la conversation si nécessaire
+                final enrichedMessage = _enrichMessageWithConversationData(message);
+                
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: MessageBubble(
+                    message: enrichedMessage,
+                    isCurrentUser: _isCurrentUserMessage(message),
+                    showAvatar: _shouldShowAvatar(messagingProvider.activeMessages, reversedIndex),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Zone de saisie des messages avec design premium
+  Widget _buildMessageInputSection(ThemeData theme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: Colors.grey[200]!,
+            width: 0.5,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Consumer<MessagingProvider>(
+            builder: (context, messagingProvider, child) {
+              return Row(
+                children: [
+                  // Champ de saisie avec design moderne
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F6FA),
+                        borderRadius: BorderRadius.circular(25),
+                        border: Border.all(
+                          color: _messageFocusNode.hasFocus 
+                              ? theme.primaryColor.withOpacity(0.3)
+                              : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      child: TextField(
+                        controller: _messageController,
+                        focusNode: _messageFocusNode,
+                        decoration: InputDecoration(
+                          hintText: 'Écrivez votre message...',
+                          hintStyle: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 16,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 14,
+                          ),
+                          suffixIcon: messagingProvider.sendMessageError != null
+                              ? Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: Icon(
+                                    Icons.error_rounded,
+                                    color: Colors.red[400],
+                                    size: 20,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        maxLines: null,
+                        textCapitalization: TextCapitalization.sentences,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          height: 1.4,
+                          color: Color(0xFF1A1A1A), // Couleur de texte visible
+                        ),
+                        onSubmitted: (value) => _sendMessage(context),
+                        onChanged: (value) {
+                          // Déclencher setState pour mettre à jour l'état du bouton
+                          setState(() {});
+                        },
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(width: 12),
+                  
+                  // Bouton d'envoi avec animation
+                  GestureDetector(
+                    onTap: _messageController.text.trim().isNotEmpty && !messagingProvider.isSendingMessage
+                        ? () {
+                            HapticFeedback.lightImpact();
+                            _sendMessage(context);
+                          }
+                        : null,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: _messageController.text.trim().isNotEmpty && !messagingProvider.isSendingMessage
+                            ? LinearGradient(
+                                colors: [theme.primaryColor, theme.primaryColor.withOpacity(0.8)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : LinearGradient(
+                                colors: [Colors.grey[300]!, Colors.grey[400]!],
+                              ),
+                        shape: BoxShape.circle,
+                        boxShadow: _messageController.text.trim().isNotEmpty && !messagingProvider.isSendingMessage
+                            ? [
+                                BoxShadow(
+                                  color: theme.primaryColor.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  spreadRadius: 1,
+                                ),
+                              ]
+                            : [],
+                      ),
+                      child: messagingProvider.isSendingMessage
+                          ? const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              ),
+                            )
+                          : const Icon(
+                              Icons.send_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Section d'erreur d'envoi
+  Widget _buildErrorSection() {
+    return Consumer<MessagingProvider>(
+      builder: (context, messagingProvider, child) {
+        if (messagingProvider.sendMessageError != null) {
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.red[50],
+              border: Border(
+                top: BorderSide(color: Colors.red[200]!, width: 1),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.error_outline_rounded, color: Colors.red[600], size: 18),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    messagingProvider.sendMessageError!.message,
+                    style: TextStyle(
+                      color: Colors.red[700],
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    _sendMessage(context);
+                  },
+                  child: Text(
+                    'Réessayer',
+                    style: TextStyle(
+                      color: Colors.red[600],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  /// Envoie un message avec feedback haptique
   Future<void> _sendMessage(BuildContext context) async {
     final content = _messageController.text.trim();
-    if (content.isEmpty) return;
+    
+    // PROTECTION: Ne pas envoyer de messages vides
+    if (content.isEmpty || content == "" || content == "null") {
+      debugPrint('⚠️ ChatPage: Refusing to send empty message');
+      return;
+    }
 
     final messagingProvider = context.read<MessagingProvider>();
     
-    // Vider le champ de saisie immédiatement
+    // Feedback haptique
+    HapticFeedback.lightImpact();
+    
+    // Vider le champ de saisie immédiatement et arrêter l'indicateur de frappe
     _messageController.clear();
+    _isTypingIndicatorSent = false;
+    _typingTimer?.cancel();
+    messagingProvider.sendTypingIndicator(false);
+    
+    debugPrint('📤 ChatPage: Sending message: "$content" (length: ${content.length})');
     
     // Envoyer le message
     final success = await messagingProvider.sendMessage(content);
     
     if (success) {
+      debugPrint('✅ ChatPage: Message sent successfully');
       // Faire défiler vers le bas pour afficher le nouveau message
       _scrollToBottom();
       
       // Refocus sur le champ de saisie
       _messageFocusNode.requestFocus();
     } else {
+      debugPrint('❌ ChatPage: Failed to send message');
       // Remettre le texte si l'envoi a échoué
       _messageController.text = content;
     }
   }
 
-  /// Fait défiler vers le bas de la liste
+  /// Fait défiler vers le bas de la liste avec animation
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
@@ -433,25 +887,33 @@ class _ChatPageState extends State<ChatPage> {
     final hasText = _messageController.text.trim().isNotEmpty;
     final messagingProvider = context.read<MessagingProvider>();
     
-    if (hasText && !_isTypingIndicatorSent) {
-      // Commencer à taper
-      _isTypingIndicatorSent = true;
-      messagingProvider.sendTypingIndicator(true);
-    } else if (!hasText && _isTypingIndicatorSent) {
-      // Arrêter de taper
-      _isTypingIndicatorSent = false;
-      messagingProvider.sendTypingIndicator(false);
-    }
-    
-    // Réinitialiser le timer pour arrêter l'indicateur automatiquement
-    if (hasText) {
-      _typingTimer?.cancel();
-      _typingTimer = Timer(const Duration(seconds: 2), () {
-        if (_isTypingIndicatorSent) {
-          _isTypingIndicatorSent = false;
-          messagingProvider.sendTypingIndicator(false);
-        }
-      });
+    // Protection contre les déclenchements trop fréquents
+    if (hasText != _isTypingIndicatorSent) {
+      debugPrint('⌨️ ChatPage: Text changed, hasText: $hasText, currentlySent: $_isTypingIndicatorSent');
+      
+      if (hasText && !_isTypingIndicatorSent) {
+        // Commencer à taper
+        _isTypingIndicatorSent = true;
+        messagingProvider.sendTypingIndicator(true);
+        debugPrint('⌨️ ChatPage: Started typing indicator');
+      } else if (!hasText && _isTypingIndicatorSent) {
+        // Arrêter de taper
+        _isTypingIndicatorSent = false;
+        messagingProvider.sendTypingIndicator(false);
+        debugPrint('⌨️ ChatPage: Stopped typing indicator');
+      }
+      
+      // Réinitialiser le timer pour arrêter l'indicateur automatiquement
+      if (hasText) {
+        _typingTimer?.cancel();
+        _typingTimer = Timer(const Duration(seconds: 2), () {
+          if (_isTypingIndicatorSent) {
+            _isTypingIndicatorSent = false;
+            messagingProvider.sendTypingIndicator(false);
+            debugPrint('⌨️ ChatPage: Auto-stopped typing indicator');
+          }
+        });
+      }
     }
   }
 
@@ -460,6 +922,39 @@ class _ChatPageState extends State<ChatPage> {
     final messagingProvider = context.read<MessagingProvider>();
     final typingUsers = messagingProvider.getTypingUsers(widget.conversation.id);
     return typingUsers.isNotEmpty ? 1 : 0;
+  }
+
+  /// Enrichit un message avec les données de la conversation pour afficher les vrais noms/avatars
+  Message _enrichMessageWithConversationData(Message originalMessage) {
+    final currentUserId = ApiService().currentUserId;
+    
+    // Si c'est un message de l'utilisateur actuel, pas besoin d'enrichir
+    if (currentUserId != null && originalMessage.senderId == currentUserId) {
+      return originalMessage;
+    }
+    
+    // Si les données utilisateur sont déjà présentes et valides, pas besoin d'enrichir
+    if (originalMessage.senderFirstName != null && 
+        originalMessage.senderFirstName!.isNotEmpty &&
+        originalMessage.senderLastName != null && 
+        originalMessage.senderLastName!.isNotEmpty) {
+      return originalMessage;
+    }
+    
+    // Enrichir avec les données de la conversation
+    return Message(
+      id: originalMessage.id,
+      conversationId: originalMessage.conversationId,
+      senderId: originalMessage.senderId,
+      content: originalMessage.content,
+      createdAt: originalMessage.createdAt,
+      updatedAt: originalMessage.updatedAt,
+      // Utiliser les données de la conversation
+      senderUsername: widget.conversation.otherUserUsername,
+      senderFirstName: widget.conversation.otherUserFirstName,
+      senderLastName: widget.conversation.otherUserLastName,
+      senderAvatar: widget.conversation.otherUserAvatar,
+    );
   }
 
   /// Construit l'indicateur de frappe
@@ -474,14 +969,24 @@ class _ChatPageState extends State<ChatPage> {
       return const SizedBox.shrink();
     }
 
-    // Créer un map des noms d'affichage (simplifiée pour l'exemple)
-    final typingUserNames = <int, String>{};
-    for (final userId in otherTypingUsers) {
-      typingUserNames[userId] = 'Utilisateur #$userId'; // TODO: Récupérer les vrais noms
+    // Utiliser le vrai nom de l'autre utilisateur depuis la conversation
+    String displayName = widget.conversation.otherUserDisplayName;
+    
+    // Si on a les informations complètes, les utiliser
+    if (widget.conversation.otherUserFirstName != null && 
+        widget.conversation.otherUserFirstName!.isNotEmpty &&
+        widget.conversation.otherUserLastName != null && 
+        widget.conversation.otherUserLastName!.isNotEmpty) {
+      displayName = '${widget.conversation.otherUserFirstName} ${widget.conversation.otherUserLastName}';
+    } else if (widget.conversation.otherUserUsername != null && 
+               widget.conversation.otherUserUsername!.isNotEmpty) {
+      displayName = widget.conversation.otherUserUsername!;
     }
 
-    return TypingIndicatorContainer(
-      typingUsers: typingUserNames,
+    return TypingIndicator(
+      userDisplayName: displayName,
+      avatarUrl: widget.conversation.otherUserAvatar,
+      showAvatar: true,
     );
   }
 }

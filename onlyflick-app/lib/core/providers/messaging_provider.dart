@@ -1,8 +1,9 @@
-// onlyflick-app/lib/features/messaging/providers/messaging_provider.dart
+// onlyflick-app/lib/core/providers/messaging_provider.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../services/messaging_service.dart';
 import '../services/websocket_service.dart';
+import '../services/api_service.dart';
 import '../models/message_models.dart' as models;
 
 /// Provider pour gérer l'état de la messagerie avec WebSocket temps réel
@@ -12,7 +13,7 @@ class MessagingProvider extends ChangeNotifier {
 
   // Subscriptions pour les streams WebSocket
   StreamSubscription<models.Message>? _messageSubscription;
-  StreamSubscription<WebSocketEvent>? _eventSubscription; // Utilise le type du WebSocketService
+  StreamSubscription<WebSocketEvent>? _eventSubscription;
 
   // État des conversations
   List<models.Conversation> _conversations = [];
@@ -36,8 +37,10 @@ class MessagingProvider extends ChangeNotifier {
 
   // État WebSocket
   bool _isWebSocketConnected = false;
+  bool _isWebSocketConnecting = false;
   Map<int, Set<int>> _typingUsers = {}; // conversationId -> Set d'userIds qui tapent
   Timer? _typingTimer;
+  bool _isCurrentlyTyping = false; // Protection contre les boucles
 
   // Getters pour l'état des conversations
   List<models.Conversation> get conversations => List.unmodifiable(_conversations);
@@ -63,6 +66,7 @@ class MessagingProvider extends ChangeNotifier {
 
   // Getters pour WebSocket et temps réel
   bool get isWebSocketConnected => _isWebSocketConnected;
+  bool get isWebSocketConnecting => _isWebSocketConnecting;
   
   /// Obtient la liste des utilisateurs qui tapent dans une conversation
   Set<int> getTypingUsers(int conversationId) {
@@ -76,6 +80,8 @@ class MessagingProvider extends ChangeNotifier {
 
   /// Initialise les subscriptions WebSocket
   void _initializeWebSocket() {
+    debugPrint('🔌 MessagingProvider: Initializing WebSocket subscriptions...');
+    
     // Écouter les nouveaux messages en temps réel
     _messageSubscription = _webSocketService.messageStream.listen(
       _handleRealtimeMessage,
@@ -87,15 +93,99 @@ class MessagingProvider extends ChangeNotifier {
       _handleWebSocketEvent,
       onError: (error) => debugPrint('❌ WebSocket event stream error: $error'),
     );
+    
+    debugPrint('✅ MessagingProvider: WebSocket subscriptions initialized');
+  }
+
+  /// Connecte le WebSocket à une conversation spécifique
+  Future<void> connectToConversation(int conversationId) async {
+    if (_isWebSocketConnecting) {
+      debugPrint('⏳ MessagingProvider: Already connecting to WebSocket, skipping...');
+      return;
+    }
+
+    if (_isWebSocketConnected && _activeConversationId == conversationId) {
+      debugPrint('✅ MessagingProvider: Already connected to conversation $conversationId');
+      return;
+    }
+
+    try {
+      _isWebSocketConnecting = true;
+      notifyListeners();
+      
+      debugPrint('🔌 MessagingProvider: Connecting to conversation $conversationId...');
+      
+      // Se connecter au WebSocket pour cette conversation spécifique
+      await _webSocketService.connectToConversation(conversationId);
+      
+      // Mettre à jour l'état local
+      _isWebSocketConnected = true;
+      _activeConversationId = conversationId;
+      
+      debugPrint('✅ MessagingProvider: Successfully connected to conversation $conversationId');
+      
+    } catch (e) {
+      debugPrint('❌ MessagingProvider: Failed to connect to conversation $conversationId: $e');
+      _isWebSocketConnected = false;
+      // Ne pas changer _activeConversationId en cas d'erreur
+      rethrow; // Permettre au UI de gérer l'erreur
+    } finally {
+      _isWebSocketConnecting = false;
+      notifyListeners();
+    }
+  }
+
+  /// Déconnecte le WebSocket de la conversation actuelle
+  Future<void> disconnectFromConversation() async {
+    try {
+      debugPrint('🔌 MessagingProvider: Disconnecting from conversation...');
+      await _webSocketService.disconnect();
+      _isWebSocketConnected = false;
+      _activeConversationId = null;
+      _typingUsers.clear();
+      debugPrint('✅ MessagingProvider: Disconnected from conversation');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ MessagingProvider: Failed to disconnect: $e');
+    }
   }
 
   /// Gère les messages reçus en temps réel
   void _handleRealtimeMessage(models.Message message) {
-    debugPrint('💬 Realtime message received for conversation ${message.conversationId}');
+    debugPrint('💬 MessagingProvider: Realtime message received for conversation ${message.conversationId}');
+    debugPrint('📋 MessagingProvider: Message ID: ${message.id}, Sender: ${message.senderId}, Content: "${message.content}"');
     
-    // Ajouter le message à la cache locale
-    final currentMessages = _messagesCache[message.conversationId] ?? [];
-    _messagesCache[message.conversationId] = [...currentMessages, message];
+    // Filtrer les messages vides (bug backend)
+    if (message.content.trim().isEmpty) {
+      debugPrint('🗑️ MessagingProvider: Ignoring empty message (ID: ${message.id})');
+      return;
+    }
+    
+    // Vérifier si c'est notre propre message pour éviter la duplication
+    final currentUserId = ApiService().currentUserId;
+    if (currentUserId != null && message.senderId == currentUserId) {
+      debugPrint('🔄 MessagingProvider: Ignoring own message (ID: ${message.id}) to prevent duplication');
+      return;
+    }
+    
+    // Vérifier si le message est pour la conversation active
+    if (message.conversationId == _activeConversationId) {
+      debugPrint('📨 MessagingProvider: Adding message to active conversation cache');
+      
+      // Vérifier si le message n'est pas déjà dans la cache (éviter doublons)
+      final currentMessages = _messagesCache[message.conversationId] ?? [];
+      final messageExists = currentMessages.any((m) => m.id == message.id);
+      
+      if (!messageExists) {
+        _messagesCache[message.conversationId] = [...currentMessages, message];
+        debugPrint('✅ MessagingProvider: Message added to cache');
+      } else {
+        debugPrint('⚠️ MessagingProvider: Message already exists in cache, skipping');
+        return;
+      }
+    } else {
+      debugPrint('📨 MessagingProvider: Message for inactive conversation ${message.conversationId}');
+    }
     
     // Mettre à jour la conversation dans la liste
     _updateConversationWithNewMessage(message);
@@ -105,19 +195,19 @@ class MessagingProvider extends ChangeNotifier {
 
   /// Gère les événements WebSocket
   void _handleWebSocketEvent(WebSocketEvent event) {
+    debugPrint('📡 MessagingProvider: WebSocket event: ${event.type}');
+    
     switch (event.type) {
       case WebSocketEventType.connected:
         _isWebSocketConnected = true;
-        debugPrint('✅ WebSocket connected');
-        // Rejoindre la conversation active si elle existe
-        if (_activeConversationId != null) {
-          _webSocketService.joinConversation(_activeConversationId!);
-        }
+        _isWebSocketConnecting = false;
+        debugPrint('✅ MessagingProvider: WebSocket connected');
         break;
         
       case WebSocketEventType.disconnected:
         _isWebSocketConnected = false;
-        debugPrint('❌ WebSocket disconnected');
+        _isWebSocketConnecting = false;
+        debugPrint('❌ MessagingProvider: WebSocket disconnected');
         break;
         
       case WebSocketEventType.userTyping:
@@ -128,22 +218,35 @@ class MessagingProvider extends ChangeNotifier {
         
       case WebSocketEventType.messageDelivered:
         if (event.messageId != null) {
-          debugPrint('✅ Message ${event.messageId} delivered');
+          debugPrint('✅ MessagingProvider: Message ${event.messageId} delivered');
         }
         break;
         
       case WebSocketEventType.messageRead:
         if (event.messageId != null) {
-          debugPrint('👁️ Message ${event.messageId} read');
+          debugPrint('👁️ MessagingProvider: Message ${event.messageId} read');
         }
         break;
         
       case WebSocketEventType.error:
-        debugPrint('❌ WebSocket error: ${event.message}');
+        _isWebSocketConnected = false;
+        _isWebSocketConnecting = false;
+        debugPrint('❌ MessagingProvider: WebSocket error: ${event.message}');
+        break;
+        
+      case WebSocketEventType.connecting:
+        _isWebSocketConnecting = true;
+        debugPrint('⏳ MessagingProvider: WebSocket connecting...');
+        break;
+        
+      case WebSocketEventType.authenticationRequired:
+        _isWebSocketConnected = false;
+        _isWebSocketConnecting = false;
+        debugPrint('🔐 MessagingProvider: WebSocket authentication required');
         break;
         
       default:
-        debugPrint('📡 WebSocket event: ${event.type}');
+        debugPrint('📡 MessagingProvider: Unhandled WebSocket event: ${event.type}');
     }
     
     notifyListeners();
@@ -151,7 +254,12 @@ class MessagingProvider extends ChangeNotifier {
 
   /// Gère les indicateurs de frappe
   void _handleUserTyping(int conversationId, int userId, bool isTyping) {
-    if (conversationId != _activeConversationId) return;
+    debugPrint('⌨️ MessagingProvider: User $userId ${isTyping ? 'started' : 'stopped'} typing in conversation $conversationId');
+    
+    if (conversationId != _activeConversationId) {
+      debugPrint('⌨️ MessagingProvider: Typing event for inactive conversation, ignoring');
+      return;
+    }
     
     _typingUsers[conversationId] ??= <int>{};
     
@@ -164,61 +272,46 @@ class MessagingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Connecte le WebSocket (appelé après login)
-  Future<void> connectWebSocket() async {
-    debugPrint('🔌 Connecting WebSocket...');
-    await _webSocketService.connect();
-    _isWebSocketConnected = true;
-    notifyListeners();
-  }
-
-  /// Déconnecte le WebSocket (appelé lors du logout)
-  Future<void> disconnectWebSocket() async {
-    debugPrint('🔌 Disconnecting WebSocket...');
-    await _webSocketService.disconnect();
-    _isWebSocketConnected = false;
-    _typingUsers.clear();
-    notifyListeners();
-  }
-
   /// Charge les conversations de l'utilisateur
   Future<void> loadConversations() async {
-    if (_isLoadingConversations) return;
+    if (_isLoadingConversations) {
+      debugPrint('⏳ MessagingProvider: Already loading conversations, skipping...');
+      return;
+    }
 
     _isLoadingConversations = true;
     _conversationsError = null;
     notifyListeners();
 
     try {
+      debugPrint('📋 MessagingProvider: Loading conversations...');
       final result = await _messagingService.getMyConversations();
       
       if (result.isSuccess && result.data != null) {
         _conversations = result.data!;
         _conversationsError = null;
-        debugPrint('💬 Loaded ${_conversations.length} conversations');
+        debugPrint('✅ MessagingProvider: Loaded ${_conversations.length} conversations');
       } else {
         _conversationsError = result.error;
-        debugPrint('❌ Failed to load conversations: ${result.error?.message}');
+        debugPrint('❌ MessagingProvider: Failed to load conversations: ${result.error?.message}');
       }
     } catch (e) {
       _conversationsError = models.MessagingError(
         message: 'Erreur inattendue lors du chargement des conversations',
         type: models.MessagingErrorType.unknown,
       );
-      debugPrint('❌ Unexpected error loading conversations: $e');
+      debugPrint('❌ MessagingProvider: Unexpected error loading conversations: $e');
     } finally {
       _isLoadingConversations = false;
       notifyListeners();
     }
   }
 
-  /// Charge les messages d'une conversation spécifique
+  /// Charge les messages d'une conversation spécifique (VERSION MISE À JOUR)
   Future<void> loadMessages(int conversationId) async {
-    if (_isLoadingMessages) return;
-
-    // Quitter la conversation précédente si WebSocket connecté
-    if (_activeConversationId != null && _isWebSocketConnected) {
-      _webSocketService.leaveConversation(_activeConversationId!);
+    if (_isLoadingMessages) {
+      debugPrint('⏳ MessagingProvider: Already loading messages, skipping...');
+      return;
     }
 
     _activeConversationId = conversationId;
@@ -227,30 +320,26 @@ class MessagingProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      debugPrint('💬 MessagingProvider: Loading messages for conversation $conversationId...');
       final result = await _messagingService.getMessagesInConversation(conversationId);
       
       if (result.isSuccess && result.data != null) {
         _messagesCache[conversationId] = result.data!;
         _messagesError = null;
-        debugPrint('💬 Loaded ${result.data!.length} messages for conversation $conversationId');
-        
-        // Rejoindre la conversation via WebSocket si connecté
-        if (_isWebSocketConnected) {
-          _webSocketService.joinConversation(conversationId);
-        }
+        debugPrint('✅ MessagingProvider: Loaded ${result.data!.length} messages for conversation $conversationId');
         
         // Marquer la conversation comme lue
         _markConversationAsRead(conversationId);
       } else {
         _messagesError = result.error;
-        debugPrint('❌ Failed to load messages: ${result.error?.message}');
+        debugPrint('❌ MessagingProvider: Failed to load messages: ${result.error?.message}');
       }
     } catch (e) {
       _messagesError = models.MessagingError(
         message: 'Erreur inattendue lors du chargement des messages',
         type: models.MessagingErrorType.unknown,
       );
-      debugPrint('❌ Unexpected error loading messages: $e');
+      debugPrint('❌ MessagingProvider: Unexpected error loading messages: $e');
     } finally {
       _isLoadingMessages = false;
       notifyListeners();
@@ -259,30 +348,42 @@ class MessagingProvider extends ChangeNotifier {
 
   /// Envoie un message dans la conversation active
   Future<bool> sendMessage(String content) async {
-    if (_activeConversationId == null || _isSendingMessage) return false;
+    if (_activeConversationId == null || _isSendingMessage) {
+      debugPrint('❌ MessagingProvider: Cannot send message (no active conversation or already sending)');
+      return false;
+    }
 
     _isSendingMessage = true;
     _sendMessageError = null;
     notifyListeners();
 
     try {
+      debugPrint('📤 MessagingProvider: Sending message to conversation $_activeConversationId...');
       final result = await _messagingService.sendMessage(_activeConversationId!, content);
       
       if (result.isSuccess && result.data != null) {
-        // Ajouter le message à la cache locale
+        // Ajouter le message à la cache locale immédiatement
         final currentMessages = _messagesCache[_activeConversationId!] ?? [];
-        _messagesCache[_activeConversationId!] = [...currentMessages, result.data!];
+        
+        // Vérifier que le message n'existe pas déjà (éviter doublons avec WebSocket)
+        final messageExists = currentMessages.any((m) => m.id == result.data!.id);
+        
+        if (!messageExists) {
+          _messagesCache[_activeConversationId!] = [...currentMessages, result.data!];
+          debugPrint('✅ MessagingProvider: Message sent and added to local cache (ID: ${result.data!.id})');
+        } else {
+          debugPrint('⚠️ MessagingProvider: Message already exists in cache (WebSocket faster than API)');
+        }
         
         // Mettre à jour la conversation dans la liste (dernier message)
         _updateConversationWithNewMessage(result.data!);
         
         _sendMessageError = null;
-        debugPrint('💬 Message sent successfully');
         notifyListeners();
         return true;
       } else {
         _sendMessageError = result.error;
-        debugPrint('❌ Failed to send message: ${result.error?.message}');
+        debugPrint('❌ MessagingProvider: Failed to send message: ${result.error?.message}');
         notifyListeners();
         return false;
       }
@@ -291,7 +392,7 @@ class MessagingProvider extends ChangeNotifier {
         message: 'Erreur inattendue lors de l\'envoi du message',
         type: models.MessagingErrorType.unknown,
       );
-      debugPrint('❌ Unexpected error sending message: $e');
+      debugPrint('❌ MessagingProvider: Unexpected error sending message: $e');
       notifyListeners();
       return false;
     } finally {
@@ -309,18 +410,19 @@ class MessagingProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      debugPrint('🔍 MessagingProvider: Searching users for "$query"...');
       final result = await _messagingService.searchUsers(query);
       
       if (result.isSuccess && result.data != null) {
         _searchResults = result.data!;
-        debugPrint('💬 Found ${_searchResults.length} users for "$query"');
+        debugPrint('✅ MessagingProvider: Found ${_searchResults.length} users for "$query"');
       } else {
         _searchResults = [];
-        debugPrint('❌ Failed to search users: ${result.error?.message}');
+        debugPrint('❌ MessagingProvider: Failed to search users: ${result.error?.message}');
       }
     } catch (e) {
       _searchResults = [];
-      debugPrint('❌ Unexpected error searching users: $e');
+      debugPrint('❌ MessagingProvider: Unexpected error searching users: $e');
     } finally {
       _isSearchingUsers = false;
       notifyListeners();
@@ -330,6 +432,7 @@ class MessagingProvider extends ChangeNotifier {
   /// Démarre une nouvelle conversation avec un utilisateur
   Future<bool> startConversation(int otherUserId) async {
     try {
+      debugPrint('💬 MessagingProvider: Starting conversation with user $otherUserId...');
       final result = await _messagingService.createConversation(otherUserId);
       
       if (result.isSuccess && result.data != null) {
@@ -340,21 +443,22 @@ class MessagingProvider extends ChangeNotifier {
         _activeConversationId = result.data!.id;
         _messagesCache[result.data!.id] = [];
         
-        debugPrint('💬 Started conversation with user $otherUserId');
+        debugPrint('✅ MessagingProvider: Started conversation ${result.data!.id} with user $otherUserId');
         notifyListeners();
         return true;
       } else {
-        debugPrint('❌ Failed to start conversation: ${result.error?.message}');
+        debugPrint('❌ MessagingProvider: Failed to start conversation: ${result.error?.message}');
         return false;
       }
     } catch (e) {
-      debugPrint('❌ Unexpected error starting conversation: $e');
+      debugPrint('❌ MessagingProvider: Unexpected error starting conversation: $e');
       return false;
     }
   }
 
   /// Actualise les données (conversations et messages actifs)
   Future<void> refresh() async {
+    debugPrint('🔄 MessagingProvider: Refreshing data...');
     await loadConversations();
     if (_activeConversationId != null) {
       await loadMessages(_activeConversationId!);
@@ -363,33 +467,54 @@ class MessagingProvider extends ChangeNotifier {
 
   /// Efface la conversation active
   void clearActiveConversation() {
-    // Quitter la conversation WebSocket si connectée
-    if (_activeConversationId != null && _isWebSocketConnected) {
-      _webSocketService.leaveConversation(_activeConversationId!);
+    debugPrint('🧹 MessagingProvider: Clearing active conversation...');
+    
+    // Réinitialiser l'état de frappe
+    _isCurrentlyTyping = false;
+    _typingTimer?.cancel();
+    
+    // Déconnecter le WebSocket de la conversation
+    if (_isWebSocketConnected) {
+      disconnectFromConversation();
     }
     
     _activeConversationId = null;
     _messagesError = null;
     _sendMessageError = null;
+    _typingUsers.clear();
     notifyListeners();
   }
 
   /// Envoie un indicateur de frappe
   void sendTypingIndicator(bool isTyping) {
+    // Protection contre les boucles infinies
+    if (_isCurrentlyTyping == isTyping) {
+      debugPrint('⌨️ MessagingProvider: Typing indicator already in state $isTyping, skipping');
+      return;
+    }
+
     if (_activeConversationId != null && _isWebSocketConnected) {
+      debugPrint('⌨️ MessagingProvider: Sending typing indicator: $isTyping for conversation $_activeConversationId');
+      
+      _isCurrentlyTyping = isTyping;
       _webSocketService.sendTypingIndicator(_activeConversationId!, isTyping);
       
       // Arrêter automatiquement l'indicateur après 3 secondes
       if (isTyping) {
         _typingTimer?.cancel();
         _typingTimer = Timer(const Duration(seconds: 3), () {
-          if (_activeConversationId != null && _isWebSocketConnected) {
+          if (_activeConversationId != null && _isWebSocketConnected && _isCurrentlyTyping) {
+            debugPrint('⌨️ MessagingProvider: Auto-stopping typing indicator');
+            _isCurrentlyTyping = false;
             _webSocketService.sendTypingIndicator(_activeConversationId!, false);
           }
         });
       } else {
         _typingTimer?.cancel();
+        _isCurrentlyTyping = false;
       }
+    } else {
+      debugPrint('⌨️ MessagingProvider: Cannot send typing indicator (no active conversation or not connected)');
     }
   }
 
@@ -433,58 +558,84 @@ class MessagingProvider extends ChangeNotifier {
         otherUserLastName: conversation.otherUserLastName,
         otherUserAvatar: conversation.otherUserAvatar,
         lastMessage: message,
-        unreadCount: 0, // Si on vient d'envoyer, pas de non-lus
+        unreadCount: message.conversationId == _activeConversationId ? 0 : conversation.unreadCount + 1,
       );
       
       // Déplacer la conversation en haut de la liste
       _conversations.removeAt(conversationIndex);
       _conversations.insert(0, updatedConversation);
+      
+      debugPrint('🔄 MessagingProvider: Updated conversation ${message.conversationId} with new message');
+    } else {
+      debugPrint('⚠️ MessagingProvider: Could not find conversation ${message.conversationId} to update');
     }
   }
 
   /// Marque une conversation comme lue (appel en arrière-plan)
   Future<void> _markConversationAsRead(int conversationId) async {
     try {
+      debugPrint('📖 MessagingProvider: Marking conversation $conversationId as read...');
       await _messagingService.markConversationAsRead(conversationId);
+      debugPrint('✅ MessagingProvider: Successfully marked conversation $conversationId as read on server');
       
-      // Mettre à jour localement
-      final conversationIndex = _conversations.indexWhere(
-        (conv) => conv.id == conversationId,
-      );
+      // Mettre à jour localement si succès
+      _updateLocalReadStatus(conversationId);
       
-      if (conversationIndex != -1) {
-        final conversation = _conversations[conversationIndex];
-        if (conversation.unreadCount > 0) {
-          final updatedConversation = models.Conversation(
-            id: conversation.id,
-            user1Id: conversation.user1Id,
-            user2Id: conversation.user2Id,
-            createdAt: conversation.createdAt,
-            updatedAt: conversation.updatedAt,
-            otherUserUsername: conversation.otherUserUsername,
-            otherUserFirstName: conversation.otherUserFirstName,
-            otherUserLastName: conversation.otherUserLastName,
-            otherUserAvatar: conversation.otherUserAvatar,
-            lastMessage: conversation.lastMessage,
-            unreadCount: 0,
-          );
-          
-          _conversations[conversationIndex] = updatedConversation;
-          notifyListeners();
-        }
-      }
     } catch (e) {
-      debugPrint('❌ Failed to mark conversation as read: $e');
-      // Ne pas faire échouer l'opération pour cela
+      debugPrint('❌ MessagingProvider: Failed to mark conversation as read on server: $e');
+      
+      // Si c'est une 404, l'endpoint n'existe pas encore - mettre à jour localement quand même
+      if (e.toString().contains('404') || e.toString().contains('page not found')) {
+        debugPrint('🤷 MessagingProvider: Mark as read endpoint not implemented, updating locally only');
+        _updateLocalReadStatus(conversationId);
+      }
+      // Pour les autres erreurs, ne pas mettre à jour localement
+    }
+  }
+
+  /// Met à jour le statut de lecture localement
+  void _updateLocalReadStatus(int conversationId) {
+    final conversationIndex = _conversations.indexWhere(
+      (conv) => conv.id == conversationId,
+    );
+    
+    if (conversationIndex != -1) {
+      final conversation = _conversations[conversationIndex];
+      if (conversation.unreadCount > 0) {
+        final updatedConversation = models.Conversation(
+          id: conversation.id,
+          user1Id: conversation.user1Id,
+          user2Id: conversation.user2Id,
+          createdAt: conversation.createdAt,
+          updatedAt: conversation.updatedAt,
+          otherUserUsername: conversation.otherUserUsername,
+          otherUserFirstName: conversation.otherUserFirstName,
+          otherUserLastName: conversation.otherUserLastName,
+          otherUserAvatar: conversation.otherUserAvatar,
+          lastMessage: conversation.lastMessage,
+          unreadCount: 0,
+        );
+        
+        _conversations[conversationIndex] = updatedConversation;
+        debugPrint('✅ MessagingProvider: Updated local read status for conversation $conversationId');
+        notifyListeners();
+      }
     }
   }
 
   @override
   void dispose() {
+    debugPrint('🧹 MessagingProvider: Disposing...');
+    
     // Nettoyer les ressources WebSocket
     _messageSubscription?.cancel();
     _eventSubscription?.cancel();
     _typingTimer?.cancel();
+    
+    // Réinitialiser l'état de frappe
+    _isCurrentlyTyping = false;
+    
+    // Déconnecter le WebSocket
     _webSocketService.dispose();
     
     // Nettoyer le reste
@@ -493,6 +644,7 @@ class MessagingProvider extends ChangeNotifier {
     _searchResults.clear();
     _typingUsers.clear();
     
+    debugPrint('✅ MessagingProvider: Disposed');
     super.dispose();
   }
 }
