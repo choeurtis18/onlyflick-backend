@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../../features/auth/auth_provider.dart';
 import '../../../../core/providers/posts_providers.dart';
 import '../widgets/connected_post_widget.dart';
+import '../pages/conversations_page.dart';
 
 class FeedScreen extends StatefulWidget {
   final bool isCreator;
@@ -51,6 +52,15 @@ class _FeedScreenState extends State<FeedScreen> {
         backgroundColor: isError ? Colors.red : Colors.green,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  // Méthode ajoutée pour naviguer vers la messagerie
+  void _navigateToMessages() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ConversationsPage(),
       ),
     );
   }
@@ -199,11 +209,9 @@ class _FeedScreenState extends State<FeedScreen> {
                     const SizedBox(width: 12),
                   ],
 
-                  // Bouton Messages
+                  // Bouton Messages - Navigation ajoutée
                   GestureDetector(
-                    onTap: () {
-                      // TODO: Navigation vers messages
-                    },
+                    onTap: _navigateToMessages, // Utilisation de la nouvelle méthode
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(

@@ -69,7 +69,7 @@ class SearchProvider with ChangeNotifier {
         return;
       }
 
-      debugPrint('🔍 Searching users: query="$_currentQuery"');
+      // debugPrint('🔍 Searching users: query="$_currentQuery"');
 
       final result = await _searchService.searchUsers(
         query: _currentQuery,
@@ -94,7 +94,7 @@ class SearchProvider with ChangeNotifier {
         _searchState = SearchState.loaded;
         _searchError = null;
 
-        debugPrint('✅ Search completed: ${_searchResult.users.length} users found');
+        // debugPrint('✅ Search completed: ${_searchResult.users.length} users found');
       } else {
         _searchState = SearchState.error;
         _searchError = result.error ?? 'Erreur de recherche';
@@ -122,7 +122,7 @@ class SearchProvider with ChangeNotifier {
       _searchState = SearchState.loadingMore;
       notifyListeners();
 
-      debugPrint('📄 Loading more users: offset=$_searchOffset');
+      // debugPrint('📄 Loading more users: offset=$_searchOffset');
 
       final result = await _searchService.searchUsers(
         query: _currentQuery,
@@ -142,7 +142,7 @@ class SearchProvider with ChangeNotifier {
         _searchState = SearchState.loaded;
         _searchError = null;
 
-        debugPrint('✅ More users loaded: ${_searchResult.users.length} total users');
+        // debugPrint('✅ More users loaded: ${_searchResult.users.length} total users');
       } else {
         _searchState = SearchState.error;
         _searchError = result.error ?? 'Erreur lors du chargement';
@@ -166,7 +166,7 @@ class SearchProvider with ChangeNotifier {
     _currentQuery = '';
     _searchOffset = 0;
     
-    debugPrint('🧹 User search cleared');
+    // debugPrint('🧹 User search cleared');
     notifyListeners();
   }
 
@@ -223,7 +223,7 @@ void clearPostSearch() {
     try {
       await _searchService.trackProfileView(user.id);
       
-      debugPrint('📊 Profile view tracked: ${user.username}');
+      // debugPrint('📊 Profile view tracked: ${user.username}');
     } catch (e) {
       debugPrint('❌ Failed to track profile view: $e');
     }
@@ -234,7 +234,7 @@ void clearPostSearch() {
     try {
       await _searchService.trackSearch(query);
       
-      debugPrint('📊 User search tracked: "$query"');
+      // debugPrint('📊 User search tracked: "$query"');
     } catch (e) {
       debugPrint('❌ Failed to track user search: $e');
     }
@@ -295,12 +295,12 @@ void clearPostSearch() {
   /// Reset complet du provider
   void reset() {
     clearUserSearch();
-    debugPrint('🔄 SearchProvider reset');
+    // debugPrint('🔄 SearchProvider reset');
   }
 
   /// Initialise le provider (optionnel pour cette version simplifiée)
   Future<void> initialize() async {
-    debugPrint('🚀 SearchProvider initialized (simplified version)');
+    // debugPrint('🚀 SearchProvider initialized (simplified version)');
   }
 
   @override

@@ -38,7 +38,7 @@ class AuthProvider extends ChangeNotifier {
 
   /// Initialise le provider et vérifie l'état d'authentification
   Future<void> checkAuth() async {
-    debugPrint('🔐 Checking authentication state...');
+    // debugPrint('🔐 Checking authentication state...');
     
     try {
       // Initialiser l'API service

@@ -56,7 +56,7 @@ class PostsProvider extends ChangeNotifier {
       _userLikesCache.clear();
       _userLikesCache.addAll(userLikes);
       notifyListeners();
-      debugPrint('📖 Loaded ${userLikes.length} cached likes for user $_currentUserId');
+      // debugPrint('📖 Loaded ${userLikes.length} cached likes for user $_currentUserId');
     } catch (e) {
       debugPrint('❌ Error loading user likes from cache: $e');
     }
@@ -72,7 +72,7 @@ class PostsProvider extends ChangeNotifier {
 
   /// Charge tous les posts
   Future<void> loadPosts() async {
-    debugPrint('📱 Loading posts...');
+    // debugPrint('📱 Loading posts...');
     
     _setState(FeedState.loading);
     _clearError();
@@ -83,7 +83,7 @@ class PostsProvider extends ChangeNotifier {
       if (result.isSuccess && result.data != null) {
         _posts = result.data!;
         _setState(FeedState.loaded);
-        debugPrint('📱 ${_posts.length} posts loaded successfully');
+        // debugPrint('📱 ${_posts.length} posts loaded successfully');
         
         // Précharger les likes pour chaque post
         _preloadLikes();
@@ -98,7 +98,7 @@ class PostsProvider extends ChangeNotifier {
 
   /// Actualise le feed
   Future<void> refreshPosts() async {
-    debugPrint('🔄 Refreshing posts...');
+    // debugPrint('🔄 Refreshing posts...');
     
     _setState(FeedState.refreshing);
     _clearError();
@@ -109,7 +109,7 @@ class PostsProvider extends ChangeNotifier {
       if (result.isSuccess && result.data != null) {
         _posts = result.data!;
         _setState(FeedState.loaded);
-        debugPrint('🔄 ${_posts.length} posts refreshed successfully');
+        // debugPrint('🔄 ${_posts.length} posts refreshed successfully');
         
         // Ne pas vider le cache des likes utilisateur lors du refresh
         // Seulement vider le cache des commentaires et recharger les compteurs
@@ -131,7 +131,7 @@ class PostsProvider extends ChangeNotifier {
       return;
     }
 
-    debugPrint('❤️ Toggling like for post: $postId');
+    // debugPrint('❤️ Toggling like for post: $postId');
 
     try {
       final result = await _postsService.toggleLike(postId);
@@ -150,7 +150,7 @@ class PostsProvider extends ChangeNotifier {
         _likesCountCache[postId] = isLiked ? currentCount + 1 : (currentCount > 0 ? currentCount - 1 : 0);
         
         notifyListeners();
-        debugPrint('❤️ Like toggled for post $postId: $isLiked');
+        // debugPrint('❤️ Like toggled for post $postId: $isLiked');
       } else {
         debugPrint('❌ Failed to toggle like: ${result.error}');
       }
@@ -176,7 +176,7 @@ class PostsProvider extends ChangeNotifier {
       return _commentsCache[postId]!;
     }
 
-    debugPrint('💬 Loading comments for post: $postId');
+    // debugPrint('💬 Loading comments for post: $postId');
 
     try {
       final result = await _postsService.getPostComments(postId);
@@ -197,7 +197,7 @@ class PostsProvider extends ChangeNotifier {
 
   /// Ajoute un commentaire à un post
   Future<bool> addComment(int postId, String content) async {
-    debugPrint('💬 Adding comment to post: $postId');
+    // debugPrint('💬 Adding comment to post: $postId');
 
     try {
       final result = await _postsService.addComment(postId, content);
@@ -288,7 +288,7 @@ class PostsProvider extends ChangeNotifier {
     _userLikesCache.clear();
     _currentUserId = null;
     notifyListeners();
-    debugPrint('🗑️ User data cleared');
+    // debugPrint('🗑️ User data cleared');
   }
 
   /// Retente le chargement en cas d'erreur

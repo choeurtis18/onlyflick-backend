@@ -58,7 +58,7 @@ class TagsService {
         return _cachedTags!;
       }
 
-      debugPrint('🏷️ Récupération des tags avec statistiques depuis l\'API...');
+      // debugPrint('🏷️ Récupération des tags avec statistiques depuis l\'API...');
       
       final response = await _apiService.get<Map<String, dynamic>>(
         '/tags/stats',
@@ -85,7 +85,7 @@ class TagsService {
             _cachedTags = tags;
             _lastCacheUpdate = DateTime.now();
             
-            debugPrint('✅ ${tags.length} tags avec stats récupérés: ${tags.map((t) => '${t.displayName}(${t.count})').join(', ')}');
+            // debugPrint('✅ ${tags.length} tags avec stats récupérés: ${tags.map((t) => '${t.displayName}(${t.count})').join(', ')}');
             return tags;
           } else {
             debugPrint('⚠️ Aucun tag récupéré depuis l\'API');
@@ -176,7 +176,7 @@ class TagsService {
   static void invalidateCache() {
     _cachedTags = null;
     _lastCacheUpdate = null;
-    debugPrint('🗑️ Cache des tags invalidé');
+    // debugPrint('🗑️ Cache des tags invalidé');
   }
 
   /// Teste si l'API des tags est accessible
@@ -194,7 +194,7 @@ class TagsService {
 
   /// Tags de fallback en cas d'erreur API (avec comptages plus réalistes)
   static Future<List<TagData>> _getFallbackTags() async {
-    debugPrint('🔄 Utilisation des tags de fallback avec comptages réalistes');
+    // debugPrint('🔄 Utilisation des tags de fallback avec comptages réalistes');
     
     return [
       const TagData(key: 'tous', displayName: 'Tous', emoji: '🏷️', count: 0),

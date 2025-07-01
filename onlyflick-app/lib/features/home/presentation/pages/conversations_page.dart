@@ -15,12 +15,17 @@ class ConversationsPage extends StatefulWidget {
 }
 
 class _ConversationsPageState extends State<ConversationsPage> {
+  bool _isInitialized = false; // Flag pour éviter les double appels
+
   @override
   void initState() {
     super.initState();
-    // Charger les conversations au démarrage
+    // Charger les conversations au démarrage - UNE SEULE FOIS
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MessagingProvider>().loadConversations();
+      if (!_isInitialized) {
+        _isInitialized = true;
+        context.read<MessagingProvider>().loadConversations();
+      }
     });
   }
 
@@ -32,7 +37,10 @@ class _ConversationsPageState extends State<ConversationsPage> {
       body: Consumer<MessagingProvider>(
         builder: (context, messagingProvider, child) {
           return RefreshIndicator(
-            onRefresh: () => messagingProvider.refresh(),
+            onRefresh: () async {
+              // Appel explicite de refresh seulement quand l'utilisateur tire vers le bas
+              await messagingProvider.refresh();
+            },
             child: _buildBody(messagingProvider),
           );
         },
@@ -209,7 +217,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              messagingProvider.conversationsError!.message,
+              messagingProvider.conversationsError?.message ?? 'Une erreur est survenue',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -264,22 +272,21 @@ class _ConversationsPageState extends State<ConversationsPage> {
             Text(
               'Aucune conversation',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[800],
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Commencez une nouvelle conversation\navec d\'autres utilisateurs OnlyFlick',
+              'Commencez une conversation avec un créateur',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],
-                height: 1.4,
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _showNewConversationDialog,
               style: ElevatedButton.styleFrom(
@@ -289,9 +296,9 @@ class _ConversationsPageState extends State<ConversationsPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
-              icon: const Icon(Icons.add, size: 20),
+              icon: const Icon(Icons.add, size: 18),
               label: const Text(
                 'Nouvelle conversation',
                 style: TextStyle(fontWeight: FontWeight.w600),
@@ -306,51 +313,85 @@ class _ConversationsPageState extends State<ConversationsPage> {
   /// En-tête avec statistiques
   Widget _buildStatsHeader(MessagingProvider messagingProvider) {
     final totalConversations = messagingProvider.conversations.length;
-    final unreadCount = messagingProvider.totalUnreadCount;
-    
+    final unreadCount = messagingProvider.conversations
+        .where((conv) => conv.unreadCount > 0)
+        .length;
+
     return Container(
+      margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+      ),
       child: Row(
         children: [
+          _buildStatItem(
+            icon: Icons.chat_bubble_outline,
+            count: totalConversations,
+            label: 'Conversations',
+          ),
+          Container(
+            width: 1,
+            height: 24,
+            color: Colors.grey[300],
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+          ),
+          _buildStatItem(
+            icon: Icons.mark_chat_unread_outlined,
+            count: unreadCount,
+            label: 'Non lues',
+            isHighlight: unreadCount > 0,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Widget pour une statistique
+  Widget _buildStatItem({
+    required IconData icon,
+    required int count,
+    required String label,
+    bool isHighlight = false,
+  }) {
+    return Expanded(
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: isHighlight ? Colors.red.withOpacity(0.1) : Colors.black.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(
+              icon,
+              size: 16,
+              color: isHighlight ? Colors.red : Colors.black,
+            ),
+          ),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '$totalConversations conversation${totalConversations > 1 ? 's' : ''}',
+                  count.toString(),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isHighlight ? Colors.red : Colors.black,
+                  ),
+                ),
+                Text(
+                  label,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                if (unreadCount > 0) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    '$unreadCount non lu${unreadCount > 1 ? 's' : ''}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.red,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
               ],
-            ),
-          ),
-          // Bouton de tri (optionnel)
-          TextButton.icon(
-            onPressed: () {
-              // TODO: Implémenter le tri
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.grey[600],
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-            ),
-            icon: Icon(Icons.sort, size: 16, color: Colors.grey[600]),
-            label: Text(
-              'Récents',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
           ),
         ],
@@ -358,145 +399,114 @@ class _ConversationsPageState extends State<ConversationsPage> {
     );
   }
 
-  /// Tuile de conversation style OnlyFlick
+  /// Tuile d'une conversation
   Widget _buildConversationTile(Conversation conversation) {
-    final hasUnreadMessages = conversation.hasUnreadMessages;
-    
     return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _openChat(conversation),
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                // Avatar
-                Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: Colors.grey[200],
-                      backgroundImage: conversation.otherUserAvatar != null
-                          ? NetworkImage(conversation.otherUserAvatar!)
-                          : null,
-                      child: conversation.otherUserAvatar == null
-                          ? Text(
-                              _getInitials(conversation.otherUserDisplayName),
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                                fontWeight: FontWeight.w600,
-                                fontSize: 16,
-                              ),
-                            )
-                          : null,
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            offset: const Offset(0, 1),
+            blurRadius: 3,
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        onTap: () => _openConversation(conversation),
+        leading: Stack(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: Colors.grey[200],
+              backgroundImage: conversation.otherUserAvatar != null
+                  ? NetworkImage(conversation.otherUserAvatar!)
+                  : null,
+              child: conversation.otherUserAvatar == null
+                  ? Icon(Icons.person, color: Colors.grey[600])
+                  : null,
+            ),
+            // Indicateur de messages non lus
+            if (conversation.unreadCount > 0)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  child: Text(
+                    conversation.unreadCount > 9 ? '9+' : conversation.unreadCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
                     ),
-                    // Indicateur en ligne (si WebSocket connecté)
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(width: 12),
-                
-                // Contenu
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Ligne 1: Nom + Timestamp
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              conversation.otherUserDisplayName,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: hasUnreadMessages ? FontWeight.w700 : FontWeight.w600,
-                                color: Colors.black,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (conversation.lastMessage != null)
-                            Text(
-                              _formatTimestamp(conversation.lastMessage!.createdAt),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: hasUnreadMessages ? Colors.black : Colors.grey[500],
-                                fontWeight: hasUnreadMessages ? FontWeight.w600 : FontWeight.w400,
-                              ),
-                            ),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 4),
-                      
-                      // Ligne 2: Dernier message + Badge
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              conversation.lastMessage?.content ?? 'Aucun message',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: hasUnreadMessages ? Colors.black87 : Colors.grey[600],
-                                fontWeight: hasUnreadMessages ? FontWeight.w500 : FontWeight.w400,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          
-                          // Badge non lus
-                          if (hasUnreadMessages) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                conversation.unreadCount > 99 
-                                    ? '99+' 
-                                    : conversation.unreadCount.toString(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
+                    textAlign: TextAlign.center,
                   ),
                 ),
-              ],
-            ),
+              ),
+          ],
+        ),
+        title: Text(
+          conversation.otherUserUsername ?? 'Utilisateur inconnu',
+          style: TextStyle(
+            fontWeight: conversation.unreadCount > 0 ? FontWeight.bold : FontWeight.w600,
+            fontSize: 16,
           ),
+        ),
+        subtitle: conversation.lastMessage != null 
+            ? Text(
+                conversation.lastMessage!.content ?? 'Message sans contenu',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                  fontWeight: conversation.unreadCount > 0 ? FontWeight.w500 : FontWeight.normal,
+                ),
+              )
+            : Text(
+                'Aucun message',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: 14,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (conversation.lastMessage != null)
+              Text(
+                _formatTime(conversation.lastMessage!.createdAt),
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: 12,
+                ),
+              ),
+            const SizedBox(height: 4),
+            Icon(
+              Icons.arrow_forward_ios_outlined,
+              size: 12,
+              color: Colors.grey[400],
+            ),
+          ],
         ),
       ),
     );
   }
 
-  /// Ouvrir le chat
-  void _openChat(Conversation conversation) {
+  /// Ouvre une conversation
+  void _openConversation(Conversation conversation) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ChatPage(conversation: conversation),
@@ -504,7 +514,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
     );
   }
 
-  /// Afficher le dialogue nouvelle conversation
+  /// Affiche le dialogue de nouvelle conversation
   void _showNewConversationDialog() {
     showDialog(
       context: context,
@@ -512,39 +522,19 @@ class _ConversationsPageState extends State<ConversationsPage> {
     );
   }
 
-  /// Générer les initiales
-  String _getInitials(String name) {
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    } else if (parts.isNotEmpty) {
-      return parts[0][0].toUpperCase();
-    }
-    return '?';
-  }
-
-  /// Formater le timestamp
-  String _formatTimestamp(DateTime dateTime) {
+  /// Formate l'heure d'un message
+  String _formatTime(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
-    
-    if (difference.inDays == 0) {
-      final hour = dateTime.hour.toString().padLeft(2, '0');
-      final minute = dateTime.minute.toString().padLeft(2, '0');
-      return '$hour:$minute';
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays}j';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m';
+    } else {
+      return 'maintenant';
     }
-    
-    if (difference.inDays == 1) {
-      return 'Hier';
-    }
-    
-    if (difference.inDays < 7) {
-      final weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-      return weekdays[dateTime.weekday - 1];
-    }
-    
-    final day = dateTime.day.toString().padLeft(2, '0');
-    final month = dateTime.month.toString().padLeft(2, '0');
-    return '$day/$month';
   }
 }

@@ -62,9 +62,9 @@ class ApiService {
     // ✅ NOUVEAU: Charger l'ID utilisateur
     _currentUserId = prefs.getInt('current_user_id');
     
-    debugPrint('🔐 ApiService initialized with token: ${_token != null}');
-    debugPrint('🔐 Current user ID: $_currentUserId');
-    debugPrint('🌍 Base URL: $_baseUrl');
+    // debugPrint('🔐 ApiService initialized with token: ${_token != null}');
+    // debugPrint('🔐 Current user ID: $_currentUserId');
+    // debugPrint('🌍 Base URL: $_baseUrl');
   }
 
   /// Met à jour le token d'authentification
@@ -73,10 +73,10 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     if (token != null) {
       await prefs.setString('auth_token', token);
-      debugPrint('🔐 Token saved: ${token.substring(0, 10)}...');
+      // debugPrint('🔐 Token saved: ${token.substring(0, 10)}...');
     } else {
       await prefs.remove('auth_token');
-      debugPrint('🔐 Token cleared');
+      // debugPrint('🔐 Token cleared');
     }
   }
 
@@ -85,7 +85,7 @@ class ApiService {
     _currentUserId = userId;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('current_user_id', userId);
-    debugPrint('🔐 Current user ID saved: $userId');
+    // debugPrint('🔐 Current user ID saved: $userId');
   }
 
   /// ✅ NOUVEAU: Efface l'ID de l'utilisateur (appelé lors du logout)
@@ -93,7 +93,7 @@ class ApiService {
     _currentUserId = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('current_user_id');
-    debugPrint('🔐 Current user ID cleared');
+    // debugPrint('🔐 Current user ID cleared');
   }
 
   /// ✅ NOUVEAU: Déconnexion complète (token + user)
@@ -156,8 +156,8 @@ class ApiService {
   }) async {
     try {
       final uri = _buildUri(endpoint, null);
-      debugPrint('🌐 POST MULTIPART ${uri.toString()}');
-      debugPrint('📤 Fields: $fields');
+      // debugPrint('🌐 POST MULTIPART ${uri.toString()}');
+      // debugPrint('📤 Fields: $fields');
       if (files != null) debugPrint('📎 Files: ${files.keys.toList()}');
 
       final request = http.MultipartRequest('POST', uri);
@@ -214,8 +214,8 @@ class ApiService {
   }) async {
     try {
       final uri = _buildUri(endpoint, null);
-      debugPrint('🌐 PATCH MULTIPART ${uri.toString()}');
-      debugPrint('📤 Fields: $fields');
+      // debugPrint('🌐 PATCH MULTIPART ${uri.toString()}');
+      // debugPrint('📤 Fields: $fields');
       if (files != null) debugPrint('📎 Files: ${files.keys.toList()}');
 
       final request = http.MultipartRequest('PATCH', uri);
@@ -274,7 +274,7 @@ class ApiService {
     try {
       final uri = _buildUri(endpoint, queryParams);
       
-      debugPrint('🌐 $method ${uri.toString()}');
+      // debugPrint('🌐 $method ${uri.toString()}');
       if (body != null) debugPrint('📤 Body: ${jsonEncode(body)}');
 
       final headers = _defaultHeaders;
@@ -313,7 +313,7 @@ class ApiService {
           throw Exception('Unsupported HTTP method: $method');
       }
 
-      debugPrint('📥 Response ${response.statusCode}: ${response.body}');
+      // debugPrint('📥 Response ${response.statusCode}: ${response.body}');
       return _handleResponse<T>(response, fromJson);
 
     } on SocketException {

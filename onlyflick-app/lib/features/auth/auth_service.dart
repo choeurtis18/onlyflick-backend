@@ -119,7 +119,7 @@ class AuthService {
       );
 
       if (response.isSuccess && response.data != null) {
-        debugPrint('🔐 Profile fetched successfully: ${response.data!.username}');
+        // debugPrint('🔐 Profile fetched successfully: ${response.data!.username}');
         return UserResult.success(response.data!);
       } else {
         debugPrint('❌ Failed to fetch profile: ${response.error}');

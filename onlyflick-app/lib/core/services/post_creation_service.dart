@@ -42,7 +42,7 @@ class PostCreationService {
         'media': imageFile, // Nom du champ attendu par le backend
       };
       
-      debugPrint('📤 Sending post creation request...');
+      // debugPrint('📤 Sending post creation request...');
       
       // Utiliser la nouvelle méthode multipart de l'ApiService
       final response = await _apiService.postMultipart<Post>(
@@ -53,7 +53,7 @@ class PostCreationService {
       );
       
       if (response.isSuccess && response.data != null) {
-        debugPrint('✅ Post created successfully: ${response.data!.id}');
+        // debugPrint('✅ Post created successfully: ${response.data!.id}');
         return PostCreationResult.success(response.data!);
       } else {
         debugPrint('❌ Post creation failed: ${response.error}');

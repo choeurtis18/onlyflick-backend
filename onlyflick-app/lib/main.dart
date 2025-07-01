@@ -76,7 +76,7 @@ class OnlyFlickBootstrap extends StatelessWidget {
 
   /// Initialise l'application avec les services API
   Future<void> _initializeApp() async {
-    debugPrint('🚀 Initializing OnlyFlick...');
+    // debugPrint('🚀 Initializing OnlyFlick...');
     
     // Initialiser le service API
     await ApiService().initialize();
@@ -84,7 +84,7 @@ class OnlyFlickBootstrap extends StatelessWidget {
     // Simulation d'initialisation pour l'écran de chargement
     await Future.delayed(const Duration(milliseconds: 1500));
     
-    debugPrint('✅ OnlyFlick initialized successfully');
+    // debugPrint('✅ OnlyFlick initialized successfully');
   }
 }
 

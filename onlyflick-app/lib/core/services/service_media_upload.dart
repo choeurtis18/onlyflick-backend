@@ -48,7 +48,7 @@ class MediaUploadService {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
       
-      debugPrint('📥 Upload response ${response.statusCode}: ${response.body}');
+      // debugPrint('📥 Upload response ${response.statusCode}: ${response.body}');
       
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
@@ -58,7 +58,7 @@ class MediaUploadService {
           fileId: jsonData['file_id'] ?? '',
         );
         
-        debugPrint('✅ Image uploaded successfully: ${result.url}');
+        // debugPrint('✅ Image uploaded successfully: ${result.url}');
         return result;
       } else {
         final errorMessage = _getErrorMessage(response);

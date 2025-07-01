@@ -65,7 +65,7 @@ class _RecommendedPostsSectionState extends State<RecommendedPostsSection> {
         });
       }
 
-      debugPrint('🔍 Chargement posts recommandés pour tag: ${widget.selectedTag}');
+      // debugPrint('🔍 Chargement posts recommandés pour tag: ${widget.selectedTag}');
 
       // Déterminer l'offset
       final offset = resetList ? 0 : (_currentPage + 1) * _pageSize;
@@ -146,7 +146,7 @@ class _RecommendedPostsSectionState extends State<RecommendedPostsSection> {
         queryParams['tags'] = tags.join(',');
       }
 
-      debugPrint('📡 Requête posts recommandés: /posts/recommended avec params: $queryParams');
+      // debugPrint('📡 Requête posts recommandés: /posts/recommended avec params: $queryParams');
 
       return await _apiService.get<Map<String, dynamic>>(
         '/posts/recommended',
