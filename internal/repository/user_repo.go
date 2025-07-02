@@ -574,3 +574,86 @@ func CheckUsernameAvailability(username string) (bool, error) {
 	log.Printf("[CheckUsernameAvailability] Username %s disponible: %v (count: %d)", username, available, count)
 	return available, nil
 }
+
+// ===== NOUVELLES MÉTHODES POUR LES STATISTIQUES SÉPARÉES =====
+
+// GetUserPostsCount récupère le nombre de posts d'un utilisateur
+func GetUserPostsCount(userID int64) (int, error) {
+	log.Printf("[GetUserPostsCount] Récupération nombre de posts pour user %d", userID)
+
+	var count int
+	query := `SELECT COUNT(*) FROM posts WHERE user_id = $1`
+
+	err := database.DB.QueryRow(query, userID).Scan(&count)
+	if err != nil {
+		log.Printf("[GetUserPostsCount][ERROR] Erreur récupération nombre de posts: %v", err)
+		return 0, fmt.Errorf("erreur récupération nombre de posts: %w", err)
+	}
+
+	log.Printf("[GetUserPostsCount] Utilisateur %d a %d posts", userID, count)
+	return count, nil
+}
+
+// GetUserFollowersCount récupère le nombre d'abonnés d'un utilisateur (si créateur)
+func GetUserFollowersCount(userID int64) (int, error) {
+	log.Printf("[GetUserFollowersCount] Récupération nombre de followers pour user %d", userID)
+
+	var count int
+	query := `SELECT COUNT(*) FROM subscriptions WHERE creator_id = $1 AND status = true`
+
+	err := database.DB.QueryRow(query, userID).Scan(&count)
+	if err != nil {
+		log.Printf("[GetUserFollowersCount][ERROR] Erreur récupération nombre de followers: %v", err)
+		return 0, fmt.Errorf("erreur récupération nombre de followers: %w", err)
+	}
+
+	log.Printf("[GetUserFollowersCount] Utilisateur %d a %d followers", userID, count)
+	return count, nil
+}
+
+// GetUserFollowingCount récupère le nombre d'abonnements d'un utilisateur
+func GetUserFollowingCount(userID int64) (int, error) {
+	log.Printf("[GetUserFollowingCount] Récupération nombre de following pour user %d", userID)
+
+	var count int
+	query := `SELECT COUNT(*) FROM subscriptions WHERE subscriber_id = $1 AND status = true`
+
+	err := database.DB.QueryRow(query, userID).Scan(&count)
+	if err != nil {
+		log.Printf("[GetUserFollowingCount][ERROR] Erreur récupération nombre de following: %v", err)
+		return 0, fmt.Errorf("erreur récupération nombre de following: %w", err)
+	}
+
+	log.Printf("[GetUserFollowingCount] Utilisateur %d suit %d créateurs", userID, count)
+	return count, nil
+}
+
+// ===== NOUVEAU : GetUserPostsCountByType récupère le nombre de posts d'un utilisateur selon le type de visibilité =====
+func GetUserPostsCountByType(userID int64, postType string) (int, error) {
+	log.Printf("[GetUserPostsCountByType] Récupération nombre de posts pour user %d (type: %s)", userID, postType)
+
+	var query string
+	var args []interface{}
+
+	switch postType {
+	case "public":
+		query = `SELECT COUNT(*) FROM posts WHERE user_id = $1 AND visibility = 'public'`
+		args = []interface{}{userID}
+	case "subscriber":
+		query = `SELECT COUNT(*) FROM posts WHERE user_id = $1 AND visibility = 'subscriber'`
+		args = []interface{}{userID}
+	default: // "all"
+		query = `SELECT COUNT(*) FROM posts WHERE user_id = $1`
+		args = []interface{}{userID}
+	}
+
+	var count int
+	err := database.DB.QueryRow(query, args...).Scan(&count)
+	if err != nil {
+		log.Printf("[GetUserPostsCountByType][ERROR] Erreur récupération nombre de posts: %v", err)
+		return 0, fmt.Errorf("erreur récupération nombre de posts: %w", err)
+	}
+
+	log.Printf("[GetUserPostsCountByType] Utilisateur %d a %d posts (type: %s)", userID, count, postType)
+	return count, nil
+}

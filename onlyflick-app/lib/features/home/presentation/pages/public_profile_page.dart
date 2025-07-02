@@ -6,7 +6,7 @@ import '../../../../core/models/user_models.dart';
 import '../../../../core/services/user_service.dart';
 import '../../../../features/auth/auth_provider.dart';
 
-/// Page pour afficher le profil public d'un utilisateur
+/// Page pour afficher le profil public d'un utilisateur avec statistiques
 /// Permet de s'abonner si c'est un créateur
 class PublicProfilePage extends StatefulWidget {
   final int userId;
@@ -27,6 +27,14 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
   
   PublicUserProfile? _profile;
   SubscriptionStatus? _subscriptionStatus;
+  
+  // ===== NOUVEAU : État des posts =====
+  List<UserPost> _posts = [];
+  bool _isLoadingPosts = false;
+  bool _hasMorePosts = false;
+  int _currentPage = 1;
+  String? _postsError;
+  
   bool _isLoadingProfile = false;
   bool _isLoadingSubscription = false;
   bool _isSubscriptionAction = false;
@@ -57,6 +65,9 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
       if (_profile!.isCreator) {
         _loadSubscriptionStatus();
       }
+      
+      // ===== NOUVEAU : Charger les posts après le profil =====
+      _loadUserPosts();
     } else {
       setState(() {
         _error = result.error?.message ?? 'Erreur lors du chargement du profil';
@@ -86,6 +97,48 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
       });
       // Ne pas afficher d'erreur pour le statut d'abonnement, juste loguer
       debugPrint('Failed to load subscription status: ${result.error?.message}');
+    }
+  }
+
+  /// ===== NOUVEAU : Charge les posts de l'utilisateur =====
+  Future<void> _loadUserPosts({bool refresh = false}) async {
+    if (_isLoadingPosts) return;
+
+    setState(() {
+      _isLoadingPosts = true;
+      _postsError = null;
+      if (refresh) {
+        _posts.clear();
+        _currentPage = 1;
+      }
+    });
+
+    final result = await _userService.getUserPosts(
+      widget.userId,
+      page: refresh ? 1 : _currentPage,
+      limit: 20,
+    );
+
+    if (result.isSuccess && result.data != null) {
+      setState(() {
+        if (refresh) {
+          _posts = result.data!.posts;
+        } else {
+          _posts.addAll(result.data!.posts);
+        }
+        _hasMorePosts = result.data!.hasMore;
+        _currentPage = refresh ? 2 : _currentPage + 1;
+        _isLoadingPosts = false;
+      });
+      
+      debugPrint('✅ Posts chargés: ${_posts.length} posts pour utilisateur ${widget.userId}');
+    } else {
+      setState(() {
+        _postsError = result.error?.message ?? 'Erreur lors du chargement des posts';
+        _isLoadingPosts = false;
+      });
+      
+      debugPrint('❌ Erreur chargement posts: ${result.error?.message}');
     }
   }
 
@@ -261,12 +314,18 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildProfileHeader(),
+            const SizedBox(height: 20),
+            // ===== NOUVEAU : Section des statistiques =====
+            _buildUserStats(),
             const SizedBox(height: 24),
             if (_profile!.isCreator) ...[
               _buildSubscriptionSection(),
               const SizedBox(height: 24),
             ],
             _buildBioSection(),
+            const SizedBox(height: 24),
+            // ===== NOUVEAU : Section posts placeholder =====
+            _buildUserPostsSection(),
           ],
         ),
       ),
@@ -341,6 +400,83 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
           ),
         ),
       ],
+    );
+  }
+
+  /// ===== NOUVEAU : Section des statistiques utilisateur =====
+  Widget _buildUserStats() {
+    final stats = _profile!.stats;
+    
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatItem(
+            count: _profile!.postsCountFormatted,
+            label: 'Posts',
+            icon: Icons.grid_on,
+          ),
+          _buildStatDivider(),
+          _buildStatItem(
+            count: _profile!.followersCountFormatted,
+            label: _profile!.isCreator ? 'Abonnés' : 'Followers',
+            icon: Icons.people,
+          ),
+          _buildStatDivider(),
+          _buildStatItem(
+            count: _profile!.followingCountFormatted,
+            label: 'Abonnements',
+            icon: Icons.person_add,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem({
+    required String count,
+    required String label,
+    required IconData icon,
+  }) {
+    return Column(
+      children: [
+        Icon(
+          icon,
+          color: Colors.grey[600],
+          size: 20,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          count,
+          style: GoogleFonts.inter(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatDivider() {
+    return Container(
+      height: 40,
+      width: 1,
+      color: Colors.grey[300],
     );
   }
 
@@ -586,6 +722,331 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
           ),
         ),
       ],
+    );
+  }
+
+  /// ===== NOUVEAU : Section des posts utilisateur avec vrais posts =====
+  Widget _buildUserPostsSection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.grid_on,
+                color: Colors.grey[600],
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Publications',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${_profile?.stats.postsCount ?? 0}',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Afficher les posts ou le state de chargement
+          if (_isLoadingPosts && _posts.isEmpty)
+            _buildPostsLoading()
+          else if (_postsError != null)
+            _buildPostsError()
+          else if (_posts.isEmpty)
+            _buildNoPosts()
+          else
+            _buildPostsList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPostsLoading() {
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(color: Colors.black),
+      ),
+    );
+  }
+
+  Widget _buildPostsError() {
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        color: Colors.red[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red[200]!),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: Colors.red[400],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _postsError!,
+              style: GoogleFonts.inter(
+                color: Colors.red[600],
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () => _loadUserPosts(refresh: true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[600],
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Réessayer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoPosts() {
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.photo_library_outlined,
+              size: 48,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Aucune publication',
+              style: GoogleFonts.inter(
+                color: Colors.grey[500],
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Cet utilisateur n\'a pas encore publié de contenu',
+              style: GoogleFonts.inter(
+                color: Colors.grey[400],
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPostsList() {
+    return Column(
+      children: [
+        // Grille des posts
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            childAspectRatio: 1,
+          ),
+          itemCount: _posts.length,
+          itemBuilder: (context, index) {
+            final post = _posts[index];
+            return _buildPostItem(post);
+          },
+        ),
+        
+        // Bouton charger plus si il y a plus de posts
+        if (_hasMorePosts) ...[
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 40,
+            child: OutlinedButton(
+              onPressed: _isLoadingPosts ? null : () => _loadUserPosts(),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.black,
+                side: const BorderSide(color: Colors.grey),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: _isLoadingPosts
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                      ),
+                    )
+                  : const Text('Charger plus'),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPostItem(UserPost post) {
+    return GestureDetector(
+      onTap: () {
+        // TODO: Ouvrir le détail du post
+        debugPrint('Clic sur post ${post.id}');
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Image du post ou placeholder
+              if (post.imageUrl != null)
+                Image.network(
+                  post.imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildPostPlaceholder(post);
+                  },
+                )
+              else
+                _buildPostPlaceholder(post),
+              
+              // Overlay avec les infos
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.7),
+                      ],
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Badge de visibilité
+                      if (post.isSubscriberOnly)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange[600],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '🔒',
+                            style: TextStyle(
+                              fontSize: 8,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      
+                      const Spacer(),
+                      
+                      // Nombre de likes
+                      Row(
+                        children: [
+                          Icon(
+                            post.isLiked ? Icons.favorite : Icons.favorite_border,
+                            color: post.isLiked ? Colors.red : Colors.white,
+                            size: 12,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            '${post.likesCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPostPlaceholder(UserPost post) {
+    return Container(
+      color: Colors.grey[300],
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              post.hasMedia ? Icons.image : Icons.text_fields,
+              color: Colors.grey[600],
+              size: 20,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              post.formattedCreatedAt,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 8,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
