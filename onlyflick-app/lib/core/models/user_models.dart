@@ -1,6 +1,47 @@
 // lib/core/models/user_models.dart
 import 'package:flutter/foundation.dart';
 
+/// Statistiques d'un utilisateur dans le profil public
+class UserStats {
+  final int postsCount;
+  final int followersCount;
+  final int followingCount;
+
+  const UserStats({
+    required this.postsCount,
+    required this.followersCount,
+    required this.followingCount,
+  });
+
+  factory UserStats.fromJson(Map<String, dynamic> json) {
+    return UserStats(
+      postsCount: json['posts_count']?.toInt() ?? 0,
+      followersCount: json['followers_count']?.toInt() ?? 0,
+      followingCount: json['following_count']?.toInt() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'posts_count': postsCount,
+      'followers_count': followersCount,
+      'following_count': followingCount,
+    };
+  }
+
+  /// Stats par défaut pour l'état de chargement
+  factory UserStats.empty() {
+    return const UserStats(
+      postsCount: 0,
+      followersCount: 0,
+      followingCount: 0,
+    );
+  }
+
+  @override
+  String toString() => 'UserStats(posts: $postsCount, followers: $followersCount, following: $followingCount)';
+}
+
 /// Modèle pour le profil public d'un utilisateur
 /// Utilisé pour afficher les profils des autres utilisateurs
 class PublicUserProfile {
@@ -17,6 +58,8 @@ class PublicUserProfile {
   final String? subscriptionPrice;
   final String? currency;
   final ViewerSubscription? viewerSubscription;
+  // ===== NOUVEAU : Ajout des statistiques =====
+  final UserStats stats;
 
   const PublicUserProfile({
     required this.id,
@@ -32,6 +75,8 @@ class PublicUserProfile {
     this.subscriptionPrice,
     this.currency,
     this.viewerSubscription,
+    // ===== NOUVEAU : Stats avec valeur par défaut =====
+    this.stats = const UserStats(postsCount: 0, followersCount: 0, followingCount: 0),
   });
 
   factory PublicUserProfile.fromJson(Map<String, dynamic> json) {
@@ -51,6 +96,10 @@ class PublicUserProfile {
       viewerSubscription: json['viewer_subscription'] != null
           ? ViewerSubscription.fromJson(json['viewer_subscription'])
           : null,
+      // ===== NOUVEAU : Parsing des statistiques =====
+      stats: json['stats'] != null
+          ? UserStats.fromJson(json['stats'] as Map<String, dynamic>)
+          : UserStats.empty(),
     );
   }
 
@@ -69,6 +118,8 @@ class PublicUserProfile {
       'subscription_price': subscriptionPrice,
       'currency': currency,
       'viewer_subscription': viewerSubscription?.toJson(),
+      // ===== NOUVEAU : Sérialisation des statistiques =====
+      'stats': stats.toJson(),
     };
   }
 
@@ -77,6 +128,30 @@ class PublicUserProfile {
   String get subscriptionPriceFormatted {
     if (subscriptionPrice == null) return '';
     return '${subscriptionPrice}€ / mois';
+  }
+
+  /// ===== NOUVEAU : Formatage des statistiques pour l'affichage =====
+  String get followersCountFormatted => _formatCount(stats.followersCount);
+  String get followingCountFormatted => _formatCount(stats.followingCount);
+  String get postsCountFormatted => _formatCount(stats.postsCount);
+
+  /// Formatte les grands nombres (ex: 1.2K, 12.5K, 1.1M)
+  String _formatCount(int count) {
+    if (count < 1000) {
+      return count.toString();
+    } else if (count < 1000000) {
+      double thousands = count / 1000;
+      if (thousands == thousands.round()) {
+        return '${thousands.round()}K';
+      }
+      return '${thousands.toStringAsFixed(1)}K';
+    } else {
+      double millions = count / 1000000;
+      if (millions == millions.round()) {
+        return '${millions.round()}M';
+      }
+      return '${millions.toStringAsFixed(1)}M';
+    }
   }
 
   @override
@@ -90,7 +165,7 @@ class PublicUserProfile {
   int get hashCode => id.hashCode;
 
   @override
-  String toString() => 'PublicUserProfile(id: $id, username: $username, role: $role)';
+  String toString() => 'PublicUserProfile(id: $id, username: $username, role: $role, stats: $stats)';
 }
 
 /// Informations d'abonnement du viewer pour un créateur
@@ -446,4 +521,146 @@ class UserSearchResponse {
 
   @override
   String toString() => 'UserSearchResponse(query: $query, total: $total, count: ${users.length})';
+}
+
+/// ===== NOUVEAU : Modèle pour les posts d'un utilisateur =====
+
+/// Post d'un utilisateur pour le profil public
+class UserPost {
+  final int id;
+  final String content;
+  final String? imageUrl;
+  final String? videoUrl;
+  final String visibility;
+  final int likesCount;
+  final int commentsCount;
+  final DateTime createdAt;
+  final bool isLiked;
+
+  const UserPost({
+    required this.id,
+    required this.content,
+    this.imageUrl,
+    this.videoUrl,
+    required this.visibility,
+    required this.likesCount,
+    required this.commentsCount,
+    required this.createdAt,
+    required this.isLiked,
+  });
+
+  factory UserPost.fromJson(Map<String, dynamic> json) {
+    return UserPost(
+      id: json['id']?.toInt() ?? 0,
+      content: json['content']?.toString() ?? '',
+      imageUrl: json['image_url']?.toString().isEmpty == true ? null : json['image_url']?.toString(),
+      videoUrl: json['video_url']?.toString().isEmpty == true ? null : json['video_url']?.toString(),
+      visibility: json['visibility']?.toString() ?? 'public',
+      likesCount: json['likes_count']?.toInt() ?? 0,
+      commentsCount: json['comments_count']?.toInt() ?? 0,
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+      isLiked: json['is_liked'] == true,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'content': content,
+      'image_url': imageUrl,
+      'video_url': videoUrl,
+      'visibility': visibility,
+      'likes_count': likesCount,
+      'comments_count': commentsCount,
+      'created_at': createdAt.toIso8601String(),
+      'is_liked': isLiked,
+    };
+  }
+
+  bool get isPublic => visibility == 'public';
+  bool get isSubscriberOnly => visibility == 'subscriber';
+  bool get hasMedia => imageUrl != null || videoUrl != null;
+
+  String get formattedCreatedAt {
+    final now = DateTime.now();
+    final difference = now.difference(createdAt);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays}j';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}min';
+    } else {
+      return 'Maintenant';
+    }
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UserPost &&
+          runtimeType == other.runtimeType &&
+          id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
+
+  @override
+  String toString() => 'UserPost(id: $id, content: $content, visibility: $visibility)';
+}
+
+/// Réponse de l'API pour les posts d'un utilisateur
+class UserPostsResponse {
+  final List<UserPost> posts;
+  final int total;
+  final int page;
+  final int limit;
+  final bool hasMore;
+  final String postType;
+  final int userId;
+
+  const UserPostsResponse({
+    required this.posts,
+    required this.total,
+    required this.page,
+    required this.limit,
+    required this.hasMore,
+    required this.postType,
+    required this.userId,
+  });
+
+  factory UserPostsResponse.fromJson(Map<String, dynamic> json) {
+    final postsList = json['posts'] as List? ?? [];
+    
+    return UserPostsResponse(
+      posts: postsList
+          .map((post) => UserPost.fromJson(post as Map<String, dynamic>))
+          .toList(),
+      total: json['total']?.toInt() ?? 0,
+      page: json['page']?.toInt() ?? 1,
+      limit: json['limit']?.toInt() ?? 20,
+      hasMore: json['has_more'] == true,
+      postType: json['post_type']?.toString() ?? 'public',
+      userId: json['user_id']?.toInt() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'posts': posts.map((post) => post.toJson()).toList(),
+      'total': total,
+      'page': page,
+      'limit': limit,
+      'has_more': hasMore,
+      'post_type': postType,
+      'user_id': userId,
+    };
+  }
+
+  bool get isEmpty => posts.isEmpty;
+  bool get isNotEmpty => posts.isNotEmpty;
+
+  @override
+  String toString() => 'UserPostsResponse(userId: $userId, total: $total, count: ${posts.length}, type: $postType)';
 }

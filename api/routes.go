@@ -142,6 +142,10 @@ func SetupRoutes() http.Handler {
 		
 		// Obtenir le profil public d'un utilisateur
 		users.Get("/{user_id}", handler.GetUserProfileHandler)
+
+		// Obtenir les posts d'un utilisateur spécifique
+		users.Get("/{user_id}/posts", handler.GetUserPostsHandler)
+
 		
 		// Recherche alternative d'utilisateurs (si besoin)
 		users.Get("/", handler.SearchUsersHandler)
@@ -168,9 +172,7 @@ func SetupRoutes() http.Handler {
 		interactions.Post("/track", handler.TrackInteractionHandler)
 	})
 
-	// ========================
-	// 🔥 AMÉLIORÉ : Abonnements (Subscriber/Creator/Admin)
-	// ========================
+	
 	r.Route("/subscriptions", func(s chi.Router) {
 		s.Use(middleware.JWTMiddlewareWithRole("subscriber", "creator", "admin"))
 

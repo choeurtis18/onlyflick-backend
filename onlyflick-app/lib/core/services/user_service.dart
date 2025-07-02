@@ -34,6 +34,48 @@ class UserService {
     }
   }
 
+  /// ===== NOUVEAU : Récupère les posts d'un utilisateur =====
+  Future<UserServiceResult<UserPostsResponse>> getUserPosts(
+    int userId, {
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      debugPrint('🔍 Fetching posts for user $userId (page: $page, limit: $limit)');
+      
+      final queryParams = {
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
+      final response = await _apiService.get(
+        '/users/$userId/posts',
+        queryParams: queryParams,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        // L'API retourne un objet avec 'data' qui contient les posts
+        final responseData = response.data as Map<String, dynamic>;
+        final postsData = responseData['data'] as Map<String, dynamic>;
+        
+        final postsResponse = UserPostsResponse.fromJson(postsData);
+        debugPrint('✅ Posts fetched successfully: ${postsResponse.posts.length} posts for user $userId');
+        return UserServiceResult.success(postsResponse);
+      } else {
+        debugPrint('❌ Failed to fetch user posts: ${response.error}');
+        return UserServiceResult.failure(
+          UserServiceError.fromApiResponse(
+            response.error ?? 'Erreur lors de la récupération des posts',
+            response.statusCode,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error in getUserPosts: $e');
+      return UserServiceResult.failure(UserServiceError.network());
+    }
+  }
+
   /// Recherche des utilisateurs par nom d'utilisateur
   Future<UserServiceResult<UserSearchResponse>> searchUsers({
     required String query,
@@ -153,10 +195,10 @@ class UserService {
     }
   }
 
-  /// S'abonner avec paiement Stripe immédiat
+  /// S'abonner à un créateur avec paiement
   Future<UserServiceResult<Map<String, dynamic>>> subscribeWithPayment(int creatorId) async {
     try {
-      debugPrint('💳 Subscribing with payment to creator $creatorId');
+      debugPrint('💳 Subscribing to creator $creatorId with payment');
       
       final response = await _apiService.post('/subscriptions/$creatorId/payment');
 
@@ -165,10 +207,10 @@ class UserService {
         debugPrint('✅ Payment subscription initiated for creator $creatorId');
         return UserServiceResult.success(data);
       } else {
-        debugPrint('❌ Failed to initiate payment subscription: ${response.error}');
+        debugPrint('❌ Failed to subscribe with payment: ${response.error}');
         return UserServiceResult.failure(
           UserServiceError.fromApiResponse(
-            response.error ?? 'Erreur lors du paiement de l\'abonnement',
+            response.error ?? 'Erreur lors de l\'abonnement avec paiement',
             response.statusCode,
           ),
         );
@@ -179,31 +221,22 @@ class UserService {
     }
   }
 
-  /// Récupère la liste des abonnements de l'utilisateur connecté
+  /// Obtenir la liste des abonnements de l'utilisateur
   Future<UserServiceResult<List<Subscription>>> getMySubscriptions() async {
     try {
-      debugPrint('📋 Fetching my subscriptions');
+      debugPrint('🔍 Fetching my subscriptions');
       
-      // Utilisation d'une approche plus simple sans type générique complexe
-      final response = await _apiService.get(
-        '/subscriptions',
-      );
+      final response = await _apiService.get('/subscriptions/');
 
       if (response.isSuccess && response.data != null) {
-        // Parser manuellement les données
-        List<Subscription> subscriptions = [];
-        
-        if (response.data is List) {
-          final dataList = response.data as List;
-          subscriptions = dataList
-              .map((item) => Subscription.fromJson(item as Map<String, dynamic>))
-              .toList();
-        }
-        
-        debugPrint('✅ My subscriptions fetched: ${subscriptions.length} subscriptions');
+        final data = response.data as List<dynamic>;
+        final subscriptions = data
+            .map((sub) => Subscription.fromJson(sub as Map<String, dynamic>))
+            .toList();
+        debugPrint('✅ Subscriptions fetched: ${subscriptions.length} subscriptions');
         return UserServiceResult.success(subscriptions);
       } else {
-        debugPrint('❌ Failed to fetch my subscriptions: ${response.error}');
+        debugPrint('❌ Failed to fetch subscriptions: ${response.error}');
         return UserServiceResult.failure(
           UserServiceError.fromApiResponse(
             response.error ?? 'Erreur lors de la récupération des abonnements',
@@ -218,87 +251,68 @@ class UserService {
   }
 }
 
-/// Classe de résultat pour les opérations du UserService
+/// ===== RÉSULTATS D'OPÉRATIONS =====
+
+/// Résultat générique pour les opérations du UserService
 class UserServiceResult<T> {
+  final bool isSuccess;
   final T? data;
   final UserServiceError? error;
-  final bool isSuccess;
 
   const UserServiceResult._({
+    required this.isSuccess,
     this.data,
     this.error,
-    required this.isSuccess,
   });
 
   factory UserServiceResult.success(T data) {
-    return UserServiceResult._(
-      data: data,
-      isSuccess: true,
-    );
+    return UserServiceResult._(isSuccess: true, data: data);
   }
 
   factory UserServiceResult.failure(UserServiceError error) {
-    return UserServiceResult._(
-      error: error,
-      isSuccess: false,
-    );
+    return UserServiceResult._(isSuccess: false, error: error);
   }
 
   bool get isFailure => !isSuccess;
+
+  @override
+  String toString() => isSuccess 
+      ? 'UserServiceResult.success($data)' 
+      : 'UserServiceResult.failure($error)';
 }
 
-/// Classe d'erreur pour le UserService
+/// Erreur du UserService
 class UserServiceError {
   final String message;
   final int? statusCode;
-  final String type;
+  final String? field;
 
   const UserServiceError({
     required this.message,
     this.statusCode,
-    required this.type,
+    this.field,
   });
 
   factory UserServiceError.network() {
     return const UserServiceError(
-      message: 'Erreur de connexion réseau',
-      type: 'network',
+      message: 'Erreur réseau. Vérifiez votre connexion internet.',
     );
   }
 
   factory UserServiceError.fromApiResponse(String message, int? statusCode) {
-    String type = 'api';
-    
-    if (statusCode != null) {
-      switch (statusCode) {
-        case 401:
-          type = 'unauthorized';
-          break;
-        case 403:
-          type = 'forbidden';
-          break;
-        case 404:
-          type = 'not_found';
-          break;
-        case 500:
-          type = 'server_error';
-          break;
-      }
-    }
-
     return UserServiceError(
       message: message,
       statusCode: statusCode,
-      type: type,
     );
   }
 
-  bool get isNetworkError => type == 'network';
-  bool get isUnauthorized => type == 'unauthorized';
-  bool get isForbidden => type == 'forbidden';
-  bool get isNotFound => type == 'not_found';
-  bool get isServerError => type == 'server_error';
+  factory UserServiceError.validation(String field, String message) {
+    return UserServiceError(
+      message: message,
+      field: field,
+    );
+  }
 
   @override
-  String toString() => 'UserServiceError(message: $message, type: $type, statusCode: $statusCode)';
+  String toString() => 'UserServiceError(message: $message, statusCode: $statusCode)';
 }
