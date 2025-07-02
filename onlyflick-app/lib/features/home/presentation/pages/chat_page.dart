@@ -36,6 +36,10 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   // Gestion des indicateurs de frappe
   Timer? _typingTimer;
   bool _isTypingIndicatorSent = false;
+  
+  // ✅ NOUVEAU: Variables pour l'auto-scroll
+  int _previousMessageCount = 0;
+  StreamSubscription<MessagingProvider>? _messagingProviderSubscription;
 
   @override
   void initState() {
@@ -76,6 +80,14 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
         debugPrint('🔌 ChatPage: Connecting WebSocket...');
         await _connectToWebSocket();
         
+        // ✅ 3. Scroll vers le bas après le chargement initial
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom(animated: false); // Pas d'animation pour le chargement initial
+        });
+        
+        // ✅ 4. Configurer le listener pour l'auto-scroll
+        _setupMessageListener();
+        
       } catch (e) {
         debugPrint('❌ ChatPage: Error in initialization: $e');
       }
@@ -83,6 +95,57 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     
     // Écouter les changements de texte pour les indicateurs de frappe
     _messageController.addListener(_onTextChanged);
+  }
+
+  /// ✅ NOUVELLE MÉTHODE: Configure l'écoute des nouveaux messages pour auto-scroll
+  void _setupMessageListener() {
+    final messagingProvider = context.read<MessagingProvider>();
+    _previousMessageCount = messagingProvider.activeMessages.length;
+    
+    debugPrint('📜 ChatPage: Setting up message listener (initial count: $_previousMessageCount)');
+  }
+
+  /// ✅ NOUVELLE MÉTHODE: Scroll automatique vers le bas
+  void _scrollToBottom({bool animated = true}) {
+    if (!_scrollController.hasClients) {
+      debugPrint('📜 ChatPage: ScrollController has no clients, skipping scroll');
+      return;
+    }
+    
+    try {
+      if (animated) {
+        _scrollController.animateTo(
+          0.0, // Position 0 car la liste est en reverse
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _scrollController.jumpTo(0.0);
+      }
+      debugPrint('📜 ChatPage: Scrolled to bottom (animated: $animated)');
+    } catch (e) {
+      debugPrint('❌ ChatPage: Error scrolling to bottom: $e');
+    }
+  }
+
+  /// ✅ MÉTHODE MISE À JOUR: Détecte les nouveaux messages et scroll automatiquement
+  void _checkForNewMessages(MessagingProvider messagingProvider) {
+    final currentMessageCount = messagingProvider.activeMessages.length;
+    
+    if (currentMessageCount > _previousMessageCount) {
+      debugPrint('📜 ChatPage: New message detected (${_previousMessageCount} -> $currentMessageCount)');
+      
+      // Scroll vers le bas après un petit délai pour laisser l'UI se mettre à jour
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            _scrollToBottom();
+          }
+        });
+      });
+    }
+    
+    _previousMessageCount = currentMessageCount;
   }
 
   /// Connecte le WebSocket à la conversation actuelle
@@ -137,6 +200,9 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     _fadeController.dispose();
     _slideController.dispose();
     
+    // ✅ NOUVEAU: Nettoyer le subscription
+    _messagingProviderSubscription?.cancel();
+    
     // Nettoyer l'état de frappe
     _isTypingIndicatorSent = false;
     
@@ -172,6 +238,11 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
               Expanded(
                 child: Consumer<MessagingProvider>(
                   builder: (context, messagingProvider, child) {
+                    // ✅ NOUVEAU: Vérifier les nouveaux messages pour auto-scroll
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _checkForNewMessages(messagingProvider);
+                    });
+                    
                     return _buildMessagesSection(messagingProvider, theme);
                   },
                 ),
@@ -583,8 +654,8 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                 final reversedIndex = messagingProvider.activeMessages.length - 1 - messageIndex;
                 final message = messagingProvider.activeMessages[reversedIndex];
                 
-                // DEBUG: Vérifier si le message est vide
-                if (message.content.trim().isEmpty) {
+                // ✅ AMÉLIORATION: Filtrage plus strict des messages vides
+                if (message.content.trim().isEmpty || message.content == "null" || message.content == "") {
                   debugPrint('⚠️ ChatPage: Empty message detected in UI! ID: ${message.id}, Content: "${message.content}"');
                   return const SizedBox.shrink(); // Ne pas afficher les messages vides
                 }
@@ -680,7 +751,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                           height: 1.4,
                           color: Color(0xFF1A1A1A), // Couleur de texte visible
                         ),
-                        onSubmitted: (value) => _sendMessage(context),
+                        onSubmitted: (value) => _sendMessage(),
                         onChanged: (value) {
                           // Déclencher setState pour mettre à jour l'état du bouton
                           setState(() {});
@@ -696,7 +767,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                     onTap: _messageController.text.trim().isNotEmpty && !messagingProvider.isSendingMessage
                         ? () {
                             HapticFeedback.lightImpact();
-                            _sendMessage(context);
+                            _sendMessage();
                           }
                         : null,
                     child: AnimatedContainer(
@@ -783,7 +854,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                 TextButton(
                   onPressed: () {
                     HapticFeedback.lightImpact();
-                    _sendMessage(context);
+                    _sendMessage();
                   },
                   child: Text(
                     'Réessayer',
@@ -802,54 +873,104 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     );
   }
 
-  /// Envoie un message avec feedback haptique
-  Future<void> _sendMessage(BuildContext context) async {
+  /// ✅ MÉTHODE MISE À JOUR: Envoie un message avec auto-scroll et meilleure gestion d'erreurs
+  Future<void> _sendMessage() async {
     final content = _messageController.text.trim();
     
-    // PROTECTION: Ne pas envoyer de messages vides
+    // ✅ PROTECTION RENFORCÉE: Ne pas envoyer de messages vides
     if (content.isEmpty || content == "" || content == "null") {
-      debugPrint('⚠️ ChatPage: Refusing to send empty message');
+      debugPrint('📤 ChatPage: Cannot send empty message');
       return;
     }
-
-    final messagingProvider = context.read<MessagingProvider>();
-    
-    // Feedback haptique
-    HapticFeedback.lightImpact();
-    
-    // Vider le champ de saisie immédiatement et arrêter l'indicateur de frappe
-    _messageController.clear();
-    _isTypingIndicatorSent = false;
-    _typingTimer?.cancel();
-    messagingProvider.sendTypingIndicator(false);
     
     debugPrint('📤 ChatPage: Sending message: "$content" (length: ${content.length})');
     
-    // Envoyer le message
-    final success = await messagingProvider.sendMessage(content);
+    final messagingProvider = context.read<MessagingProvider>();
     
-    if (success) {
-      debugPrint('✅ ChatPage: Message sent successfully');
-      // Faire défiler vers le bas pour afficher le nouveau message
-      _scrollToBottom();
+    try {
+      // Effacer le champ de texte immédiatement pour un feedback instantané
+      final messageCopy = content;
+      _messageController.clear();
       
-      // Refocus sur le champ de saisie
-      _messageFocusNode.requestFocus();
-    } else {
-      debugPrint('❌ ChatPage: Failed to send message');
-      // Remettre le texte si l'envoi a échoué
+      // ✅ Arrêter l'indicateur de frappe immédiatement
+      _stopTypingIndicator();
+      
+      // Envoyer le message
+      debugPrint('📤 MessagingProvider: Sending message to conversation ${widget.conversation.id}...');
+      final success = await messagingProvider.sendMessage(messageCopy);
+      
+      if (success) {
+        debugPrint('✅ ChatPage: Message sent successfully');
+        
+        // ✅ Scroll vers le bas après l'envoi réussi
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom();
+        });
+        
+        // Vibration légère pour confirmer l'envoi
+        HapticFeedback.lightImpact();
+        
+      } else {
+        debugPrint('❌ ChatPage: Failed to send message');
+        
+        // ✅ Restaurer le texte en cas d'erreur
+        _messageController.text = messageCopy;
+        
+        // Afficher une erreur à l'utilisateur
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.white, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Erreur lors de l\'envoi du message',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+              action: SnackBarAction(
+                label: 'Réessayer',
+                textColor: Colors.white,
+                onPressed: () {
+                  _sendMessage(); // Réessayer l'envoi
+                },
+              ),
+            ),
+          );
+        }
+      }
+      
+    } catch (e) {
+      debugPrint('❌ ChatPage: Error sending message: $e');
+      
+      // Restaurer le texte en cas d'erreur
       _messageController.text = content;
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur de connexion'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
-  /// Fait défiler vers le bas de la liste avec animation
-  void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        0.0, // Position 0 car la liste est reverse
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+  /// ✅ NOUVELLE MÉTHODE: Arrête l'indicateur de frappe
+  void _stopTypingIndicator() {
+    if (_isTypingIndicatorSent) {
+      _isTypingIndicatorSent = false;
+      _typingTimer?.cancel();
+      final messagingProvider = context.read<MessagingProvider>();
+      messagingProvider.sendTypingIndicator(false);
+      debugPrint('⌨️ ChatPage: Stopped typing indicator');
     }
   }
 

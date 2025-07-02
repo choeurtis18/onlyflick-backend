@@ -150,22 +150,23 @@ class MessagingProvider extends ChangeNotifier {
     }
   }
 
-  /// Gère les messages reçus en temps réel
+  /// Gère les messages reçus en temps réel (VERSION CORRIGÉE)
   void _handleRealtimeMessage(models.Message message) {
     debugPrint('💬 MessagingProvider: Realtime message received for conversation ${message.conversationId}');
     debugPrint('📋 MessagingProvider: Message ID: ${message.id}, Sender: ${message.senderId}, Content: "${message.content}"');
     
-    // Filtrer les messages vides (bug backend)
+    // ✅ Filtrer les messages vides (déjà fait au niveau WebSocket, mais double sécurité)
     if (message.content.trim().isEmpty) {
       debugPrint('🗑️ MessagingProvider: Ignoring empty message (ID: ${message.id})');
       return;
     }
     
-    // Vérifier si c'est notre propre message pour éviter la duplication
+    // ✅ AMÉLIORATION: Ne plus ignorer automatiquement ses propres messages
+    // Car cela peut causer des problèmes de synchronisation
     final currentUserId = ApiService().currentUserId;
     if (currentUserId != null && message.senderId == currentUserId) {
-      debugPrint('🔄 MessagingProvider: Ignoring own message (ID: ${message.id}) to prevent duplication');
-      return;
+      debugPrint('🔄 MessagingProvider: Received own message via WebSocket (ID: ${message.id})');
+      // Ne pas ignorer complètement, mais vérifier s'il existe déjà
     }
     
     // Vérifier si le message est pour la conversation active
@@ -177,19 +178,41 @@ class MessagingProvider extends ChangeNotifier {
       final messageExists = currentMessages.any((m) => m.id == message.id);
       
       if (!messageExists) {
-        _messagesCache[message.conversationId] = [...currentMessages, message];
-        debugPrint('✅ MessagingProvider: Message added to cache');
+        // ✅ AMÉLIORATION: Insérer le message à la bonne position (par date)
+        final updatedMessages = [...currentMessages, message];
+        // Trier par date de création pour maintenir l'ordre chronologique
+        updatedMessages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        
+        _messagesCache[message.conversationId] = updatedMessages;
+        debugPrint('✅ MessagingProvider: Message added to cache (total: ${updatedMessages.length})');
+        
+        // ✅ Force un rebuild immédiat de l'UI
+        notifyListeners();
+        
       } else {
-        debugPrint('⚠️ MessagingProvider: Message already exists in cache, skipping');
-        return;
+        debugPrint('⚠️ MessagingProvider: Message ${message.id} already exists in cache, skipping');
+        return; // Pas besoin de notifyListeners si rien n'a changé
       }
-    } else {
+      
+    } else if (message.conversationId != _activeConversationId) {
       debugPrint('📨 MessagingProvider: Message for inactive conversation ${message.conversationId}');
+      
+      // ✅ AMÉLIORATION: Même pour les conversations inactives, maintenir le cache
+      final currentMessages = _messagesCache[message.conversationId] ?? [];
+      final messageExists = currentMessages.any((m) => m.id == message.id);
+      
+      if (!messageExists) {
+        final updatedMessages = [...currentMessages, message];
+        updatedMessages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        _messagesCache[message.conversationId] = updatedMessages;
+        debugPrint('✅ MessagingProvider: Message cached for inactive conversation');
+      }
     }
     
-    // Mettre à jour la conversation dans la liste
+    // Mettre à jour la conversation dans la liste (toujours)
     _updateConversationWithNewMessage(message);
     
+    // ✅ Force un rebuild final pour s'assurer que l'UI se met à jour
     notifyListeners();
   }
 
@@ -307,7 +330,7 @@ class MessagingProvider extends ChangeNotifier {
     }
   }
 
-  /// Charge les messages d'une conversation spécifique (VERSION MISE À JOUR)
+  /// Charge les messages d'une conversation spécifique (VERSION CORRIGÉE)
   Future<void> loadMessages(int conversationId) async {
     if (_isLoadingMessages) {
       debugPrint('⏳ MessagingProvider: Already loading messages, skipping...');
@@ -324,9 +347,20 @@ class MessagingProvider extends ChangeNotifier {
       final result = await _messagingService.getMessagesInConversation(conversationId);
       
       if (result.isSuccess && result.data != null) {
-        _messagesCache[conversationId] = result.data!;
+        // ✅ CORRECTION: Filtrer les messages vides lors du chargement initial
+        final filteredMessages = result.data!.where((message) {
+          final hasContent = message.content.trim().isNotEmpty;
+          if (!hasContent) {
+            debugPrint('🗑️ MessagingProvider: Filtering out empty message from API (ID: ${message.id})');
+          }
+          return hasContent;
+        }).toList();
+        
+        _messagesCache[conversationId] = filteredMessages;
         _messagesError = null;
-        debugPrint('✅ MessagingProvider: Loaded ${result.data!.length} messages for conversation $conversationId');
+        
+        debugPrint('✅ MessagingProvider: Loaded ${result.data!.length} total messages');
+        debugPrint('✅ MessagingProvider: Filtered to ${filteredMessages.length} non-empty messages for conversation $conversationId');
         
         // Marquer la conversation comme lue
         _markConversationAsRead(conversationId);

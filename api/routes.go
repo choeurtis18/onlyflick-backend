@@ -132,9 +132,20 @@ func SetupRoutes() http.Handler {
 		search.Get("/stats", handler.GetSearchStatsHandler)
 
 		search.Get("/posts", handler.SearchPostsHandler)
-
 	})
 
+	// ========================
+	// 🔥 NOUVEAU : Utilisateurs (profils publics)
+	// ========================
+	r.Route("/users", func(users chi.Router) {
+		users.Use(middleware.JWTMiddleware)
+		
+		// Obtenir le profil public d'un utilisateur
+		users.Get("/{user_id}", handler.GetUserProfileHandler)
+		
+		// Recherche alternative d'utilisateurs (si besoin)
+		users.Get("/", handler.SearchUsersHandler)
+	})
 
 	// ========================
 	// 🏷️ TAGS ET CATÉGORIES
@@ -158,12 +169,15 @@ func SetupRoutes() http.Handler {
 	})
 
 	// ========================
-	// Abonnements (Subscriber/Creator/Admin)
+	// 🔥 AMÉLIORÉ : Abonnements (Subscriber/Creator/Admin)
 	// ========================
 	r.Route("/subscriptions", func(s chi.Router) {
 		s.Use(middleware.JWTMiddlewareWithRole("subscriber", "creator", "admin"))
 
-		// Route pour s'abonner à un créateur avec paiement
+		// 🔥 NOUVEAU : S'abonner à un créateur (sans paiement immédiat)
+		s.Post("/{creator_id}", handler.Subscribe)
+
+		// Route pour s'abonner à un créateur avec paiement Stripe
 		s.Post("/{creator_id}/payment", handler.SubscribeWithPayment)
 
 		// Route pour se désabonner d'un créateur
@@ -171,6 +185,9 @@ func SetupRoutes() http.Handler {
 
 		// Route pour récupérer la liste des abonnements d'un utilisateur
 		s.Get("/", handler.ListMySubscriptions)
+
+		// 🔥 NOUVEAU : Vérifier le statut d'abonnement à un créateur
+		s.Get("/{creator_id}/status", handler.CheckSubscriptionStatusHandler)
 	})
 
 	// ========================

@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/models/search_models.dart';
 import '../../../../core/providers/search_provider.dart';
 import '../../../../core/services/tags_service.dart';
+import '../pages/public_profile_page.dart';
 import '../widgets/recommended_posts_section.dart';
 import '../widgets/tags_filter_widget.dart';
 import '../widgets/search_suggestions_widget.dart';
@@ -353,26 +354,20 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
     );
   }
 
+  // 🔥 NOUVELLE MÉTHODE : Navigation réelle vers le profil public avec abonnement
   void _navigateToUserProfile(UserSearchResult user, SearchProvider provider) {
     // Enregistrer l'interaction de vue de profil
     provider.trackProfileView(user);
     
-    // TODO: Implémenter la navigation vers le profil utilisateur
-    debugPrint('Navigation vers le profil de ${user.username}');
+    debugPrint('🔗 Navigation vers le profil de ${user.username} (ID: ${user.id})');
     
-    // Placeholder pour la navigation
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Profil de ${user.firstName} ${user.lastName}',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+    // 🎯 NAVIGATION VERS LE PROFIL PUBLIC AVEC SYSTÈME D'ABONNEMENT
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PublicProfilePage(
+          userId: user.id,
+          username: user.username,
         ),
-        backgroundColor: Colors.black,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        duration: const Duration(seconds: 2),
       ),
     );
   }
