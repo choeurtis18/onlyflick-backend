@@ -1,9 +1,9 @@
 {
 	"info": {
-		"_postman_id": "bd25294d-f844-454d-a71b-c227c66432b2",
+		"_postman_id": "75459fe5-5ea0-44db-a4d7-5979014f5091",
 		"name": "OnlyFlick API",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "16409343"
+		"_exporter_id": "24610154"
 	},
 	"item": [
 		{
@@ -69,7 +69,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\":\"alice@onlyflick.com\",// admin / creator / user / alice-onlyflick@yopmail.com\n    \"password\":\"pass123\" //pass123\n}"
+							"raw": "{\n    \"email\":\"emma.strong@gmail.com\",// admin / creator / user / alice-onlyflick@yopmail.com\n    \"password\":\"password123\" //pass123\n}"
 						},
 						"url": {
 							"raw": "{{SERVER_URL}}/login",
@@ -90,6 +90,504 @@
 			"item": [
 				{
 					"name": "Get Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTEwNzM5MjQsImlhdCI6MTc1MDk4NzUyNCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjEwODB9.bdOGl0aN7oBluOvdh9gTXkviI0wqHE9HYit4Eg0VW2I",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/profile/",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"profile",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Users",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE1MzA4MDcsImlhdCI6MTc1MTQ0NDQwNywicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjEwNzR9.ScUr9HdCV3VvH3lkSqPx0ZhTRiBoH19BbyW_lWih5zY",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/users/1073",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"users",
+								"1073"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Search Users",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE1MzA4MDcsImlhdCI6MTc1MTQ0NDQwNywicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjEwNzR9.ScUr9HdCV3VvH3lkSqPx0ZhTRiBoH19BbyW_lWih5zY",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/search/users?q=sarah_strong&limit=10&offset=0",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"search",
+								"users"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "sarah_strong"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Check Subscriptions",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE1MzA4MDcsImlhdCI6MTc1MTQ0NDQwNywicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjEwNzR9.ScUr9HdCV3VvH3lkSqPx0ZhTRiBoH19BbyW_lWih5zY",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/subscriptions/1075/status",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"subscriptions",
+								"1075",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile Stats",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTEwNzM5MjQsImlhdCI6MTc1MDk4NzUyNCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjEwODB9.bdOGl0aN7oBluOvdh9gTXkviI0wqHE9HYit4Eg0VW2I",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/profile/stats",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"profile",
+								"stats"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile Posts",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTA4ODEzNDgsImlhdCI6MTc1MDc5NDk0OCwicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjF9.S4KmyfouW957kbqSIzOTdy570IL_qYJykYIczGeHLk0",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/profile/posts",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"profile",
+								"posts"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile Username",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTA3OTQ4NDYsImlhdCI6MTc1MDcwODQ0Niwicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjF9.eTVm3oquR3v06urGPYhEnIygZrpQTjqRED9lkiVvewU",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"admin_admin_2\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/profile/username/check?username=admin_admin_2",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"profile",
+								"username",
+								"check"
+							],
+							"query": [
+								{
+									"key": "username",
+									"value": "admin_admin_2"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"first_name\":\"AliceUpdated\"}"
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/profile/",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"profile",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Account",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/profile/",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"profile",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Request Creator Upgrade",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/profile/request-upgrade",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"profile",
+								"request-upgrade"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Search",
+			"item": [
+				{
+					"name": "Get recherche user",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTExMTMwMDgsImlhdCI6MTc1MTAyNjYwOCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjEwODB9.mV5YNUiwh0UrfEzbQSCcj23n6652e0L9YU__CxFBanA",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/search/users?q=ba",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"search",
+								"users"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "ba"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get recommended posts in searchPage",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTEyMzI5NjEsImlhdCI6MTc1MTE0NjU2MSwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjEwODB9.eB6R7ZCbvhOewNWjRhpqKW-q8pDJnxIDGozaTXW87Gc",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/posts/recommended",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"posts",
+								"recommended"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Search Posts With Tags",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTEyMzE3OTgsImlhdCI6MTc1MTE0NTM5OCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjEwODB9.UHSxEBVxUYlKxGDkOFX3XQUXvz6U9uR9yOwyzH_Agtc",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/search/posts?sort_by=recent&limit=10&offset=0&tags=musculation",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"search",
+								"posts"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "art",
+									"disabled": true
+								},
+								{
+									"key": "sort_by",
+									"value": "recent"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "tags",
+									"value": "musculation"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tags Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/tags/stats",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"tags",
+								"stats"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile Username",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -370,6 +868,16 @@
 				{
 					"name": "List My Posts",
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTA5MjU3NzMsImlhdCI6MTc1MDgzOTM3Mywicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjF9.LeL__tX0qBNz6GVJNcpA8c_QcBMv9e77rzeaTmxQshM",
+									"type": "string"
+								}
+							]
+						},
 						"method": "GET",
 						"header": [
 							{
@@ -978,6 +1486,16 @@
 				{
 					"name": "Unsubscribe",
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE1MzA4MDcsImlhdCI6MTc1MTQ0NDQwNywicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjEwNzR9.ScUr9HdCV3VvH3lkSqPx0ZhTRiBoH19BbyW_lWih5zY",
+									"type": "string"
+								}
+							]
+						},
 						"method": "DELETE",
 						"header": [
 							{
@@ -1001,6 +1519,16 @@
 				{
 					"name": "List My Subscriptions",
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE1MzA4MDcsImlhdCI6MTc1MTQ0NDQwNywicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjEwNzR9.ScUr9HdCV3VvH3lkSqPx0ZhTRiBoH19BbyW_lWih5zY",
+									"type": "string"
+								}
+							]
+						},
 						"method": "GET",
 						"header": [
 							{
@@ -1051,6 +1579,16 @@
 						}
 					],
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE0NDU5NTgsImlhdCI6MTc1MTM1OTU1OCwicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjEwNzR9.FSqcKndUBw3bU3Bd6J4jhv4oZ1vubzdvJu3ecu4IoJA",
+									"type": "string"
+								}
+							]
+						},
 						"method": "POST",
 						"header": [
 							{
@@ -1094,6 +1632,16 @@
 						}
 					],
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE0NTA3ODcsImlhdCI6MTc1MTM2NDM4Nywicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjEwNzR9.gaMCIXGbw32SlNRZVy53LVfkhA1Ge9TwDmyKbau1BFE",
+									"type": "string"
+								}
+							]
+						},
 						"method": "GET",
 						"header": [
 							{
@@ -1128,6 +1676,16 @@
 						}
 					],
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE0NDU1NTgsImlhdCI6MTc1MTM1OTE1OCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjEwODB9.Oj5y8zirpX8gJ-mAeOU9cUOU0J9juQ_s8W3BPGkzspo",
+									"type": "string"
+								}
+							]
+						},
 						"method": "POST",
 						"header": [
 							{
@@ -1172,6 +1730,16 @@
 						}
 					],
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE0NDU1NTgsImlhdCI6MTc1MTM1OTE1OCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjEwODB9.Oj5y8zirpX8gJ-mAeOU9cUOU0J9juQ_s8W3BPGkzspo",
+									"type": "string"
+								}
+							]
+						},
 						"method": "GET",
 						"header": [
 							{
