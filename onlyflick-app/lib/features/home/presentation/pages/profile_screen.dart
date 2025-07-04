@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';  // ✅ Ajout de l'import GoRouter
 import '../../../auth/auth_provider.dart';
 import '../../../../core/providers/profile_provider.dart';
+import '../pages/post_detail_page.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool isCreator;
@@ -875,12 +876,17 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
+  // ✅ MÉTHODE MODIFIÉE : Navigation vers PostDetailPage
   void _onPostTap(dynamic post) {
-    // TODO: Navigation vers le détail du post
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Post: ${post.content}'),
-        duration: const Duration(seconds: 1),
+    debugPrint('🎯 [ProfileScreen] Post tapped - ID: ${post.id}, Title: ${post.title}');
+    
+    // Navigation vers la page de détail avec le post initial
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PostDetailPage(
+          postId: post.id,
+          initialPost: post, // Passer le post complet pour éviter un rechargement
+        ),
       ),
     );
   }

@@ -136,21 +136,19 @@ class PostsProvider extends ChangeNotifier {
     try {
       final result = await _postsService.toggleLike(postId);
 
-      if (result.isSuccess && result.data != null) {
-        final isLiked = result.data!;
+      if (result.isSuccess && result.isLiked != null && result.likesCount != null) {
+        final isLiked = result.isLiked!;
+        final likesCount = result.likesCount!;
         
         // Mettre à jour le cache local
         _userLikesCache[postId] = isLiked;
+        _likesCountCache[postId] = likesCount;
         
         // Sauvegarder dans le cache persistant
         await _likesCache.saveLikeState(_currentUserId!, postId, isLiked);
         
-        // Mettre à jour le cache des likes count
-        final currentCount = _likesCountCache[postId] ?? 0;
-        _likesCountCache[postId] = isLiked ? currentCount + 1 : (currentCount > 0 ? currentCount - 1 : 0);
-        
         notifyListeners();
-        // debugPrint('❤️ Like toggled for post $postId: $isLiked');
+        // debugPrint('❤️ Like toggled for post $postId: $isLiked (count: $likesCount)');
       } else {
         debugPrint('❌ Failed to toggle like: ${result.error}');
       }
@@ -205,7 +203,7 @@ class PostsProvider extends ChangeNotifier {
       if (result.isSuccess && result.data != null) {
         // Ajouter le commentaire au cache
         if (_commentsCache.containsKey(postId)) {
-          _commentsCache[postId]!.add(result.data!);
+          _commentsCache[postId]!.insert(0, result.data!); // Ajouter en premier
         } else {
           _commentsCache[postId] = [result.data!];
         }
@@ -238,15 +236,16 @@ class PostsProvider extends ChangeNotifier {
   /// Charge les likes pour un post spécifique
   Future<void> _loadLikesForPost(int postId) async {
     try {
-      final result = await _postsService.getPostLikes(postId);
+      final result = await _postsService.getPostLikeStatus(postId);
       
-      if (result.isSuccess && result.data != null) {
-        _likesCountCache[postId] = result.data!;
+      if (result.isSuccess && result.likesCount != null && result.isLiked != null) {
+        _likesCountCache[postId] = result.likesCount!;
         
-        // Charger l'état du like utilisateur depuis le cache si disponible
-        if (_currentUserId != null && !_userLikesCache.containsKey(postId)) {
-          final isLiked = await _likesCache.getLikeState(_currentUserId!, postId);
-          _userLikesCache[postId] = isLiked;
+        // Mettre à jour l'état du like utilisateur
+        if (_currentUserId != null) {
+          _userLikesCache[postId] = result.isLiked!;
+          // Sauvegarder dans le cache persistant
+          await _likesCache.saveLikeState(_currentUserId!, postId, result.isLiked!);
         }
       }
     } catch (e) {

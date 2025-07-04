@@ -1,8 +1,11 @@
 // lib/features/posts/widgets/recommended_posts_section.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/models/post_models.dart';
 import '../../../../core/services/api_service.dart';
+import '../../../../core/providers/posts_providers.dart';
+import '../pages/post_detail_page.dart';
 
 class RecommendedPostsSection extends StatefulWidget {
   final String selectedTag;
@@ -64,8 +67,6 @@ class _RecommendedPostsSectionState extends State<RecommendedPostsSection> {
           _isLoadingMore = true;
         });
       }
-
-      // debugPrint('🔍 Chargement posts recommandés pour tag: ${widget.selectedTag}');
 
       // Déterminer l'offset
       final offset = resetList ? 0 : (_currentPage + 1) * _pageSize;
@@ -146,8 +147,6 @@ class _RecommendedPostsSectionState extends State<RecommendedPostsSection> {
         queryParams['tags'] = tags.join(',');
       }
 
-      // debugPrint('📡 Requête posts recommandés: /posts/recommended avec params: $queryParams');
-
       return await _apiService.get<Map<String, dynamic>>(
         '/posts/recommended',
         queryParams: queryParams,
@@ -216,39 +215,16 @@ class _RecommendedPostsSectionState extends State<RecommendedPostsSection> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: _refreshPosts,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: Text(
-                    'Réessayer',
-                    style: GoogleFonts.inter(fontSize: 14),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Bouton pour revenir aux posts généraux si on a un problème avec un tag spécifique
-                if (widget.selectedTag != 'Tous')
-                  TextButton(
-                    onPressed: () {
-                      // Simuler la sélection du tag "Tous"
-                      debugPrint('Tentative de retour aux posts généraux');
-                      // Note: En réalité, ceci devrait déclencher un callback vers le parent
-                      // pour changer le tag sélectionné
-                    },
-                    child: Text(
-                      'Voir tous les posts',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.blue[600],
-                      ),
-                    ),
-                  ),
-              ],
+            ElevatedButton(
+              onPressed: _refreshPosts,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(
+                'Réessayer',
+                style: GoogleFonts.inter(fontSize: 14),
+              ),
             ),
           ],
         ),
@@ -362,17 +338,6 @@ class _RecommendedPostsSectionState extends State<RecommendedPostsSection> {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
-            Text(
-              widget.selectedTag == 'Tous'
-                  ? "Essayez de sélectionner une catégorie spécifique."
-                  : "Essayez de sélectionner une autre catégorie.",
-              style: GoogleFonts.inter(
-                color: Colors.grey[500],
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            ),
           ],
         ),
       ),
@@ -430,16 +395,37 @@ class _RecommendedPostsSectionState extends State<RecommendedPostsSection> {
   Widget _buildMasonryGrid(List<Post> posts) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: _MasonryGridLayout(posts: posts),
+      child: _ModernMasonryGrid(
+        posts: posts,
+        onPostTap: _navigateToPostDetail,
+      ),
+    );
+  }
+
+  /// 🎯 NAVIGATION VERS POST DETAIL PAGE
+  void _navigateToPostDetail(Post post) {
+    debugPrint('🎯 Navigation vers PostDetailPage: ${post.title} (ID: ${post.id})');
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PostDetailPage(
+          postId: post.id,
+          initialPost: post,
+        ),
+      ),
     );
   }
 }
 
-/// Layout en grille masonry pour afficher les posts
-class _MasonryGridLayout extends StatelessWidget {
+/// Layout masonry moderne avec métadonnées et actions
+class _ModernMasonryGrid extends StatelessWidget {
   final List<Post> posts;
+  final Function(Post) onPostTap;
   
-  const _MasonryGridLayout({required this.posts});
+  const _ModernMasonryGrid({
+    required this.posts,
+    required this.onPostTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -447,8 +433,9 @@ class _MasonryGridLayout extends StatelessWidget {
     
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Grille à 2 colonnes pour plus d'espace pour les métadonnées
         final screenWidth = constraints.maxWidth;
-        final itemWidth = (screenWidth - 4) / 3; // 3 colonnes avec 2px de gap
+        final itemWidth = (screenWidth - 16) / 2; // 2 colonnes avec 16px de gap
         
         return Column(
           children: _buildRows(itemWidth),
@@ -459,182 +446,288 @@ class _MasonryGridLayout extends StatelessWidget {
 
   List<Widget> _buildRows(double itemWidth) {
     final List<Widget> rows = [];
-    int index = 0;
     
-    while (index < posts.length) {
-      // Pattern inspiré de la maquette Instagram
-      if (index == 0 && posts.length > 2) {
-        // Première ligne: un grand item (2x2) + deux normaux
-        rows.add(_buildFirstRow(itemWidth, index));
-        index += 3;
-      } else if (index > 0 && index + 1 < posts.length && (index - 3) % 6 == 0) {
-        // Ligne avec un item large (2x1)
-        rows.add(_buildWideRow(itemWidth, index));
-        index += 2;
-      } else {
-        // Ligne normale avec 3 items
-        rows.add(_buildNormalRow(itemWidth, index));
-        index += 3;
+    for (int i = 0; i < posts.length; i += 2) {
+      rows.add(_buildRow(itemWidth, i));
+      if (i + 1 < posts.length) {
+        rows.add(const SizedBox(height: 16));
       }
     }
     
     return rows;
   }
 
-  Widget _buildFirstRow(double itemWidth, int startIndex) {
-    return SizedBox(
-      height: itemWidth * 2 + 2, // Double hauteur + gap
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Item large (2x2)
-          if (startIndex < posts.length)
-            _buildPostItem(
-              posts[startIndex], 
-              itemWidth * 2 + 2, // Double largeur + gap
-              itemWidth * 2 + 2, // Double hauteur + gap
-              true, // isLarge
-            ),
-          
-          const SizedBox(width: 2),
-          
-          // Colonne droite avec deux items normaux
+  Widget _buildRow(double itemWidth, int startIndex) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Premier post
+        if (startIndex < posts.length)
           Expanded(
-            child: Column(
-              children: [
-                if (startIndex + 1 < posts.length)
-                  _buildPostItem(
-                    posts[startIndex + 1], 
-                    itemWidth, 
-                    itemWidth,
-                    false,
-                  ),
-                
-                const SizedBox(height: 2),
-                
-                if (startIndex + 2 < posts.length)
-                  _buildPostItem(
-                    posts[startIndex + 2], 
-                    itemWidth, 
-                    itemWidth,
-                    false,
-                  )
-                else
-                  Container(
-                    height: itemWidth,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-              ],
+            child: _buildPostCard(
+              posts[startIndex], 
+              itemWidth,
+              _getRandomHeight(startIndex),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWideRow(double itemWidth, int startIndex) {
-    return Container(
-      margin: const EdgeInsets.only(top: 2),
-      height: itemWidth,
-      child: Row(
-        children: [
-          // Item wide (2x1)
-          if (startIndex < posts.length)
-            _buildPostItem(
-              posts[startIndex], 
-              itemWidth * 2 + 2, // Double largeur + gap
-              itemWidth,
-              false,
-            ),
-          
-          const SizedBox(width: 2),
-          
-          // Item normal
-          if (startIndex + 1 < posts.length)
-            _buildPostItem(
+        
+        const SizedBox(width: 16),
+        
+        // Deuxième post
+        if (startIndex + 1 < posts.length)
+          Expanded(
+            child: _buildPostCard(
               posts[startIndex + 1], 
-              itemWidth, 
               itemWidth,
-              false,
+              _getRandomHeight(startIndex + 1),
             ),
-        ],
-      ),
+          )
+        else
+          Expanded(child: Container()), // Espace vide si pas de deuxième post
+      ],
     );
   }
 
-  Widget _buildNormalRow(double itemWidth, int startIndex) {
-    return Container(
-      margin: const EdgeInsets.only(top: 2),
-      height: itemWidth,
-      child: Row(
-        children: [
-          for (int i = 0; i < 3; i++) ...[
-            if (i > 0) const SizedBox(width: 2),
-            if (startIndex + i < posts.length)
-              _buildPostItem(
-                posts[startIndex + i], 
-                itemWidth, 
-                itemWidth,
-                false,
-              )
-            else
-              Container(
-                width: itemWidth,
-                height: itemWidth,
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-          ],
-        ],
-      ),
-    );
+  double _getRandomHeight(int index) {
+    // Hauteurs variables pour créer l'effet masonry
+    final heights = [200.0, 250.0, 180.0, 220.0, 240.0, 190.0];
+    return heights[index % heights.length];
   }
 
-  Widget _buildPostItem(Post post, double width, double height, bool isLarge) {
+  Widget _buildPostCard(Post post, double width, double imageHeight) {
     return GestureDetector(
-      onTap: () => _onPostTap(post),
+      onTap: () => onPostTap(post),
       child: Container(
-        width: width,
-        height: height,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Image de fond ou gradient
-              _buildBackground(post),
-              
-              // Overlay sombre pour la lisibilité
-              _buildOverlay(),
-              
-              // Indicateur de type de contenu BASÉ SUR LES TAGS
-              _buildContentIndicator(post),
-              
-              // Titre du post
-              _buildPostTitle(post, isLarge),
-              
-              // Badge pour posts recommandés
-              if (isLarge)
-                _buildRecommendedBadge(),
-            ],
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image avec overlay pour le titre
+            _buildPostImage(post, imageHeight),
+            
+            // Métadonnées et actions
+            _buildPostMeta(post),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPostImage(Post post, double height) {
+    return Container(
+      height: height,
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Image de fond ou gradient
+            _buildBackground(post),
+            
+            // Overlay gradient pour la lisibilité
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.6),
+                  ],
+                  stops: const [0.6, 1.0],
+                ),
+              ),
+            ),
+            
+            // Badge recommandé
+            if (post.tags.contains('recommended'))
+              Positioned(
+                top: 12,
+                left: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.star,
+                        color: Colors.white,
+                        size: 12,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Recommandé',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            
+            // Icône de catégorie
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  _getIconFromTags(post.tags),
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+            ),
+            
+            // Titre du post
+            Positioned(
+              bottom: 12,
+              left: 12,
+              right: 12,
+              child: Text(
+                post.title,
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withOpacity(0.8),
+                      offset: const Offset(0, 1),
+                      blurRadius: 3,
+                    ),
+                  ],
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPostMeta(Post post) {
+    return Consumer<PostsProvider>(
+      builder: (context, postsProvider, _) {
+        final likesCount = postsProvider.getLikesCount(post.id);
+        final commentsCount = postsProvider.getCommentsCount(post.id);
+        final isLiked = postsProvider.isLikedByUser(post.id);
+        
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Créateur
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundImage: NetworkImage(post.authorAvatarFallback),
+                    backgroundColor: Colors.grey[200],
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          post.authorDisplayName,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                        Text(
+                          _formatTimeAgo(post.createdAt),
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Actions
+              Row(
+                children: [
+                  _buildActionButton(
+                    isLiked ? Icons.favorite : Icons.favorite_border,
+                    '$likesCount',
+                    isLiked ? Colors.red : Colors.grey[600]!,
+                  ),
+                  const SizedBox(width: 16),
+                  _buildActionButton(
+                    Icons.mode_comment_outlined,
+                    '$commentsCount',
+                    Colors.grey[600]!,
+                  ),
+                  const Spacer(),
+                  Icon(
+                    Icons.bookmark_border,
+                    color: Colors.grey[400],
+                    size: 20,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildActionButton(IconData icon, String count, Color color) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          color: Colors.grey[600],
+          size: 20,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          count,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[700],
+          ),
+        ),
+      ],
     );
   }
 
@@ -657,8 +750,12 @@ class _MasonryGridLayout extends StatelessWidget {
   }
 
   Widget _buildGradientBackground(Post post) {
-    // Différents gradients selon le post pour créer de la diversité
     final gradients = [
+      const LinearGradient(
+        colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
       const LinearGradient(
         colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
         begin: Alignment.topLeft,
@@ -679,16 +776,6 @@ class _MasonryGridLayout extends StatelessWidget {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
-      const LinearGradient(
-        colors: [Color(0xFFa8edea), Color(0xFFfed6e3)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      const LinearGradient(
-        colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
     ];
     
     final gradientIndex = post.title.hashCode % gradients.length;
@@ -700,234 +787,54 @@ class _MasonryGridLayout extends StatelessWidget {
     );
   }
 
-  Widget _buildOverlay() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.transparent,
-            Colors.black.withOpacity(0.6),
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          stops: const [0.5, 1.0],
-        ),
-      ),
-    );
-  }
+  IconData _getIconFromTags(List<String> tags) {
+    if (tags.isEmpty) return Icons.camera_alt;
 
-  /// NOUVELLE MÉTHODE : Indicateur basé sur les TAGS du post
-  Widget _buildContentIndicator(Post post) {
-    IconData icon;
-    Color iconColor = Colors.white;
-    
-    // Déterminer l'icône basée sur les TAGS du post au lieu du type de média
-    icon = _getIconFromTags(post, post.tags);
-
-    return Positioned(
-      top: 6,
-      right: 6,
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.7),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Icon(
-          icon,
-          color: iconColor,
-          size: 12,
-        ),
-      ),
-    );
-  }
-
-  /// NOUVELLE MÉTHODE : Détermine l'icône à afficher selon les tags du post
-  IconData _getIconFromTags(Post post, List<String> tags) {
-    // Si pas de tags, utiliser une icône générique
-    if (tags.isEmpty) {
-      return Icons.camera_alt;
-    }
-
-    // Parcourir les tags et retourner la première icône correspondante
     for (String tag in tags) {
       switch (tag.toLowerCase()) {
-        // Tags fitness et sport
         case 'fitness':
         case 'musculation':
           return Icons.fitness_center;
-        
         case 'yoga':
           return Icons.self_improvement;
-        
-        // Tags bien-être
         case 'wellness':
           return Icons.spa;
-        
-        // Tags créatifs
         case 'art':
           return Icons.palette;
-        
         case 'musique':
         case 'music':
           return Icons.music_note;
-        
-        case 'diy':
-          return Icons.handyman;
-        
-        // Tags lifestyle
         case 'cuisine':
         case 'food':
           return Icons.restaurant;
-        
         case 'mode':
         case 'fashion':
           return Icons.style;
-        
         case 'beaute':
         case 'beauté':
         case 'beauty':
           return Icons.face;
-        
-        // Tags génériques
-        case 'photo':
-        case 'photography':
-          return Icons.camera_alt;
-        
-        case 'video':
-          return Icons.videocam;
-        
-        case 'travel':
-          return Icons.flight;
-        
         default:
-          continue; // Continuer vers le tag suivant
+          continue;
       }
     }
 
-    // Si aucun tag reconnu, essayer de deviner depuis le titre
-    return _getIconFromTitle(post.title, tags.isNotEmpty ? tags.first : '');
-  }
-
-  /// NOUVELLE MÉTHODE : Fallback - essayer de deviner l'icône depuis le titre
-  IconData _getIconFromTitle(String title, String firstTag) {
-    final lowerText = (title + ' ' + firstTag).toLowerCase();
-    
-    if (lowerText.contains('workout') || 
-        lowerText.contains('fitness') || 
-        lowerText.contains('exercise') ||
-        lowerText.contains('training') ||
-        lowerText.contains('push') ||
-        lowerText.contains('squat') ||
-        lowerText.contains('transformation')) {
-      return Icons.fitness_center;
-    }
-    
-    if (lowerText.contains('yoga') || 
-        lowerText.contains('meditation') ||
-        lowerText.contains('zen')) {
-      return Icons.self_improvement;
-    }
-    
-    if (lowerText.contains('music') || 
-        lowerText.contains('studio') ||
-        lowerText.contains('song') ||
-        lowerText.contains('sound')) {
-      return Icons.music_note;
-    }
-    
-    if (lowerText.contains('food') || 
-        lowerText.contains('recipe') ||
-        lowerText.contains('cook') ||
-        lowerText.contains('boeuf') ||
-        lowerText.contains('cuisine')) {
-      return Icons.restaurant;
-    }
-    
-    if (lowerText.contains('style') || 
-        lowerText.contains('dress') ||
-        lowerText.contains('look') ||
-        lowerText.contains('outfit')) {
-      return Icons.style;
-    }
-    
-    if (lowerText.contains('morning') || 
-        lowerText.contains('routine') ||
-        lowerText.contains('wellness') ||
-        lowerText.contains('equilibre')) {
-      return Icons.spa;
-    }
-    
-    if (lowerText.contains('art') || 
-        lowerText.contains('paint') ||
-        lowerText.contains('creative')) {
-      return Icons.palette;
-    }
-    
-    // Icône par défaut
     return Icons.camera_alt;
   }
 
-  Widget _buildRecommendedBadge() {
-    return Positioned(
-      top: 6,
-      left: 6,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.9),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.star,
-              color: Colors.white,
-              size: 10,
-            ),
-            const SizedBox(width: 2),
-            Text(
-              'Recommandé',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 8,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPostTitle(Post post, bool isLarge) {
-    return Positioned(
-      bottom: 8,
-      left: 8,
-      right: 8,
-      child: Text(
-        post.title,
-        style: GoogleFonts.inter(
-          color: Colors.white,
-          fontSize: isLarge ? 16 : 14,
-          fontWeight: FontWeight.w600,
-          shadows: [
-            Shadow(
-              color: Colors.black.withOpacity(0.8),
-              offset: const Offset(0, 1),
-              blurRadius: 3,
-            ),
-          ],
-        ),
-        maxLines: isLarge ? 2 : 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-
-  void _onPostTap(Post post) {
-    // TODO: Naviguer vers le détail du post
-    debugPrint('Tap sur le post recommandé: ${post.title} avec tags: ${post.tags}');
+  String _formatTimeAgo(DateTime dateTime) {
+    final difference = DateTime.now().difference(dateTime);
+    
+    if (difference.inDays > 7) {
+      return '${dateTime.day}/${dateTime.month}';
+    } else if (difference.inDays > 0) {
+      return '${difference.inDays}j';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}min';
+    } else {
+      return 'maintenant';
+    }
   }
 }
