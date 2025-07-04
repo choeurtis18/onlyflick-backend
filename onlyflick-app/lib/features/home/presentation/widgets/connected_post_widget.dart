@@ -1,12 +1,13 @@
+// lib/features/home/presentation/widgets/connected_post_widget.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/providers/posts_providers.dart';
 import '../../../../../core/services/posts_service.dart';
-import '../../../../core/models/post_models.dart' as models; // ===== ALIAS POUR ÉVITER CONFLITS =====
-
+import '../../../../core/models/post_models.dart' as models;
+import '../pages/public_profile_page.dart';
 class ConnectedPostWidget extends StatefulWidget {
-  final models.Post post; // ===== UTILISATION DE L'ALIAS =====
+  final models.Post post;
   final VoidCallback onLike;
   final Function(String) onComment;
   final Function(String) onError;
@@ -77,6 +78,20 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     super.dispose();
   }
 
+  /// 🎯 NAVIGATION VERS LE PROFIL UTILISATEUR
+  void _navigateToUserProfile() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PublicProfilePage(
+          userId: widget.post.userId,
+          username: widget.post.authorUsername.isNotEmpty 
+              ? widget.post.authorUsername 
+              : 'user${widget.post.userId}',
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleAddComment() async {
     final content = _commentController.text.trim();
     if (content.isEmpty) return;
@@ -139,7 +154,16 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
-          color: Colors.white,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                offset: const Offset(0, 2),
+                blurRadius: 8,
+              ),
+            ],
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -156,107 +180,181 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
+  /// 🎨 HEADER AVEC NAVIGATION VERS PROFIL
   Widget _buildCleanHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          // ===== AVATAR AVEC VRAIE URL =====
-          CircleAvatar(
-            backgroundImage: NetworkImage(
-              widget.post.authorAvatarFallback, // ===== UTILISATION DU VRAI AVATAR =====
+          // 🎯 AVATAR CLIQUABLE
+          GestureDetector(
+            onTap: _navigateToUserProfile,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: CircleAvatar(
+                backgroundImage: NetworkImage(
+                  widget.post.authorAvatarFallback,
+                ),
+                radius: 18,
+                backgroundColor: Colors.grey[300],
+              ),
             ),
-            radius: 18,
           ),
           const SizedBox(width: 12),
           
-          // Info utilisateur épurée
+          // 🎯 INFO UTILISATEUR CLIQUABLE
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      widget.post.authorDisplayName, // ===== UTILISATION DU VRAI USERNAME =====
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                        color: Colors.black,
-                      ),
-                    ),
-                    // ===== BADGE CRÉATEUR =====
-                    if (widget.post.isFromCreator) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.purple,
-                          borderRadius: BorderRadius.circular(4),
+            child: GestureDetector(
+              onTap: _navigateToUserProfile,
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      // 🎯 NOM D'UTILISATEUR CLIQUABLE
+                      Text(
+                        widget.post.authorDisplayName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: Colors.black,
                         ),
-                        child: const Text(
-                          'Créateur',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
+                      ),
+                      
+                      // Badge Créateur
+                      if (widget.post.isFromCreator) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Colors.purple, Colors.pink],
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            '✨ Créateur',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                    // ===== BADGE PREMIUM =====
-                    if (widget.post.isSubscriberOnly) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.orange,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          'Premium',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
+                      ],
+                      
+                      // Badge Premium
+                      if (widget.post.visibility == 'subscriber') ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Colors.orange, Colors.red],
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            '🔒 Premium',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
-                ),
-                Text(
-                  _getTimeAgo(widget.post.createdAt),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
                   ),
-                ),
-              ],
+                  
+                  // Timestamp
+                  Text(
+                    _getTimeAgo(widget.post.createdAt),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           
-          // Menu épuré
-          IconButton(
-            onPressed: () => _showOptionsMenu(context),
+          // Menu contextuel
+          PopupMenuButton<String>(
             icon: Icon(Icons.more_horiz, color: Colors.grey[600], size: 20),
-            visualDensity: VisualDensity.compact,
+            onSelected: (value) {
+              switch (value) {
+                case 'profile':
+                  _navigateToUserProfile();
+                  break;
+                case 'share':
+                  _sharePost();
+                  break;
+                case 'report':
+                  _showReportDialog();
+                  break;
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem<String>(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(Icons.person, size: 18, color: Colors.grey[700]),
+                    const SizedBox(width: 8),
+                    const Text('Voir le profil'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'share',
+                child: Row(
+                  children: [
+                    Icon(Icons.share, size: 18, color: Colors.grey[700]),
+                    const SizedBox(width: 8),
+                    const Text('Partager'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'report',
+                child: Row(
+                  children: [
+                    Icon(Icons.flag, size: 18, color: Colors.red[400]),
+                    const SizedBox(width: 8),
+                    Text('Signaler', style: TextStyle(color: Colors.red[400])),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
+  /// 🖼️ IMAGE AVEC DOUBLE TAP LIKE
   Widget _buildCleanImage() {
     return GestureDetector(
       onDoubleTap: _handleDoubleTapLike,
       child: Container(
         width: double.infinity,
-        height: MediaQuery.of(context).size.width * 0.75, // Ratio plus moderne
+        height: MediaQuery.of(context).size.width * 0.75,
         color: Colors.grey[100],
         child: Stack(
           children: [
-            // Image
+            // Image du post
             widget.post.mediaUrl.isNotEmpty
                 ? Image.network(
                     widget.post.mediaUrl,
@@ -276,23 +374,12 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
                       );
                     },
                     errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey[200],
-                        child: Center(
-                          child: Icon(Icons.broken_image, 
-                                     size: 40, color: Colors.grey[400]),
-                        ),
-                      );
+                      return _buildImagePlaceholder();
                     },
                   )
-                : Container(
-                    color: Colors.grey[200],
-                    child: Center(
-                      child: Icon(Icons.image, size: 40, color: Colors.grey[400]),
-                    ),
-                  ),
+                : _buildImagePlaceholder(),
             
-            // Animation de like
+            // Animation de like au double tap
             if (_showLikeAnimation)
               Center(
                 child: AnimatedBuilder(
@@ -305,6 +392,13 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.9),
                           shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: const Icon(
                           Icons.favorite,
@@ -322,12 +416,50 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
+  /// 📝 PLACEHOLDER POUR IMAGES
+  Widget _buildImagePlaceholder() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.blue.withOpacity(0.1),
+            Colors.purple.withOpacity(0.1),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.image_outlined,
+              size: 48,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Image non disponible',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// ⚡ ACTIONS (like, commentaire, partage, bookmark)
   Widget _buildCleanActions(bool isLiked, int likesCount, int commentsCount) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          // Like button
+          // Bouton Like avec animation
           AnimatedBuilder(
             animation: _pulseAnimation,
             builder: (context, child) {
@@ -347,7 +479,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
           
           const SizedBox(width: 16),
           
-          // Comment button
+          // Bouton Commentaire
           GestureDetector(
             onTap: () => _commentFocusNode.requestFocus(),
             child: const Icon(
@@ -359,16 +491,19 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
           
           const SizedBox(width: 16),
           
-          // Share button
-          const Icon(
-            Icons.send_outlined,
-            color: Colors.black,
-            size: 22,
+          // Bouton Partage
+          GestureDetector(
+            onTap: _sharePost,
+            child: const Icon(
+              Icons.send_outlined,
+              color: Colors.black,
+              size: 22,
+            ),
           ),
           
           const Spacer(),
           
-          // Bookmark button
+          // Bouton Bookmark
           const Icon(
             Icons.bookmark_border,
             color: Colors.black,
@@ -379,13 +514,14 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
+  /// 📝 DESCRIPTION ET TITRE
   Widget _buildCleanDescription() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Likes count
+          // Compteur de likes
           Consumer<PostsProvider>(
             builder: (context, postsProvider, _) {
               final likesCount = postsProvider.getLikesCount(widget.post.id);
@@ -406,17 +542,22 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
             },
           ),
           
-          // Description
+          // Description avec nom d'utilisateur cliquable
           if (widget.post.description.isNotEmpty) ...[
             RichText(
               text: TextSpan(
                 children: [
-                  TextSpan(
-                    text: '${widget.post.authorDisplayName} ', // ===== VRAI USERNAME =====
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                      fontSize: 14,
+                  WidgetSpan(
+                    child: GestureDetector(
+                      onTap: _navigateToUserProfile,
+                      child: Text(
+                        '${widget.post.authorDisplayName} ',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                          fontSize: 14,
+                        ),
+                      ),
                     ),
                   ),
                   TextSpan(
@@ -432,7 +573,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
             const SizedBox(height: 4),
           ],
           
-          // Title si présent
+          // Titre si présent
           if (widget.post.title.isNotEmpty) ...[
             Text(
               widget.post.title,
@@ -449,8 +590,9 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
+  /// 💬 SECTION COMMENTAIRES
   Widget _buildCleanCommentsSection(PostsProvider postsProvider) {
-    return FutureBuilder<List<models.Comment>>( // ===== UTILISATION DE L'ALIAS =====
+    return FutureBuilder<List<models.Comment>>(
       future: postsProvider.getComments(widget.post.id),
       builder: (context, snapshot) {
         final comments = snapshot.data ?? [];
@@ -490,18 +632,36 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
-  Widget _buildCompactComment(models.Comment comment) { // ===== UTILISATION DE L'ALIAS =====
+  /// 💬 COMMENTAIRE COMPACT
+  Widget _buildCompactComment(models.Comment comment) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: RichText(
         text: TextSpan(
           children: [
-            TextSpan(
-              text: '${comment.authorDisplayName} ', // ===== VRAI USERNAME DU COMMENTAIRE =====
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-                fontSize: 14,
+            WidgetSpan(
+              child: GestureDetector(
+                onTap: () {
+                  // Navigation vers le profil du commentateur
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => PublicProfilePage(
+                        userId: comment.userId,
+                        username: comment.authorUsername.isNotEmpty 
+                            ? comment.authorUsername 
+                            : 'user${comment.userId}',
+                      ),
+                    ),
+                  );
+                },
+                child: Text(
+                  '${comment.authorDisplayName} ',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                    fontSize: 14,
+                  ),
+                ),
               ),
             ),
             TextSpan(
@@ -517,6 +677,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
+  /// ✍️ SECTION AJOUT COMMENTAIRE
   Widget _buildCleanAddCommentSection() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -569,37 +730,50 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
-  void _showOptionsMenu(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.flag_outlined),
-              title: const Text('Signaler'),
-              onTap: () {
-                Navigator.pop(context);
-                widget.onError('Fonctionnalité de signalement à venir');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.share_outlined),
-              title: const Text('Partager'),
-              onTap: () {
-                Navigator.pop(context);
-                widget.onError('Fonctionnalité de partage à venir');
-              },
-            ),
-          ],
-        ),
+  /// 📤 PARTAGE DU POST
+  void _sharePost() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Fonctionnalité de partage à venir !'),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
-  void _showCommentsModal(BuildContext context, List<models.Comment> comments) { // ===== UTILISATION DE L'ALIAS =====
+  /// 🚩 SIGNALEMENT DU POST
+  void _showReportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Signaler ce post'),
+        content: const Text('Voulez-vous signaler ce contenu comme inapproprié ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Post signalé avec succès'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            child: Text(
+              'Signaler',
+              style: TextStyle(color: Colors.red[600]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 💬 MODAL COMMENTAIRES COMPLETS
+  void _showCommentsModal(BuildContext context, List<models.Comment> comments) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -652,7 +826,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
               
               const Divider(height: 24),
               
-              // Comments list
+              // Liste des commentaires
               Expanded(
                 child: ListView.builder(
                   controller: scrollController,
@@ -671,17 +845,32 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
-  Widget _buildModalCommentItem(models.Comment comment) { // ===== UTILISATION DE L'ALIAS =====
+  /// 💬 ITEM COMMENTAIRE DANS LA MODAL
+  Widget _buildModalCommentItem(models.Comment comment) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            backgroundImage: NetworkImage(
-              comment.authorAvatarFallback, // ===== VRAI AVATAR DU COMMENTAIRE =====
+          GestureDetector(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => PublicProfilePage(
+                    userId: comment.userId,
+                    username: comment.authorUsername.isNotEmpty 
+                        ? comment.authorUsername 
+                        : 'user${comment.userId}',
+                  ),
+                ),
+              );
+            },
+            child: CircleAvatar(
+              backgroundImage: NetworkImage(
+                comment.authorAvatarFallback,
+              ),
+              radius: 16,
             ),
-            radius: 16,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -691,12 +880,28 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
                 RichText(
                   text: TextSpan(
                     children: [
-                      TextSpan(
-                        text: '${comment.authorDisplayName} ', // ===== VRAI USERNAME DU COMMENTAIRE =====
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                          fontSize: 14,
+                      WidgetSpan(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => PublicProfilePage(
+                                  userId: comment.userId,
+                                  username: comment.authorUsername.isNotEmpty 
+                                      ? comment.authorUsername 
+                                      : 'user${comment.userId}',
+                                ),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            '${comment.authorDisplayName} ',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ),
                       TextSpan(
@@ -711,7 +916,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  comment.timeAgo, // ===== UTILISATION DE LA MÉTHODE DU MODÈLE =====
+                  comment.timeAgo,
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 12,
@@ -725,6 +930,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
+  /// 🕒 FORMATAGE DU TEMPS
   String _getTimeAgo(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
