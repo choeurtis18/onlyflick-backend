@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 )
 
 // SetupRoutes configure et retourne le routeur principal de l'API OnlyFlick.
@@ -16,6 +17,15 @@ func SetupRoutes() http.Handler {
 	log.Println("Setting up API routes...")
 
 	r := chi.NewRouter()
+
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:55273", "http://localhost:3000", "*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
 
 	// ========================
 	// Health Check
@@ -121,13 +131,13 @@ func SetupRoutes() http.Handler {
 	// ========================
 	r.Route("/search", func(search chi.Router) {
 		search.Use(middleware.JWTMiddleware)
-		
+
 		// Recherche d'utilisateurs par username
 		search.Get("/users", handler.SearchUsersHandler)
-		
+
 		// Suggestions de recherche
 		search.Get("/suggestions", handler.GetSearchSuggestionsHandler)
-		
+
 		// Statistiques de recherche
 		search.Get("/stats", handler.GetSearchStatsHandler)
 
@@ -139,14 +149,16 @@ func SetupRoutes() http.Handler {
 	// ========================
 	r.Route("/users", func(users chi.Router) {
 		users.Use(middleware.JWTMiddleware)
-		
+
+		// Liste des utilisateurs (privée, admin uniquement)
+		users.With(middleware.JWTMiddlewareWithRole("admin")).Get("/all", handler.GetAllUsersHandler)
+
 		// Obtenir le profil public d'un utilisateur
 		users.Get("/{user_id}", handler.GetUserProfileHandler)
 
 		// Obtenir les posts d'un utilisateur spécifique
 		users.Get("/{user_id}/posts", handler.GetUserPostsHandler)
 
-		
 		// Recherche alternative d'utilisateurs (si besoin)
 		users.Get("/", handler.SearchUsersHandler)
 	})
@@ -157,7 +169,7 @@ func SetupRoutes() http.Handler {
 	r.Route("/tags", func(tags chi.Router) {
 		// Endpoint public pour récupérer tous les tags disponibles
 		tags.Get("/available", handler.GetAvailableTagsHandler)
-		
+
 		// Endpoint public pour récupérer les statistiques des tags
 		tags.Get("/stats", handler.GetTagsStatsHandler)
 	})
@@ -167,12 +179,11 @@ func SetupRoutes() http.Handler {
 	// ========================
 	r.Route("/interactions", func(interactions chi.Router) {
 		interactions.Use(middleware.JWTMiddleware)
-		
+
 		// Enregistrer une interaction utilisateur (analytics)
 		interactions.Post("/track", handler.TrackInteractionHandler)
 	})
 
-	
 	r.Route("/subscriptions", func(s chi.Router) {
 		s.Use(middleware.JWTMiddlewareWithRole("subscriber", "creator", "admin"))
 

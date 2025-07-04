@@ -7,12 +7,17 @@ import (
 
 // Report représente un signalement effectué par un utilisateur sur un contenu.
 type Report struct {
-	ID          int64      `json:"id"`                   // Identifiant unique du signalement
-	UserID      int64      `json:"user_id"`              // Identifiant de l'utilisateur ayant signalé
-	ContentType string     `json:"content_type"`         // Type de contenu signalé (ex: "post", "commentaire")
-	ContentID   int64      `json:"content_id"`           // Identifiant du contenu signalé
-	Reason      string     `json:"reason"`               // Raison du signalement
-	Status      string     `json:"status"`               // Statut du signalement (ex: "en attente", "traité")
-	CreatedAt   time.Time  `json:"created_at"`           // Date de création du signalement
-	ProcessedAt *time.Time `json:"updated_at,omitempty"` // Date de traitement du signalement (optionnelle)
+	ID               int       `json:"id"`
+	UserID           int       `json:"user_id"`
+	ReporterUsername string    `json:"reporter_username"`
+	ContentType      string    `json:"content_type"` // "post" ou "comment"
+	ContentID        int       `json:"content_id"`
+	Reason           string    `json:"reason"`
+	Status           string    `json:"status"`
+	CreatedAt        time.Time `json:"created_at"`
+	ProcessedAt      time.Time `json:"updated_at"`
+
+	// Enrichi dynamiquement selon le type
+	ContentText     string  `json:"text"`
+	ContentMediaURL *string `json:"image_url"`
 }

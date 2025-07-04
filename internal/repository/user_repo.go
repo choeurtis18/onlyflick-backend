@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"time"
 	"onlyflick/internal/database"
 	"onlyflick/internal/domain"
 	"onlyflick/internal/utils"
+	"time"
 )
 
 // ===== STRUCTURES DE DONNÉES PROFIL =====
@@ -16,7 +16,7 @@ import (
 type ProfileStats struct {
 	PostsCount     int     `json:"posts_count"`
 	FollowersCount int     `json:"followers_count"`
-	FollowingCount int     `json:"following_count"`  
+	FollowingCount int     `json:"following_count"`
 	LikesReceived  int     `json:"likes_received"`
 	TotalEarnings  float64 `json:"total_earnings"`
 }
@@ -40,7 +40,7 @@ type UpdateUserPayload struct {
 	LastName  *string
 	Email     *string
 	Password  *string
-	Username  *string  // ===== AJOUT USERNAME =====
+	Username  *string // ===== AJOUT USERNAME =====
 	AvatarURL *string
 	Bio       *string
 }
@@ -54,19 +54,19 @@ func CreateUser(user *domain.User) error {
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at, updated_at
 	`
-	log.Printf("[CreateUser] Création de l'utilisateur: %s %s, username: %s, email: %s", 
+	log.Printf("[CreateUser] Création de l'utilisateur: %s %s, username: %s, email: %s",
 		user.FirstName, user.LastName, user.Username, user.Email)
-	
+
 	err := database.DB.QueryRow(
 		query,
-		user.FirstName,    // $1 (chiffré)
-		user.LastName,     // $2 (chiffré) 
-		user.Username,     // $3 (clair - pseudo public)
-		user.Email,        // $4 (chiffré)
-		user.Password,     // $5 (hashé)
-		user.Role,         // $6
-		user.AvatarURL,    // $7
-		user.Bio,          // $8
+		user.FirstName, // $1 (chiffré)
+		user.LastName,  // $2 (chiffré)
+		user.Username,  // $3 (clair - pseudo public)
+		user.Email,     // $4 (chiffré)
+		user.Password,  // $5 (hashé)
+		user.Role,      // $6
+		user.AvatarURL, // $7
+		user.Bio,       // $8
 	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 
 	if err != nil {
@@ -94,14 +94,14 @@ func GetUserByEmail(email string) (*domain.User, error) {
 		var user domain.User
 		var avatarURL, bio sql.NullString
 		var updatedAt sql.NullTime
-		
+
 		if err := rows.Scan(
-			&user.ID, 
-			&user.FirstName, 
-			&user.LastName, 
-			&user.Username,    // ===== AJOUT USERNAME =====
-			&user.Email, 
-			&user.Password, 
+			&user.ID,
+			&user.FirstName,
+			&user.LastName,
+			&user.Username, // ===== AJOUT USERNAME =====
+			&user.Email,
+			&user.Password,
 			&user.Role,
 			&avatarURL,
 			&bio,
@@ -139,7 +139,7 @@ func GetUserByEmail(email string) (*domain.User, error) {
 			}
 			user.Email = decryptedEmail
 
-			log.Printf("[GetUserByEmail] Utilisateur trouvé pour l'email: %s (ID: %d, Username: %s)", 
+			log.Printf("[GetUserByEmail] Utilisateur trouvé pour l'email: %s (ID: %d, Username: %s)",
 				email, user.ID, user.Username)
 			return &user, nil
 		}
@@ -166,12 +166,12 @@ func GetUserByID(userID int64) (*domain.User, error) {
 	var user domain.User
 	var avatarURL, bio sql.NullString
 	var updatedAt sql.NullTime
-	
+
 	err := database.DB.QueryRow(query, userID).Scan(
 		&user.ID,
 		&user.FirstName,
 		&user.LastName,
-		&user.Username,      // ===== AJOUT USERNAME =====
+		&user.Username, // ===== AJOUT USERNAME =====
 		&user.Email,
 		&user.Password,
 		&user.Role,
@@ -208,7 +208,7 @@ func GetUserByID(userID int64) (*domain.User, error) {
 		user.UpdatedAt = updatedAt.Time
 	}
 
-	log.Printf("[GetUserByID] Utilisateur trouvé: %s %s (ID: %d, Username: %s)", 
+	log.Printf("[GetUserByID] Utilisateur trouvé: %s %s (ID: %d, Username: %s)",
 		user.FirstName, user.LastName, user.ID, user.Username)
 	return &user, nil
 }
@@ -255,7 +255,7 @@ func GetUserByUsername(username string) (*domain.User, error) {
 			user.FirstName = firstName.String // Fallback
 		}
 	}
-	
+
 	if lastName.Valid {
 		if decryptedLastName, err := utils.DecryptAES(lastName.String); err == nil {
 			user.LastName = decryptedLastName
@@ -263,7 +263,7 @@ func GetUserByUsername(username string) (*domain.User, error) {
 			user.LastName = lastName.String // Fallback
 		}
 	}
-	
+
 	if email.Valid {
 		if decryptedEmail, err := utils.DecryptAES(email.String); err == nil {
 			user.Email = decryptedEmail
@@ -310,7 +310,7 @@ func UpdateUser(userID int64, payload UpdateUserPayload) error {
 		params = append(params, *payload.LastName)
 		paramIndex++
 	}
-	if payload.Username != nil {  // ===== AJOUT USERNAME =====
+	if payload.Username != nil { // ===== AJOUT USERNAME =====
 		query += fmt.Sprintf(" username = $%d,", paramIndex)
 		params = append(params, *payload.Username)
 		paramIndex++
@@ -422,7 +422,7 @@ func GetProfileStats(userID int64) (*ProfileStats, error) {
 		return nil, fmt.Errorf("erreur récupération statistiques: %w", err)
 	}
 
-	log.Printf("[GetProfileStats] Stats récupérées: posts=%d, followers=%d, following=%d, likes=%d, earnings=%.2f", 
+	log.Printf("[GetProfileStats] Stats récupérées: posts=%d, followers=%d, following=%d, likes=%d, earnings=%.2f",
 		stats.PostsCount, stats.FollowersCount, stats.FollowingCount, stats.LikesReceived, stats.TotalEarnings)
 
 	return &stats, nil
@@ -484,9 +484,9 @@ func GetUserPosts(userID int64, page, limit int, postType string) ([]*UserPost, 
 
 		err := rows.Scan(
 			&post.ID,
-			&post.Content,    // Maintenant c'est le title
-			&imageURL,        // media_url
-			&videoURL,        // Toujours vide pour l'instant
+			&post.Content, // Maintenant c'est le title
+			&imageURL,     // media_url
+			&videoURL,     // Toujours vide pour l'instant
 			&post.Visibility,
 			&post.LikesCount,
 			&post.CommentsCount,
@@ -520,7 +520,7 @@ func UpdateUserAvatar(userID int64, avatarURL string) error {
 	log.Printf("[UpdateUserAvatar] Mise à jour avatar pour user %d: %s", userID, avatarURL)
 
 	query := `UPDATE users SET avatar_url = $1, updated_at = NOW() WHERE id = $2`
-	
+
 	result, err := database.DB.Exec(query, avatarURL, userID)
 	if err != nil {
 		log.Printf("[UpdateUserAvatar][ERROR] Erreur mise à jour avatar: %v", err)
@@ -541,7 +541,7 @@ func UpdateUserBio(userID int64, bio string) error {
 	log.Printf("[UpdateUserBio] Mise à jour bio pour user %d", userID)
 
 	query := `UPDATE users SET bio = $1, updated_at = NOW() WHERE id = $2`
-	
+
 	result, err := database.DB.Exec(query, bio, userID)
 	if err != nil {
 		log.Printf("[UpdateUserBio][ERROR] Erreur mise à jour bio: %v", err)
@@ -656,4 +656,74 @@ func GetUserPostsCountByType(userID int64, postType string) (int, error) {
 
 	log.Printf("[GetUserPostsCountByType] Utilisateur %d a %d posts (type: %s)", userID, count, postType)
 	return count, nil
+}
+
+func GetAllUsers() ([]*domain.User, error) {
+	log.Printf("[GetAllUsers] Récupération de tous les utilisateurs")
+
+	rows, err := database.DB.Query(`
+		SELECT id, first_name, last_name, username, email, password, role, avatar_url, bio, created_at, updated_at
+		FROM users
+		ORDER BY id ASC
+	`)
+	if err != nil {
+		log.Printf("[GetAllUsers][ERREUR] Erreur lors de la requête SQL: %v", err)
+		return nil, fmt.Errorf("erreur lors de la récupération des utilisateurs: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*domain.User
+	for rows.Next() {
+		var user domain.User
+		var avatarURL, bio sql.NullString
+		var updatedAt sql.NullTime
+
+		if err := rows.Scan(
+			&user.ID,
+			&user.FirstName,
+			&user.LastName,
+			&user.Username,
+			&user.Email,
+			&user.Password,
+			&user.Role,
+			&avatarURL,
+			&bio,
+			&user.CreatedAt,
+			&updatedAt,
+		); err != nil {
+			log.Printf("[GetAllUsers][ERREUR] Erreur lors du scan d'un utilisateur: %v", err)
+			continue
+		}
+
+		// Décryptage des champs chiffrés
+		if decryptedFirstName, err := utils.DecryptAES(user.FirstName); err == nil {
+			user.FirstName = decryptedFirstName
+		}
+		if decryptedLastName, err := utils.DecryptAES(user.LastName); err == nil {
+			user.LastName = decryptedLastName
+		}
+		if decryptedEmail, err := utils.DecryptAES(user.Email); err == nil {
+			user.Email = decryptedEmail
+		}
+
+		if avatarURL.Valid {
+			user.AvatarURL = avatarURL.String
+		}
+		if bio.Valid {
+			user.Bio = bio.String
+		}
+		if updatedAt.Valid {
+			user.UpdatedAt = updatedAt.Time
+		}
+
+		users = append(users, &user)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Printf("[GetAllUsers][ERREUR] Erreur lors de l'itération des lignes: %v", err)
+		return nil, fmt.Errorf("erreur lors de l'itération des lignes: %w", err)
+	}
+
+	log.Printf("[GetAllUsers] %d utilisateurs récupérés", len(users))
+	return users, nil
 }
