@@ -20,13 +20,49 @@ func CreateReport(userID int64, contentType string, contentID int64, reason stri
 	return err
 }
 
-// ListReport retourne tous les signalements, triés par date de création décroissante.
+// ListReport retourne tous les signalements enrichis (posts & commentaires)
 func ListReport() ([]domain.Report, error) {
-	rows, err := database.DB.Query(`
-		SELECT id, user_id, content_type, content_id, reason, status, created_at, updated_at
-		FROM reports
+	query := `
+		SELECT 
+			r.id,
+			r.user_id,
+			u.username,
+			r.content_type,
+			r.content_id,
+			r.reason,
+			r.status,
+			r.created_at,
+			r.updated_at,
+			p.title AS content_text,
+			p.media_url AS content_media
+		FROM reports r
+		JOIN users u ON r.user_id = u.id
+		JOIN posts p ON r.content_id = p.id
+		WHERE r.content_type = 'post'
+
+		UNION
+
+		SELECT 
+			r.id,
+			r.user_id,
+			u.username,
+			r.content_type,
+			r.content_id,
+			r.reason,
+			r.status,
+			r.created_at,
+			r.updated_at,
+			c.content AS content_text,
+			NULL AS content_media
+		FROM reports r
+		JOIN users u ON r.user_id = u.id
+		JOIN comments c ON r.content_id = c.id
+		WHERE r.content_type = 'comment'
+
 		ORDER BY created_at DESC
-	`)
+	`
+
+	rows, err := database.DB.Query(query)
 	if err != nil {
 		log.Printf("[ERREUR] Impossible de lister les signalements : %v", err)
 		return nil, err
@@ -36,13 +72,26 @@ func ListReport() ([]domain.Report, error) {
 	var reports []domain.Report
 	for rows.Next() {
 		var r domain.Report
-		if err := rows.Scan(&r.ID, &r.UserID, &r.ContentType, &r.ContentID, &r.Reason, &r.Status, &r.CreatedAt, &r.ProcessedAt); err != nil {
-			log.Printf("[ERREUR] Impossible de scanner le signalement : %v", err)
+		if err := rows.Scan(
+			&r.ID,
+			&r.UserID,
+			&r.ReporterUsername,
+			&r.ContentType,
+			&r.ContentID,
+			&r.Reason,
+			&r.Status,
+			&r.CreatedAt,
+			&r.ProcessedAt,
+			&r.ContentText,     // post.title ou comment.text
+			&r.ContentMediaURL, // post.media_url ou NULL
+		); err != nil {
+			log.Printf("[ERREUR] Scan ligne report : %v", err)
 			return nil, err
 		}
 		reports = append(reports, r)
 	}
-	log.Printf("[INFO] %d signalements récupérés", len(reports))
+
+	log.Printf("[INFO] %d signalements enrichis récupérés", len(reports))
 	return reports, nil
 }
 

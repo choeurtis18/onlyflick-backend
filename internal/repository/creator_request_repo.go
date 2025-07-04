@@ -10,8 +10,11 @@ import (
 
 // CreatorRequest représente une demande de passage en créateur.
 type CreatorRequest struct {
-	ID        int64     `json:"id"`
-	UserID    int64     `json:"user_id"`
+	ID        int       `json:"id"`
+	UserID    int       `json:"user_id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	Bio       string    `json:"bio"`
 	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -37,12 +40,25 @@ func FlagUserAsPendingCreator(userID int64) error {
 	return nil
 }
 
-// GetAllPendingRequests récupère toutes les demandes de passage en créateur.
-// Retourne la liste complète, peu importe le statut.
+// GetAllPendingRequests récupère toutes les demandes de créateur avec infos utilisateur
 func GetAllPendingRequests() ([]CreatorRequest, error) {
 	log.Println("[CreatorRequest] Récupération de toutes les demandes de créateur")
 
-	query := `SELECT id, user_id, status, created_at, updated_at FROM creator_requests`
+	query := `
+	SELECT 
+		cr.id, 
+		cr.user_id, 
+		u.username, 
+		u.email, 
+		u.bio,
+		cr.status, 
+		cr.created_at, 
+		cr.updated_at
+	FROM creator_requests cr
+	JOIN users u ON cr.user_id = u.id
+	ORDER BY cr.created_at DESC
+	`
+
 	rows, err := database.DB.Query(query)
 	if err != nil {
 		log.Printf("[CreatorRequest][ERREUR] Erreur lors de la récupération des demandes : %v", err)
@@ -53,7 +69,16 @@ func GetAllPendingRequests() ([]CreatorRequest, error) {
 	var requests []CreatorRequest
 	for rows.Next() {
 		var r CreatorRequest
-		if err := rows.Scan(&r.ID, &r.UserID, &r.Status, &r.CreatedAt, &r.UpdatedAt); err != nil {
+		if err := rows.Scan(
+			&r.ID,
+			&r.UserID,
+			&r.Username,
+			&r.Email,
+			&r.Bio,
+			&r.Status,
+			&r.CreatedAt,
+			&r.UpdatedAt,
+		); err != nil {
 			log.Printf("[CreatorRequest][ERREUR] Erreur lors du scan d'une ligne : %v", err)
 			return nil, fmt.Errorf("échec du scan d'une demande: %w", err)
 		}

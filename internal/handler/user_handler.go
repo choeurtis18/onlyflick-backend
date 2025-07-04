@@ -73,7 +73,7 @@ func GetUserProfileHandler(w http.ResponseWriter, r *http.Request) {
 	// Vérifier l'état d'abonnement de l'utilisateur connecté à ce profil (si c'est un créateur)
 	var isSubscribed bool
 	var subscriptionStatus string
-	
+
 	if user.Role == "creator" && currentUserID != targetUserID {
 		// Vérifier si l'utilisateur connecté est abonné à ce créateur
 		subscription, err := repository.GetActiveSubscription(currentUserID, targetUserID)
@@ -94,7 +94,7 @@ func GetUserProfileHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Construire la réponse du profil public avec statistiques
 	publicProfile := map[string]interface{}{
-		"id":                  user.ID,
+		"id":                 user.ID,
 		"username":           user.Username,
 		"first_name":         firstName,
 		"last_name":          lastName,
@@ -115,9 +115,9 @@ func GetUserProfileHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Informations spécifiques aux créateurs
 	if user.Role == "creator" {
-		publicProfile["subscription_price"] = "4.99"  // Prix fixe pour l'abonnement
+		publicProfile["subscription_price"] = "4.99" // Prix fixe pour l'abonnement
 		publicProfile["currency"] = "EUR"
-		
+
 		// Informations d'abonnement pour l'utilisateur connecté
 		if currentUserID != targetUserID {
 			publicProfile["viewer_subscription"] = map[string]interface{}{
@@ -130,7 +130,7 @@ func GetUserProfileHandler(w http.ResponseWriter, r *http.Request) {
 	// Ne pas retourner l'email dans le profil public (sécurité)
 	// Le champ email est disponible seulement via ProfileHandler pour l'utilisateur lui-même
 
-	log.Printf("[GetUserProfileHandler] Profil public récupéré pour utilisateur %d (%s %s) - Stats: %d posts, %d followers, %d following", 
+	log.Printf("[GetUserProfileHandler] Profil public récupéré pour utilisateur %d (%s %s) - Stats: %d posts, %d followers, %d following",
 		targetUserID, firstName, lastName, userStats.PostsCount, userStats.FollowersCount, userStats.FollowingCount)
 
 	response.RespondWithJSON(w, http.StatusOK, publicProfile)
@@ -162,20 +162,20 @@ func GetUserPostsHandler(w http.ResponseWriter, r *http.Request) {
 	// Paramètres de pagination
 	page := 1
 	limit := 20
-	
+
 	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
 		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
 			page = p
 		}
 	}
-	
+
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 50 {
 			limit = l
 		}
 	}
 
-	log.Printf("[GetUserPostsHandler] Utilisateur %d demande les posts de %d (page=%d, limit=%d)", 
+	log.Printf("[GetUserPostsHandler] Utilisateur %d demande les posts de %d (page=%d, limit=%d)",
 		currentUserID, targetUserID, page, limit)
 
 	// Vérifier que l'utilisateur cible existe
@@ -188,7 +188,7 @@ func GetUserPostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Déterminer quel type de posts on peut voir
 	postType := "public" // Par défaut, seuls les posts publics
-	
+
 	if currentUserID == targetUserID {
 		// L'utilisateur regarde ses propres posts
 		postType = "all"
@@ -221,16 +221,16 @@ func GetUserPostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Construire la réponse
 	responseData := map[string]interface{}{
-		"posts":      posts,
-		"total":      totalPosts,
-		"page":       page,
-		"limit":      limit,
-		"has_more":   len(posts) == limit,
-		"post_type":  postType,
-		"user_id":    targetUserID,
+		"posts":     posts,
+		"total":     totalPosts,
+		"page":      page,
+		"limit":     limit,
+		"has_more":  len(posts) == limit,
+		"post_type": postType,
+		"user_id":   targetUserID,
 	}
 
-	log.Printf("[GetUserPostsHandler] %d posts récupérés pour utilisateur %d (total: %d, type: %s)", 
+	log.Printf("[GetUserPostsHandler] %d posts récupérés pour utilisateur %d (total: %d, type: %s)",
 		len(posts), targetUserID, totalPosts, postType)
 
 	// Réponse avec format standard
@@ -333,11 +333,11 @@ func CheckSubscriptionStatusHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Construire la réponse du statut
 	subscriptionStatus := map[string]interface{}{
-		"creator_id":     creatorID,
-		"creator_name":   creator.Username,
-		"is_subscribed":  false,
-		"status":         "none",
-		"subscription":   nil,
+		"creator_id":    creatorID,
+		"creator_name":  creator.Username,
+		"is_subscribed": false,
+		"status":        "none",
+		"subscription":  nil,
 	}
 
 	if subscription != nil {
@@ -356,8 +356,24 @@ func CheckSubscriptionStatusHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	log.Printf("[CheckSubscriptionStatusHandler] Statut abonnement utilisateur %d -> créateur %d: %v", 
+	log.Printf("[CheckSubscriptionStatusHandler] Statut abonnement utilisateur %d -> créateur %d: %v",
 		subscriberID, creatorID, subscriptionStatus["is_subscribed"])
 
 	response.RespondWithJSON(w, http.StatusOK, subscriptionStatus)
+}
+
+// GetAllUsersHandler récupère la liste de tous les utilisateurs
+func GetAllUsersHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("[GetAllUsersHandler] Récupération de la liste de tous les utilisateurs")
+
+	// Récupérer la liste des utilisateurs
+	users, err := repository.GetAllUsers()
+	if err != nil {
+		log.Printf("[GetAllUsersHandler] Erreur récupération utilisateurs: %v", err)
+		response.RespondWithError(w, http.StatusInternalServerError, "Erreur récupération des utilisateurs")
+		return
+	}
+
+	log.Printf("[GetAllUsersHandler] %d utilisateurs récupérés", len(users))
+	response.RespondWithJSON(w, http.StatusOK, users)
 }

@@ -35,7 +35,7 @@ class AppFonts {
   static const String inter = 'Inter';
 
   // Méthode d'aide pour TextStyle avec police Pacifico
-  static TextStyle pacifico({
+  static TextStyle pacificoStyle({
     double? size,
     Color? color,
     FontWeight? weight,
@@ -53,7 +53,7 @@ class AppFonts {
   }
 
   // Méthode d'aide pour TextStyle avec police Inter
-  static TextStyle inter({
+  static TextStyle interStyle({
     double? size,
     Color? color,
     FontWeight? weight,

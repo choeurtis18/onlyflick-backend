@@ -69,14 +69,38 @@ class _MainScreenState extends State<MainScreen> {
         
         return Scaffold(
           backgroundColor: Colors.white,
-          body: IndexedStack(
-            index: _selectedIndex,
-            children: screens,
+          body: Stack(
+            children: [
+              IndexedStack(
+                index: _selectedIndex,
+                children: screens,
+              ),
+
+              // ✅ Bouton admin flottant en haut à droite
+              Positioned(
+                top: 40,
+                right: 16,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    context.go('/admin');
+                  },
+                  icon: const Icon(Icons.admin_panel_settings),
+                  label: const Text('Admin'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           bottomNavigationBar: _buildCompactBottomNavigationBar(),
-          
-          // Plus de FAB - le bouton + sera dans le header du feed
         );
+
       },
     );
   }

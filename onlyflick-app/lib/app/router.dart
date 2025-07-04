@@ -10,6 +10,11 @@ import 'package:matchmaker/features/auth/presentation/pages/register_page.dart';
 import 'package:matchmaker/features/auth/auth_provider.dart';
 import 'package:matchmaker/features/home/presentation/pages/search_page.dart';
 import 'package:matchmaker/features/home/presentation/pages/websocket_test_page.dart';
+import 'package:matchmaker/features/admin/dashboard/dashboard_page.dart';
+import 'package:matchmaker/features/admin/users/users_page.dart';
+import 'package:matchmaker/features/admin/creators/creators_page.dart';
+import 'package:matchmaker/features/admin/creator_requests/creator_requests_page.dart';
+import 'package:matchmaker/features/admin/reports/reports_page.dart';
 
 final GoRouter router = GoRouter(
   initialLocation: '/login',
@@ -79,5 +84,33 @@ final GoRouter router = GoRouter(
       name: 'websocketTest',
       builder: (BuildContext context, GoRouterState state) => const WebSocketTestPage(),
     ),
+
+    // Route pour le back-office administrateur
+    GoRoute(
+      path: '/admin',
+      name: 'adminDashboard',
+      builder: (context, state) => const AdminDashboardPage(),
+    ),
+    GoRoute(
+      path: '/admin/users',
+      name: 'adminUsers',
+      builder: (context, state) => const UsersPage(),
+    ),
+    GoRoute(
+      path: '/admin/creators',
+      name: 'adminCreators',
+      builder: (context, state) => const CreatorsPage(),
+    ),
+    GoRoute(
+      path: '/admin/creator-requests',
+      name: 'adminCreatorRequests',
+      builder: (context, state) => const CreatorRequestsPage(),
+    ),
+    GoRoute(
+      path: '/admin/reports',
+      name: 'adminReports',
+      builder: (context, state) => const ReportsPage(),
+    ),
+
   ],
 );
