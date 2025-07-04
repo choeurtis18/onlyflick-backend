@@ -149,6 +149,9 @@ func SetupRoutes() http.Handler {
 		
 		// Recherche alternative d'utilisateurs (si besoin)
 		users.Get("/", handler.SearchUsersHandler)
+
+		users.Get("/{user_id}/followers", handler.GetUserFollowersHandler)
+		users.Get("/{user_id}/following", handler.GetUserFollowingHandler)
 	})
 
 	// ========================

@@ -1,13 +1,19 @@
 // lib/features/home/presentation/pages/profile_screen.dart
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:go_router/go_router.dart';  // ✅ Ajout de l'import GoRouter
+import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 import '../../../auth/auth_provider.dart';
 import '../../../../core/providers/profile_provider.dart';
 import '../pages/post_detail_page.dart';
+import '../widgets/subscription_stats_widget.dart';
+import '../../../../core/utils/constants.dart';
+import '../../../../core/utils/auth_storage.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool isCreator;
@@ -32,13 +38,10 @@ class _ProfileScreenState extends State<ProfileScreen>
     final userIsCreator = user?.isCreator ?? false;
     _tabController = TabController(length: userIsCreator ? 2 : 1, vsync: this);
     
-    // 🔥 SOLUTION : Utiliser la nouvelle méthode ensureInitialized
+    // S'assurer que les données sont initialisées (y compris les stats d'abonnements)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final profileProvider = context.read<ProfileProvider>();
-      
-      // S'assurer que les données sont initialisées
       profileProvider.ensureInitialized();
-      
       debugPrint('🔄 [ProfileScreen] Initialization requested');
     });
   }
@@ -117,6 +120,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildAvatarAndStats(dynamic user, ProfileProvider profileProvider) {
+    final userIsCreator = user?.isCreator ?? false;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
@@ -125,30 +129,16 @@ class _ProfileScreenState extends State<ProfileScreen>
           _buildAvatar(user, profileProvider),
           const SizedBox(width: 16),
           Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: profileProvider.isLoadingStats
-                  ? List.generate(3, (index) => const _LoadingStatColumn())
-                  : [
-                      _StatColumn(
-                        value: _formatCount(profileProvider.stats.postsCount),
-                        title: 'Posts',
-                      ),
-                      _StatColumn(
-                        value: _formatCount(profileProvider.stats.followersCount),
-                        title: 'Abonnés',
-                      ),
-                      if (user?.isCreator == true)
-                        _StatColumn(
-                          value: '${profileProvider.stats.totalEarnings.toStringAsFixed(1)}€',
-                          title: 'Revenus',
-                        )
-                      else
-                        _StatColumn(
-                          value: _formatCount(profileProvider.stats.followingCount),
-                          title: 'Abonnements',
-                        ),
-                    ],
+            child: SubscriptionStatsWidget(
+              // Utiliser les données du provider avec stats d'abonnements intégrées
+              postsCount: profileProvider.postsCount,
+              followersCount: profileProvider.followersCount,
+              followingCount: profileProvider.followingCount,
+              totalEarnings: profileProvider.totalEarnings,
+              userId: user?.id ?? 0,
+              isCreator: userIsCreator,
+              isCurrentUser: true, // C'est le profil de l'utilisateur connecté
+              isLoadingStats: profileProvider.isLoadingStats,
             ),
           ),
         ],

@@ -1,3 +1,4 @@
+// internal/repository/subscription_repo.go
 package repository
 
 import (
@@ -13,59 +14,207 @@ import (
 	"github.com/stripe/stripe-go/paymentintent"
 )
 
-// Subscribe permet à un utilisateur de s'abonner à un créateur.
-// Retourne l'ID de l'abonnement ou une erreur.
-func Subscribe(subscriberID, creatorID int64) (int64, error) {
-	if subscriberID == creatorID {
-		log.Printf("[Subscribe] L'utilisateur %d a tenté de s'abonner à lui-même.", subscriberID)
-		return 0, fmt.Errorf("vous ne pouvez pas vous abonner à vous-même")
+// ===== STRUCTURES POUR LES ABONNEMENTS =====
+
+// Subscription représente un abonnement (compatible avec domain.Subscription)
+type Subscription struct {
+	ID           int64     `json:"id"`
+	SubscriberID int64     `json:"subscriber_id"`
+	CreatorID    int64     `json:"creator_id"`
+	Status       bool      `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
+	EndAt        time.Time `json:"end_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// ===== MÉTHODES POUR LES LISTES D'ABONNEMENTS =====
+
+// GetUserFollowers récupère la liste des abonnés d'un utilisateur (créateur)
+func GetUserFollowers(creatorID int64) ([]Subscription, error) {
+	log.Printf("[GetUserFollowers] Récupération des abonnés pour le créateur %d", creatorID)
+
+	var subscriptions []Subscription
+
+	query := `
+		SELECT id, subscriber_id, creator_id, status, created_at, end_at, created_at as updated_at
+		FROM subscriptions 
+		WHERE creator_id = $1 AND status = true
+		ORDER BY created_at DESC
+	`
+
+	rows, err := database.DB.Query(query, creatorID)
+	if err != nil {
+		log.Printf("[GetUserFollowers][ERROR] Erreur requête: %v", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var sub Subscription
+		err := rows.Scan(
+			&sub.ID,
+			&sub.SubscriberID,
+			&sub.CreatorID,
+			&sub.Status,
+			&sub.CreatedAt,
+			&sub.EndAt,
+			&sub.UpdatedAt,
+		)
+		if err != nil {
+			log.Printf("[GetUserFollowers][ERROR] Erreur scan: %v", err)
+			continue
+		}
+		subscriptions = append(subscriptions, sub)
 	}
 
-	// Créer un abonnement
-	var subscriptionID int64
+	if err = rows.Err(); err != nil {
+		log.Printf("[GetUserFollowers][ERROR] Erreur rows: %v", err)
+		return nil, err
+	}
+
+	log.Printf("[GetUserFollowers] %d abonnés trouvés pour le créateur %d", len(subscriptions), creatorID)
+	return subscriptions, nil
+}
+
+// GetUserFollowing récupère la liste des abonnements d'un utilisateur
+func GetUserFollowing(subscriberID int64) ([]Subscription, error) {
+	log.Printf("[GetUserFollowing] Récupération des abonnements pour l'utilisateur %d", subscriberID)
+
+	var subscriptions []Subscription
+
+	query := `
+		SELECT id, subscriber_id, creator_id, status, created_at, end_at, created_at as updated_at
+		FROM subscriptions 
+		WHERE subscriber_id = $1 AND status = true
+		ORDER BY created_at DESC
+	`
+
+	rows, err := database.DB.Query(query, subscriberID)
+	if err != nil {
+		log.Printf("[GetUserFollowing][ERROR] Erreur requête: %v", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var sub Subscription
+		err := rows.Scan(
+			&sub.ID,
+			&sub.SubscriberID,
+			&sub.CreatorID,
+			&sub.Status,
+			&sub.CreatedAt,
+			&sub.EndAt,
+			&sub.UpdatedAt,
+		)
+		if err != nil {
+			log.Printf("[GetUserFollowing][ERROR] Erreur scan: %v", err)
+			continue
+		}
+		subscriptions = append(subscriptions, sub)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("[GetUserFollowing][ERROR] Erreur rows: %v", err)
+		return nil, err
+	}
+
+	log.Printf("[GetUserFollowing] %d abonnements trouvés pour l'utilisateur %d", len(subscriptions), subscriberID)
+	return subscriptions, nil
+}
+
+// ===== MÉTHODES DE GESTION DES ABONNEMENTS =====
+
+// Subscribe permet à un utilisateur de s'abonner à un créateur.
+// Retourne l'abonnement créé ou une erreur.
+func Subscribe(subscriberID, creatorID int64) (*Subscription, error) {
+	if subscriberID == creatorID {
+		log.Printf("[Subscribe] L'utilisateur %d a tenté de s'abonner à lui-même.", subscriberID)
+		return nil, fmt.Errorf("vous ne pouvez pas vous abonner à vous-même")
+	}
+
+	// Vérifier qu'il n'y a pas déjà un abonnement actif
+	existingSubscription, err := GetActiveSubscription(subscriberID, creatorID)
+	if err != nil {
+		return nil, err
+	}
+	if existingSubscription != nil && existingSubscription.Status {
+		log.Printf("[Subscribe] Abonnement déjà existant et actif: %d", existingSubscription.ID)
+		// Convertir domain.Subscription vers notre structure
+		return &Subscription{
+			ID:           existingSubscription.ID,
+			SubscriberID: existingSubscription.SubscriberID,
+			CreatorID:    existingSubscription.CreatorID,
+			Status:       existingSubscription.Status,
+			CreatedAt:    existingSubscription.CreatedAt,
+			EndAt:        existingSubscription.EndAt,
+			UpdatedAt:    existingSubscription.CreatedAt,
+		}, nil
+	}
+
+	// Créer un nouvel abonnement
+	var subscription Subscription
 	query := `
 		INSERT INTO subscriptions (subscriber_id, creator_id, created_at, end_at, status)
 		VALUES ($1, $2, NOW(), NOW() + INTERVAL '1 month', TRUE)
-		RETURNING id;
+		RETURNING id, subscriber_id, creator_id, status, created_at, end_at, created_at
 	`
-	err := database.DB.QueryRow(query, subscriberID, creatorID).Scan(&subscriptionID)
+	
+	err = database.DB.QueryRow(query, subscriberID, creatorID).Scan(
+		&subscription.ID,
+		&subscription.SubscriberID,
+		&subscription.CreatorID,
+		&subscription.Status,
+		&subscription.CreatedAt,
+		&subscription.EndAt,
+		&subscription.UpdatedAt,
+	)
 	if err != nil {
 		log.Printf("[Subscribe] erreur lors de l'abonnement de %d à %d : %v", subscriberID, creatorID, err)
-		return 0, err
+		return nil, err
 	}
 
-	log.Printf("[Subscribe] L'utilisateur %d s'est abonné à %d, abonnement ID: %d", subscriberID, creatorID, subscriptionID)
-	return subscriptionID, nil
+	log.Printf("[Subscribe] L'utilisateur %d s'est abonné à %d, abonnement ID: %d", subscriberID, creatorID, subscription.ID)
+	return &subscription, nil
 }
 
 // Unsubscribe permet à un utilisateur de se désabonner d'un créateur.
-// Retourne une erreur si la requête échoue.
 func Unsubscribe(subscriberID, creatorID int64) error {
-	// Mise à jour du statut de l'abonnement à "canceled" au lieu de supprimer l'abonnement.
+	log.Printf("[Unsubscribe] Désabonnement %d -> %d", subscriberID, creatorID)
+
 	query := `
 		UPDATE subscriptions
 		SET status = FALSE
-		WHERE subscriber_id = $1 AND creator_id = $2 AND status = TRUE;
+		WHERE subscriber_id = $1 AND creator_id = $2 AND status = TRUE
 	`
 
-	// Exécution de la mise à jour
-	_, err := database.DB.Exec(query, subscriberID, creatorID)
+	result, err := database.DB.Exec(query, subscriberID, creatorID)
 	if err != nil {
-		log.Printf("[Unsubscribe] erreur lors du désabonnement de %d à %d : %v", subscriberID, creatorID, err)
+		log.Printf("[Unsubscribe][ERROR] Erreur désabonnement: %v", err)
 		return err
 	}
 
-	log.Printf("[Unsubscribe] L'utilisateur %d s'est désabonné du créateur %d.", subscriberID, creatorID)
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("[Unsubscribe][ERROR] Erreur vérification: %v", err)
+		return err
+	}
+
+	if rowsAffected == 0 {
+		log.Printf("[Unsubscribe] Aucun abonnement actif trouvé pour désactiver")
+		return nil // Pas d'erreur, mais rien n'a été modifié
+	}
+
+	log.Printf("[Unsubscribe] Désabonnement réussi: %d lignes modifiées", rowsAffected)
 	return nil
 }
 
 // IsSubscribed vérifie si un utilisateur est abonné à un créateur.
-// Retourne true si l'abonnement existe, false sinon.
 func IsSubscribed(subscriberID, creatorID int64) (bool, error) {
 	query := `
 		SELECT EXISTS (
 			SELECT 1 FROM subscriptions
-			WHERE subscriber_id = $1 AND creator_id = $2
+			WHERE subscriber_id = $1 AND creator_id = $2 AND status = TRUE
 		);
 	`
 	var exists bool
@@ -80,30 +229,42 @@ func IsSubscribed(subscriberID, creatorID int64) (bool, error) {
 
 // GetActiveSubscription récupère l'abonnement actif ou inactif d'un utilisateur pour un créateur donné.
 func GetActiveSubscription(subscriberID, creatorID int64) (*domain.Subscription, error) {
+	log.Printf("[GetActiveSubscription] Vérification abonnement %d -> %d", subscriberID, creatorID)
+
 	var subscription domain.Subscription
 	query := `
 		SELECT id, subscriber_id, creator_id, created_at, end_at, status
 		FROM subscriptions
-		WHERE subscriber_id = $1 AND creator_id = $2;
+		WHERE subscriber_id = $1 AND creator_id = $2
+		ORDER BY created_at DESC
+		LIMIT 1
 	`
 
-	err := database.DB.QueryRow(query, subscriberID, creatorID).Scan(&subscription.ID, &subscription.SubscriberID, &subscription.CreatorID, &subscription.CreatedAt, &subscription.EndAt, &subscription.Status)
+	err := database.DB.QueryRow(query, subscriberID, creatorID).Scan(
+		&subscription.ID, 
+		&subscription.SubscriberID, 
+		&subscription.CreatorID, 
+		&subscription.CreatedAt, 
+		&subscription.EndAt, 
+		&subscription.Status,
+	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			// Pas d'abonnement trouvé
+			log.Printf("[GetActiveSubscription] Aucun abonnement trouvé %d -> %d", subscriberID, creatorID)
 			return nil, nil
 		}
-		// Autre erreur de base de données
-		log.Printf("[GetActiveSubscription] erreur lors de la récupération de l'abonnement : %v", err)
+		log.Printf("[GetActiveSubscription][ERROR] Erreur: %v", err)
 		return nil, err
 	}
 
+	log.Printf("[GetActiveSubscription] Abonnement trouvé: %d (status: %v)", subscription.ID, subscription.Status)
 	return &subscription, nil
 }
 
 // ReactivateSubscription réactive un abonnement si la date de fin est supérieure à la date actuelle
-// Sinon, elle procède à un paiement et prolonge l'abonnement d'un mois.
 func ReactivateSubscription(subscriptionID int64, today time.Time) error {
+	log.Printf("[ReactivateSubscription] Réactivation abonnement %d", subscriptionID)
+
 	// Récupérer l'abonnement
 	var subscription domain.Subscription
 	err := database.DB.QueryRow(`
@@ -139,7 +300,7 @@ func ReactivateSubscription(subscriptionID int64, today time.Time) error {
 	}
 
 	// Si l'abonnement est inactif et que la date de fin est dans le passé, on doit procéder à un paiement
-	stripe.Key = os.Getenv("STRIPE_SECRET_KEY") // Mettre votre clé secrète Stripe ici
+	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 
 	// Créer un PaymentIntent via Stripe
 	intentParams := &stripe.PaymentIntentParams{
@@ -178,8 +339,10 @@ func ReactivateSubscription(subscriptionID int64, today time.Time) error {
 	return nil
 }
 
+// UpdateSubscriptionEndDate met à jour la date de fin d'un abonnement
 func UpdateSubscriptionEndDate(subscriptionID int64, newEndDate time.Time) (int64, error) {
-	// Mettre à jour la date de fin de l'abonnement
+	log.Printf("[UpdateSubscriptionEndDate] Mise à jour date fin abonnement %d", subscriptionID)
+
 	query := `
 		UPDATE subscriptions
 		SET end_at = $1
@@ -198,8 +361,9 @@ func UpdateSubscriptionEndDate(subscriptionID int64, newEndDate time.Time) (int6
 }
 
 // ListMySubscriptions retourne la liste des abonnements d'un utilisateur.
-// Retourne une slice de Subscription ou une erreur.
 func ListMySubscriptions(subscriberID int64) ([]domain.Subscription, error) {
+	log.Printf("[ListMySubscriptions] Récupération abonnements pour utilisateur %d", subscriberID)
+
 	query := `
 		SELECT id, subscriber_id, creator_id, created_at, end_at, status
 		FROM subscriptions
@@ -222,6 +386,12 @@ func ListMySubscriptions(subscriberID int64) ([]domain.Subscription, error) {
 		}
 		subscriptions = append(subscriptions, s)
 	}
+	
+	if err = rows.Err(); err != nil {
+		log.Printf("[ListMySubscriptions] erreur rows: %v", err)
+		return nil, err
+	}
+
 	log.Printf("[ListMySubscriptions] %d abonnements trouvés pour l'utilisateur %d.", len(subscriptions), subscriberID)
 	return subscriptions, nil
 }
