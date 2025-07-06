@@ -312,37 +312,47 @@ func ListAllVisiblePosts(w http.ResponseWriter, r *http.Request) {
 func ListPostsFromCreator(w http.ResponseWriter, r *http.Request) {
 	log.Println("[ListPostsFromCreator] Handler appelé")
 
-	requesterID := r.Context().Value(middleware.ContextUserIDKey).(int64)
-	role := r.Context().Value("userRole").(string)
+	// Récupération sécurisée de userID
+	requesterID, ok := r.Context().Value(middleware.ContextUserIDKey).(int64)
+	if !ok {
+		log.Println("[ListPostsFromCreator] userID non trouvé dans le contexte")
+		response.RespondWithError(w, http.StatusUnauthorized, "Utilisateur non authentifié")
+		return
+	}
 
+	// Récupération sécurisée de userRole
+	role, _ := r.Context().Value(middleware.ContextUserRoleKey).(string) // string ou "" par défaut
+
+	// Paramètre URL
 	creatorIDStr := chi.URLParam(r, "creator_id")
 	creatorID, err := strconv.ParseInt(creatorIDStr, 10, 64)
 	if err != nil {
 		response.RespondWithError(w, http.StatusBadRequest, "ID du créateur invalide")
-		log.Printf("[ListPostsFromCreator] Erreur lors du parsing de l'ID créateur : %v", err)
+		log.Printf("[ListPostsFromCreator] Erreur parsing ID créateur : %v", err)
 		return
 	}
 
+	// Droits
 	canViewPrivate := (role == "admin" || requesterID == creatorID)
-
 	if !canViewPrivate {
 		isSub, err := repository.IsSubscribed(requesterID, creatorID)
 		if err != nil {
-			response.RespondWithError(w, http.StatusInternalServerError, "Impossible de vérifier l'abonnement")
-			log.Printf("[ListPostsFromCreator] Erreur lors de la vérification de l'abonnement (user: %d, creator: %d) : %v", requesterID, creatorID, err)
+			response.RespondWithError(w, http.StatusInternalServerError, "Erreur vérification abonnement")
+			log.Printf("[ListPostsFromCreator] Erreur vérif abonnement (user: %d, creator: %d) : %v", requesterID, creatorID, err)
 			return
 		}
 		canViewPrivate = isSub
 	}
 
+	// Récupération des posts
 	posts, err := repository.ListPostsFromCreator(creatorID, canViewPrivate)
 	if err != nil {
-		response.RespondWithError(w, http.StatusInternalServerError, "Impossible de lister les posts du créateur")
-		log.Printf("[ListPostsFromCreator] Erreur lors du listing des posts du créateur %d : %v", creatorID, err)
+		response.RespondWithError(w, http.StatusInternalServerError, "Impossible de lister les posts")
+		log.Printf("[ListPostsFromCreator] Erreur récupération posts créateur %d : %v", creatorID, err)
 		return
 	}
 
-	log.Printf("[ListPostsFromCreator] %d posts listés pour le créateur %d par l'utilisateur %d (rôle: %s)", len(posts), creatorID, requesterID, role)
+	log.Printf("[ListPostsFromCreator] %d posts listés pour le créateur %d (demandeur: %d, rôle: %s)", len(posts), creatorID, requesterID, role)
 	response.RespondWithJSON(w, http.StatusOK, posts)
 }
 
@@ -350,30 +360,41 @@ func ListPostsFromCreator(w http.ResponseWriter, r *http.Request) {
 func ListSubscriberOnlyPostsFromCreator(w http.ResponseWriter, r *http.Request) {
 	log.Println("[ListSubscriberOnlyPostsFromCreator] Handler appelé")
 
-	requesterID := r.Context().Value(middleware.ContextUserIDKey).(int64)
-	role := r.Context().Value("userRole").(string)
+	// Récupération sécurisée du userID
+	requesterID, ok := r.Context().Value(middleware.ContextUserIDKey).(int64)
+	if !ok {
+		log.Println("[ListSubscriberOnlyPostsFromCreator] userID manquant dans le contexte")
+		response.RespondWithError(w, http.StatusUnauthorized, "Utilisateur non authentifié")
+		return
+	}
 
+	// Récupération sécurisée du rôle
+	role, _ := r.Context().Value(middleware.ContextUserRoleKey).(string) // par défaut "", pas de panic
+
+	// Lecture du paramètre d’URL
 	creatorIDStr := chi.URLParam(r, "creator_id")
 	creatorID, err := strconv.ParseInt(creatorIDStr, 10, 64)
 	if err != nil {
 		response.RespondWithError(w, http.StatusBadRequest, "ID du créateur invalide")
-		log.Printf("[ListSubscriberOnlyPostsFromCreator] Erreur lors du parsing de l'ID créateur : %v", err)
+		log.Printf("[ListSubscriberOnlyPostsFromCreator] Erreur parsing ID créateur : %v", err)
 		return
 	}
 
+	// Vérification des droits
 	if role != "admin" && requesterID != creatorID {
 		isSub, err := repository.IsSubscribed(requesterID, creatorID)
 		if err != nil || !isSub {
 			response.RespondWithError(w, http.StatusForbidden, "Non autorisé à voir le contenu abonné")
-			log.Printf("[ListSubscriberOnlyPostsFromCreator] Accès refusé à l'utilisateur %d pour le créateur %d (abonné: %v, err: %v)", requesterID, creatorID, isSub, err)
+			log.Printf("[ListSubscriberOnlyPostsFromCreator] Accès refusé : user %d, creator %d, abonné: %v, err: %v", requesterID, creatorID, isSub, err)
 			return
 		}
 	}
 
+	// Récupération des posts abonnés
 	posts, err := repository.ListSubscriberOnlyPosts(creatorID)
 	if err != nil {
-		response.RespondWithError(w, http.StatusInternalServerError, "Impossible de lister les posts abonnés")
-		log.Printf("[ListSubscriberOnlyPostsFromCreator] Erreur lors du listing des posts abonnés du créateur %d : %v", creatorID, err)
+		response.RespondWithError(w, http.StatusInternalServerError, "Erreur récupération des posts abonnés")
+		log.Printf("[ListSubscriberOnlyPostsFromCreator] Erreur listing posts creator %d : %v", creatorID, err)
 		return
 	}
 
@@ -421,7 +442,7 @@ func GetRecommendedPosts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	log.Printf("[GetRecommendedPosts] Paramètres: userID=%d, tags=%v, limit=%d, offset=%d", 
+	log.Printf("[GetRecommendedPosts] Paramètres: userID=%d, tags=%v, limit=%d, offset=%d",
 		userID, tags, limit, offset)
 
 	// ===== APPEL REPOSITORY MODIFIÉ =====
@@ -445,7 +466,7 @@ func GetRecommendedPosts(w http.ResponseWriter, r *http.Request) {
 		"sort_by":     "recent", // Tri par défaut
 	}
 
-	log.Printf("[GetRecommendedPosts] ✅ %d posts recommandés trouvés (total: %d) pour l'utilisateur %d", 
+	log.Printf("[GetRecommendedPosts] ✅ %d posts recommandés trouvés (total: %d) pour l'utilisateur %d",
 		len(posts), total, userID)
 	response.RespondWithJSON(w, http.StatusOK, result)
 }

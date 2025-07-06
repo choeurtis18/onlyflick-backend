@@ -2,12 +2,12 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
 	"onlyflick/internal/database"
 	"onlyflick/internal/domain"
-	"database/sql"
 	"strings"
 	"time"
 )
@@ -43,7 +43,6 @@ func CreatePost(post *domain.Post) error {
 	log.Printf("[PostRepo] Post créé avec succès (ID: %d)", post.ID)
 	return nil
 }
-
 
 // ListPostsByUser retourne tous les posts d'un utilisateur donné.
 func ListPostsByUser(userID int64) ([]domain.Post, error) {
@@ -142,7 +141,6 @@ func UpdatePost(post *domain.Post) error {
 	return nil
 }
 
-
 // ===== FONCTION PRINCIPALE CORRIGÉE =====
 // ListVisiblePosts retourne les posts visibles selon le rôle avec informations utilisateur complètes.
 func ListVisiblePosts(userRole string) ([]domain.Post, error) {
@@ -238,17 +236,17 @@ func ListVisiblePosts(userRole string) ([]domain.Post, error) {
 		// ===== VARIABLES POUR LES DONNÉES UTILISATEUR =====
 		var username, firstName, lastName, avatarUrl, bio, role string
 		var likesCount, commentsCount int
-		
+
 		// ===== SCAN AVEC GESTION DES NULL VALUES =====
 		if err := rows.Scan(
-			&post.ID, 
-			&post.UserID, 
-			&post.Title, 
+			&post.ID,
+			&post.UserID,
+			&post.Title,
 			&post.Description,
-			&post.MediaURL, 
-			&post.FileID,        // ===== MAINTENANT COALESCE EN SQL =====
-			&post.Visibility, 
-			&post.CreatedAt, 
+			&post.MediaURL,
+			&post.FileID, // ===== MAINTENANT COALESCE EN SQL =====
+			&post.Visibility,
+			&post.CreatedAt,
 			&post.UpdatedAt,
 			// Données utilisateur
 			&username,
@@ -321,18 +319,18 @@ func GetPostByID(postID int64) (*domain.Post, error) {
 		) comments_count ON p.id = comments_count.post_id
 		WHERE p.id = $1
 	`
-	
+
 	var post domain.Post
 	var username, firstName, lastName, avatarUrl, bio, role string
 	var likesCount, commentsCount int
-	
+
 	err := database.DB.QueryRow(query, postID).Scan(
 		&post.ID,
 		&post.UserID,
 		&post.Title,
 		&post.Description,
 		&post.MediaURL,
-		&post.FileID,        // ===== MAINTENANT COALESCE EN SQL =====
+		&post.FileID, // ===== MAINTENANT COALESCE EN SQL =====
 		&post.Visibility,
 		&post.CreatedAt,
 		&post.UpdatedAt,
@@ -366,15 +364,13 @@ func GetPostByID(postID int64) (*domain.Post, error) {
 	return &post, nil
 }
 
-
-
-
 // ListPostsFromCreator retourne les posts d'un créateur, avec option pour inclure/exclure les posts privés.
 func ListPostsFromCreator(creatorID int64, includePrivate bool) ([]*domain.Post, error) {
 	log.Printf("[PostRepo] Listing des posts du créateur ID: %d (includePrivate: %v)", creatorID, includePrivate)
 
+	//SELECT id, user_id, title, description, media_url, file_id, visibility, created_at, updated_at
 	query := `
-		SELECT id, user_id, title, description, media_url, file_id, visibility, created_at, updated_at
+		SELECT id, user_id, title, description, media_url, visibility, created_at, updated_at
 		FROM posts
 		WHERE user_id = $1
 	`
@@ -393,7 +389,8 @@ func ListPostsFromCreator(creatorID int64, includePrivate bool) ([]*domain.Post,
 	var posts []*domain.Post
 	for rows.Next() {
 		var p domain.Post
-		err := rows.Scan(&p.ID, &p.UserID, &p.Title, &p.Description, &p.MediaURL, &p.FileID, &p.Visibility, &p.CreatedAt, &p.UpdatedAt)
+		// err := rows.Scan(&p.ID, &p.UserID, &p.Title, &p.Description, &p.MediaURL, &p.FileID, &p.Visibility, &p.CreatedAt, &p.UpdatedAt)
+		err := rows.Scan(&p.ID, &p.UserID, &p.Title, &p.Description, &p.MediaURL, &p.Visibility, &p.CreatedAt, &p.UpdatedAt)
 		if err != nil {
 			log.Printf("[PostRepo][ERREUR] Scan du post du créateur ID %d échoué : %v", creatorID, err)
 			return nil, err
@@ -439,7 +436,7 @@ func ListSubscriberOnlyPosts(creatorID int64) ([]*domain.Post, error) {
 
 // ListPostsRecommendedForUserWithTags retourne des posts recommandés avec filtrage par tags optionnel
 func ListPostsRecommendedForUserWithTags(userID int64, tags []string, limit, offset int) ([]interface{}, int, error) {
-	log.Printf("[PostRepo] Posts recommandés avec tags pour user %d: tags=%v, limit=%d, offset=%d", 
+	log.Printf("[PostRepo] Posts recommandés avec tags pour user %d: tags=%v, limit=%d, offset=%d",
 		userID, tags, limit, offset)
 
 	// Si aucun tag spécifié, utiliser la logique de recommandation normale
@@ -450,7 +447,6 @@ func ListPostsRecommendedForUserWithTags(userID int64, tags []string, limit, off
 	// Sinon, filtrer par tags
 	return getRecommendedPostsWithTags(userID, tags, limit, offset)
 }
-
 
 // GetTagsStatistics retourne le nombre de posts pour chaque tag
 func GetTagsStatistics() (map[string]int, error) {
@@ -475,17 +471,17 @@ func GetTagsStatistics() (map[string]int, error) {
 	defer rows.Close()
 
 	tagStats := make(map[string]int)
-	
+
 	for rows.Next() {
 		var tag string
 		var count int
-		
+
 		err := rows.Scan(&tag, &count)
 		if err != nil {
 			log.Printf("[PostRepo][ERREUR] Erreur scan stat tag : %v", err)
 			continue
 		}
-		
+
 		tagStats[tag] = count
 	}
 
@@ -501,7 +497,7 @@ func GetTagsStatistics() (map[string]int, error) {
 // GetTotalPublicPosts retourne le nombre total de posts publics
 func GetTotalPublicPosts() (int, error) {
 	query := `SELECT COUNT(*) FROM posts WHERE visibility = 'public'`
-	
+
 	var total int
 	err := database.DB.QueryRow(query).Scan(&total)
 	if err != nil {
@@ -512,8 +508,6 @@ func GetTotalPublicPosts() (int, error) {
 	log.Printf("[PostRepo] 📊 Total posts publics : %d", total)
 	return total, nil
 }
-
-
 
 // getRecommendedPostsWithoutTags - VERSION CORRIGÉE avec nettoyage des prepared statements
 func getRecommendedPostsWithoutTags(userID int64, limit, offset int) ([]interface{}, int, error) {
@@ -527,7 +521,7 @@ func getRecommendedPostsWithoutTags(userID int64, limit, offset int) ([]interfac
 
 	// SOLUTION 2: Utiliser une requête avec un nom unique pour éviter les conflits
 	queryName := fmt.Sprintf("rec_posts_no_tags_%d", time.Now().UnixNano())
-	
+
 	query := `
 		SELECT 
 			p.id,
@@ -612,16 +606,16 @@ func getRecommendedPostsWithTags(userID int64, tags []string, limit, offset int)
 	// Construction cohérente des arguments
 	var args []interface{}
 	var tagPlaceholders []string
-	
+
 	// 1. UserID
 	args = append(args, userID)
-	
+
 	// 2. Tags
 	for i, tag := range tags {
 		args = append(args, tag)
 		tagPlaceholders = append(tagPlaceholders, fmt.Sprintf("$%d", i+2))
 	}
-	
+
 	// 3. Limit et Offset
 	args = append(args, limit, offset)
 	limitPos := len(tags) + 2
@@ -708,7 +702,7 @@ func countRecommendedPostsWithoutTags(userID int64) (int, error) {
 		FROM posts p
 		WHERE p.visibility = 'public' AND p.user_id != $1
 	`
-	
+
 	var total int
 	err := database.DB.QueryRow(query, userID).Scan(&total)
 	if err != nil {
@@ -727,7 +721,7 @@ func countRecommendedPostsWithTags(userID int64, tags []string) (int, error) {
 
 	var args []interface{}
 	var tagPlaceholders []string
-	
+
 	args = append(args, userID)
 	for i, tag := range tags {
 		args = append(args, tag)
@@ -761,9 +755,6 @@ func countRecommendedPosts(userID int64, tags []string) (int, error) {
 		return countRecommendedPostsWithTags(userID, tags)
 	}
 }
-
-
-
 
 // scanPostsResults - fonction utilitaire pour scanner les résultats
 func scanPostsResults(rows *sql.Rows) ([]interface{}, error) {
@@ -818,4 +809,3 @@ func scanPostsResults(rows *sql.Rows) ([]interface{}, error) {
 
 	return posts, nil
 }
-

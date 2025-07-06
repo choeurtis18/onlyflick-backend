@@ -145,6 +145,17 @@ func SetupRoutes() http.Handler {
 	})
 
 	// ========================
+	// 🏷️ TAGS ET CATÉGORIES
+	// ========================
+	r.Route("/tags", func(tags chi.Router) {
+		// Endpoint public pour récupérer tous les tags disponibles
+		tags.Get("/available", handler.GetAvailableTagsHandler)
+
+		// Endpoint public pour récupérer les statistiques des tags
+		tags.Get("/stats", handler.GetTagsStatsHandler)
+	})
+
+	// ========================
 	// 🔥 NOUVEAU : Utilisateurs (profils publics)
 	// ========================
 	r.Route("/users", func(users chi.Router) {
@@ -165,18 +176,6 @@ func SetupRoutes() http.Handler {
 		users.Get("/{user_id}/followers", handler.GetUserFollowersHandler)
 		users.Get("/{user_id}/following", handler.GetUserFollowingHandler)
 	})
-
-	// ========================
-	// 🏷️ TAGS ET CATÉGORIES
-	// ========================
-	r.Route("/tags", func(tags chi.Router) {
-		// Endpoint public pour récupérer tous les tags disponibles
-		tags.Get("/available", handler.GetAvailableTagsHandler)
-
-		// Endpoint public pour récupérer les statistiques des tags
-		tags.Get("/stats", handler.GetTagsStatsHandler)
-	})
-
 	// ========================
 	// 📊 TRACKING DES INTERACTIONS
 	// ========================
