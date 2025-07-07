@@ -51,14 +51,7 @@ class StripeConfig {
   static Future<bool> isApplePayAvailable() async {
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       try {
-        return await Stripe.instance.isPlatformPaySupported(
-          params: const PlatformPayParams(
-            applePay: ApplePayParams(
-              merchantCountryCode: 'FR',
-              currencyCode: 'EUR',
-            ),
-          ),
-        );
+        return await Stripe.instance.isPlatformPaySupported();
       } catch (e) {
         print('[Stripe] Erreur Apple Pay: $e');
       }
@@ -71,12 +64,8 @@ class StripeConfig {
     if (defaultTargetPlatform == TargetPlatform.android) {
       try {
         return await Stripe.instance.isPlatformPaySupported(
-          params: const PlatformPayParams(
-            googlePay: GooglePayParams(
-              merchantCountryCode: 'FR',
-              currencyCode: 'EUR',
-              testEnv: !kReleaseMode,
-            ),
+          googlePay: IsGooglePaySupportedParams(
+            testEnv: !kReleaseMode,
           ),
         );
       } catch (e) {

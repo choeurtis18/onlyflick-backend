@@ -271,7 +271,7 @@ class SubscriptionService {
         throw Exception('Token d\'authentification manquant');
       }
 
-      final url = '$_baseUrl/subscription/subscribe-with-payment/$creatorId';
+      final url = '$_baseUrl/subscriptions/$creatorId/payment';
       print('🌐 [SubscriptionService] Calling subscribeWithPayment: $url'); // Debug
       
       final response = await http.post(
