@@ -1,9 +1,9 @@
 {
 	"info": {
-		"_postman_id": "75459fe5-5ea0-44db-a4d7-5979014f5091",
+		"_postman_id": "bd25294d-f844-454d-a71b-c227c66432b2",
 		"name": "OnlyFlick API",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "24610154"
+		"_exporter_id": "16409343"
 	},
 	"item": [
 		{
@@ -43,7 +43,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"first_name\":\"alice\",\n    \"last_name\":\"alice\",\n    \"email\":\"alice@onlyflick.com\",// admin / creator / user / alice-onlyflick@yopmail.com\n    \"password\":\"pass123\" //pass123\n}"
+							"raw": "{\n    \"first_name\":\"user\",\n    \"last_name\":\"user\",\n    \"username\": \"user_user\",\n    \"email\":\"user@onlyflick.com\",// admin / creator / user / alice-onlyflick@yopmail.com\n    \"password\":\"pass123\" //pass123\n}"
 						},
 						"url": {
 							"raw": "{{SERVER_URL}}/register",
@@ -69,7 +69,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\":\"emma.strong@gmail.com\",// admin / creator / user / alice-onlyflick@yopmail.com\n    \"password\":\"password123\" //pass123\n}"
+							"raw": "{\n    \"email\":\"sofia.wellness@outlook.com\",// admin / creator / user / alice-onlyflick@yopmail.com\n    \"password\":\"password123\" //pass123\n}"
 						},
 						"url": {
 							"raw": "{{SERVER_URL}}/login",
@@ -78,6 +78,42 @@
 							],
 							"path": [
 								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Check Exist Username",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/auth/check-username?username=uder_user",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"auth",
+								"check-username"
+							],
+							"query": [
+								{
+									"key": "username",
+									"value": "uder_user"
+								}
 							]
 						}
 					},
@@ -91,21 +127,63 @@
 				{
 					"name": "Get Profile",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTEwNzM5MjQsImlhdCI6MTc1MDk4NzUyNCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjEwODB9.bdOGl0aN7oBluOvdh9gTXkviI0wqHE9HYit4Eg0VW2I",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{creator_token}}"
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/profile",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"profile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"first_name\":\"AliceUpdated\"}"
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/profile",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"profile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Account",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
 							}
 						],
 						"url": {
@@ -122,114 +200,32 @@
 					"response": []
 				},
 				{
-					"name": "Get Users",
+					"name": "Request Creator Upgrade",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE1MzA4MDcsImlhdCI6MTc1MTQ0NDQwNywicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjEwNzR9.ScUr9HdCV3VvH3lkSqPx0ZhTRiBoH19BbyW_lWih5zY",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
+						"method": "POST",
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{creator_token}}"
+								"value": "Bearer {{token}}"
 							}
 						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
-							"raw": "{{SERVER_URL}}/users/1073",
+							"raw": "{{SERVER_URL}}/profile/request-upgrade",
 							"host": [
 								"{{SERVER_URL}}"
 							],
 							"path": [
-								"users",
-								"1073"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Search Users",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE1MzA4MDcsImlhdCI6MTc1MTQ0NDQwNywicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjEwNzR9.ScUr9HdCV3VvH3lkSqPx0ZhTRiBoH19BbyW_lWih5zY",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{creator_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{SERVER_URL}}/search/users?q=sarah_strong&limit=10&offset=0",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"search",
-								"users"
-							],
-							"query": [
-								{
-									"key": "q",
-									"value": "sarah_strong"
-								},
-								{
-									"key": "limit",
-									"value": "10"
-								},
-								{
-									"key": "offset",
-									"value": "0"
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Check Subscriptions",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE1MzA4MDcsImlhdCI6MTc1MTQ0NDQwNywicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjEwNzR9.ScUr9HdCV3VvH3lkSqPx0ZhTRiBoH19BbyW_lWih5zY",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{creator_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{SERVER_URL}}/subscriptions/1075/status",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"subscriptions",
-								"1075",
-								"status"
+								"profile",
+								"request-upgrade"
 							]
 						}
 					},
@@ -238,21 +234,11 @@
 				{
 					"name": "Get Profile Stats",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTEwNzM5MjQsImlhdCI6MTc1MDk4NzUyNCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjEwODB9.bdOGl0aN7oBluOvdh9gTXkviI0wqHE9HYit4Eg0VW2I",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{creator_token}}"
+								"value": "Bearer {{token}}"
 							}
 						],
 						"url": {
@@ -271,21 +257,11 @@
 				{
 					"name": "Get Profile Posts",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTA4ODEzNDgsImlhdCI6MTc1MDc5NDk0OCwicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjF9.S4KmyfouW957kbqSIzOTdy570IL_qYJykYIczGeHLk0",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{creator_token}}"
+								"value": "Bearer {{token}}"
 							}
 						],
 						"url": {
@@ -302,31 +278,51 @@
 					"response": []
 				},
 				{
-					"name": "Get Profile Username",
-					"protocolProfileBehavior": {
-						"disableBodyPruning": true
-					},
+					"name": "Create Profile Avatar",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTA3OTQ4NDYsImlhdCI6MTc1MDcwODQ0Niwicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjF9.eTVm3oquR3v06urGPYhEnIygZrpQTjqRED9lkiVvewU",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
+						"method": "POST",
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{creator_token}}"
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "avatar",
+									"type": "file",
+									"src": "/Users/skurtis/Documents/Capture d’écran 2025-06-26 à 18.19.15.png"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/profile/avatar",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"profile",
+								"avatar"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile Bio",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\": \"admin_admin_2\"\n}",
+							"raw": "{\n    \"bio\": \"zzz\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -334,353 +330,13 @@
 							}
 						},
 						"url": {
-							"raw": "{{SERVER_URL}}/profile/username/check?username=admin_admin_2",
+							"raw": "{{SERVER_URL}}/profile/bio",
 							"host": [
 								"{{SERVER_URL}}"
 							],
 							"path": [
 								"profile",
-								"username",
-								"check"
-							],
-							"query": [
-								{
-									"key": "username",
-									"value": "admin_admin_2"
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Update Profile",
-					"request": {
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\"first_name\":\"AliceUpdated\"}"
-						},
-						"url": {
-							"raw": "{{SERVER_URL}}/profile/",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"profile",
-								""
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Delete Account",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}"
-							}
-						],
-						"url": {
-							"raw": "{{SERVER_URL}}/profile/",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"profile",
-								""
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Request Creator Upgrade",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{creator_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{SERVER_URL}}/profile/request-upgrade",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"profile",
-								"request-upgrade"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Search",
-			"item": [
-				{
-					"name": "Get recherche user",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTExMTMwMDgsImlhdCI6MTc1MTAyNjYwOCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjEwODB9.mV5YNUiwh0UrfEzbQSCcj23n6652e0L9YU__CxFBanA",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{creator_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{SERVER_URL}}/search/users?q=ba",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"search",
-								"users"
-							],
-							"query": [
-								{
-									"key": "q",
-									"value": "ba"
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get recommended posts in searchPage",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTEyMzI5NjEsImlhdCI6MTc1MTE0NjU2MSwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjEwODB9.eB6R7ZCbvhOewNWjRhpqKW-q8pDJnxIDGozaTXW87Gc",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{creator_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{SERVER_URL}}/posts/recommended",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"posts",
-								"recommended"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Search Posts With Tags",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTEyMzE3OTgsImlhdCI6MTc1MTE0NTM5OCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjEwODB9.UHSxEBVxUYlKxGDkOFX3XQUXvz6U9uR9yOwyzH_Agtc",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{creator_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{SERVER_URL}}/search/posts?sort_by=recent&limit=10&offset=0&tags=musculation",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"search",
-								"posts"
-							],
-							"query": [
-								{
-									"key": "q",
-									"value": "art",
-									"disabled": true
-								},
-								{
-									"key": "sort_by",
-									"value": "recent"
-								},
-								{
-									"key": "limit",
-									"value": "10"
-								},
-								{
-									"key": "offset",
-									"value": "0"
-								},
-								{
-									"key": "tags",
-									"value": "musculation"
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Tags Stats",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{creator_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{SERVER_URL}}/tags/stats",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"tags",
-								"stats"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Profile Username",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{creator_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{SERVER_URL}}/profile/",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"profile",
-								""
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Update Profile",
-					"request": {
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\"first_name\":\"AliceUpdated\"}"
-						},
-						"url": {
-							"raw": "{{SERVER_URL}}/profile/",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"profile",
-								""
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Delete Account",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}"
-							}
-						],
-						"url": {
-							"raw": "{{SERVER_URL}}/profile/",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"profile",
-								""
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Request Creator Upgrade",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{creator_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{SERVER_URL}}/profile/request-upgrade",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"profile",
-								"request-upgrade"
+								"bio"
 							]
 						}
 					},
@@ -738,30 +394,6 @@
 					"response": []
 				},
 				{
-					"name": "Delete Account",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{admin_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{SERVER_URL}}/admin/users/{{subscriberId}}",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"admin",
-								"users",
-								"{{subscriberId}}"
-							]
-						}
-					},
-					"response": []
-				},
-				{
 					"name": "Approve Creator",
 					"request": {
 						"method": "POST",
@@ -810,6 +442,77 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Delete Account",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/admin/users/{{subscriberId}}",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"admin",
+								"users",
+								"{{subscriberId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Creators",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/admin/creators",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"admin",
+								"creators"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Creators Spécifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/admin/creator/{{creatorId}}",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"admin",
+								"creator",
+								"{{creatorId}}"
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -831,7 +534,7 @@
 							"formdata": [
 								{
 									"key": "title",
-									"value": "My First Post",
+									"value": "My Third Post",
 									"type": "text"
 								},
 								{
@@ -868,16 +571,6 @@
 				{
 					"name": "List My Posts",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTA5MjU3NzMsImlhdCI6MTc1MDgzOTM3Mywicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjF9.LeL__tX0qBNz6GVJNcpA8c_QcBMv9e77rzeaTmxQshM",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [
 							{
@@ -929,28 +622,33 @@
 					"response": []
 				},
 				{
-					"name": "Get All Subscriber Posts Of Creator",
+					"name": "Get recommended posts in searchPage",
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
 						"method": "GET",
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{subscriber_token}}",
-								"type": "text"
+								"value": "Bearer {{admin_token}}"
 							}
 						],
 						"url": {
-							"raw": "http://localhost:8080/posts/from/{{creatorId}}/subscriber-only",
-							"protocol": "http",
+							"raw": "{{SERVER_URL}}/posts/recommended",
 							"host": [
-								"localhost"
+								"{{SERVER_URL}}"
 							],
-							"port": "8080",
 							"path": [
 								"posts",
-								"from",
-								"{{creatorId}}",
-								"subscriber-only"
+								"recommended"
 							]
 						}
 					},
@@ -962,21 +660,11 @@
 						"disableBodyPruning": true
 					},
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDkzMzk4NjUsImlhdCI6MTc0OTI1MzQ2NSwicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjU2fQ.b9i7WRW9qmaDVXrnTkw7DOVUmyz8arr5j_fTjsj5nY4",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{token}}"
+								"value": "Bearer {{creator_token}}"
 							}
 						],
 						"body": {
@@ -998,13 +686,71 @@
 					"response": []
 				},
 				{
-					"name": "Get Post by ID",
+					"name": "Get All Subscriber Posts Of Creator",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": []
+						},
+						"url": {
+							"raw": "http://localhost:8080/posts/from/{{creatorId}}/subscriber-only",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"posts",
+								"from",
+								"{{creatorId}}",
+								"subscriber-only"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Post",
 					"request": {
 						"method": "GET",
 						"header": [
 							{
 								"key": "Authorization",
 								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/posts/me",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"posts",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Post by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
 							}
 						],
 						"url": {
@@ -1021,7 +767,55 @@
 					"response": []
 				},
 				{
-					"name": "Update Post (with new media)",
+					"name": "Create Post",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "My Third Post",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Hello world!",
+									"type": "text"
+								},
+								{
+									"key": "visibility",
+									"value": "subscriber",
+									"description": "subscriber ou public",
+									"type": "text"
+								},
+								{
+									"key": "media",
+									"type": "file",
+									"src": "/Users/skurtis/Documents/Capture d’écran 2025-06-08 à 18.58.58.png"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/posts",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"posts"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Post",
 					"request": {
 						"method": "PATCH",
 						"header": [
@@ -1112,7 +906,7 @@
 								{
 									"key": "file",
 									"type": "file",
-									"src": "/Users/skurtis/Documents/Capture d’écran 2025-06-08 à 00.39.23.png"
+									"src": "/Users/skurtis/Documents/Capture d’écran 2025-06-08 à 18.58.58.png"
 								}
 							]
 						},
@@ -1155,6 +949,512 @@
 			]
 		},
 		{
+			"name": "Search",
+			"item": [
+				{
+					"name": "Get recherche user",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/search/users?q=ba",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"search",
+								"users"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "ba"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Search Suggestions With Tags Copy",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/search/suggestions?sort_by=recent&limit=10&offset=0&tags=musculation",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"search",
+								"suggestions"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "art",
+									"disabled": true
+								},
+								{
+									"key": "sort_by",
+									"value": "recent"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "tags",
+									"value": "musculation"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Search Stats With Tags",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/search/stats?sort_by=recent&limit=10&offset=0&tags=musculation",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"search",
+								"stats"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "art",
+									"disabled": true
+								},
+								{
+									"key": "sort_by",
+									"value": "recent"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "tags",
+									"value": "musculation"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Search Posts With Tags",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/search/posts?sort_by=recent&limit=10&offset=0&tags=musculation",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"search",
+								"posts"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "art",
+									"disabled": true
+								},
+								{
+									"key": "sort_by",
+									"value": "recent"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "tags",
+									"value": "musculation"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tags Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/tags/stats",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"tags",
+								"stats"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tags Available",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{creator_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/tags/available",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"tags",
+								"available"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "Get User Global Infos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/users/{{subscriberId}}",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"users",
+								"{{subscriberId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Posts Global Infos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/users/{{subscriberId}}/posts",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"users",
+								"{{subscriberId}}",
+								"posts"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Followers",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/users/{{subscriberId}}/followers",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"users",
+								"{{subscriberId}}",
+								"followers"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Following",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/users/{{subscriberId}}/following",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"users",
+								"{{subscriberId}}",
+								"following"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Interactions",
+			"item": [
+				{
+					"name": "Add Interaction",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/interactions/track",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"interactions",
+								"track"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🔁 Subscriptions",
+			"item": [
+				{
+					"name": "Subscribe to Creator",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{subscriber_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"payment_method\": \"pm_card_visa\"  // Utiliser une carte test Stripe\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/subscriptions/{{creatorId}}/payment",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"subscriptions",
+								"{{creatorId}}",
+								"payment"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Unsubscribe",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/subscriptions/{{creatorId}}",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"subscriptions",
+								"{{creatorId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List My Subscriptions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{subscriber_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{SERVER_URL}}/subscriptions/",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"subscriptions",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Subscribe Status",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/subscriptions/{{creatorId}}/status",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"subscriptions",
+								"{{creatorId}}",
+								"status"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "💬 Commentaires",
 			"item": [
 				{
@@ -1168,12 +1468,12 @@
 							},
 							{
 								"key": "Authorization",
-								"value": "Bearer {{subscriber_token}}"
+								"value": "Bearer {{admin_token}}"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\"post_id\": 2, \"content\": \"Super post !\"}"
+							"raw": "{\"post_id\": 230, \"content\": \"Super postit !\"}"
 						},
 						"url": {
 							"raw": "http://localhost:8080/comments",
@@ -1196,7 +1496,7 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{subscriber_token}}"
+								"value": "Bearer {{admin_token}}"
 							}
 						],
 						"url": {
@@ -1222,7 +1522,7 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{token}}"
+								"value": "Bearer {{admin_token}}"
 							}
 						],
 						"url": {
@@ -1256,7 +1556,7 @@
 							},
 							{
 								"key": "Authorization",
-								"value": "Bearer {{token}}"
+								"value": "Bearer {{admin_token}}"
 							}
 						],
 						"url": {
@@ -1351,7 +1651,7 @@
 							},
 							{
 								"key": "Authorization",
-								"value": "Bearer {{token}}"
+								"value": "Bearer {{subscriber_token}}"
 							}
 						],
 						"body": {
@@ -1458,100 +1758,6 @@
 			]
 		},
 		{
-			"name": "🔁 Subscriptions",
-			"item": [
-				{
-					"name": "Subscribe to Creator",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{subscriber_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{SERVER_URL}}/subscriptions/{{creatorId}}",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"subscriptions",
-								"{{creatorId}}"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Unsubscribe",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE1MzA4MDcsImlhdCI6MTc1MTQ0NDQwNywicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjEwNzR9.ScUr9HdCV3VvH3lkSqPx0ZhTRiBoH19BbyW_lWih5zY",
-									"type": "string"
-								}
-							]
-						},
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{subscriber_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{SERVER_URL}}/subscriptions/{{creatorId}}",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"subscriptions",
-								"{{creatorId}}"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "List My Subscriptions",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE1MzA4MDcsImlhdCI6MTc1MTQ0NDQwNywicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjEwNzR9.ScUr9HdCV3VvH3lkSqPx0ZhTRiBoH19BbyW_lWih5zY",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{subscriber_token}}"
-							}
-						],
-						"url": {
-							"raw": "{{SERVER_URL}}/subscriptions/",
-							"host": [
-								"{{SERVER_URL}}"
-							],
-							"path": [
-								"subscriptions",
-								""
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
 			"name": "💌 Message",
 			"item": [
 				{
@@ -1579,16 +1785,6 @@
 						}
 					],
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE0NDU5NTgsImlhdCI6MTc1MTM1OTU1OCwicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjEwNzR9.FSqcKndUBw3bU3Bd6J4jhv4oZ1vubzdvJu3ecu4IoJA",
-									"type": "string"
-								}
-							]
-						},
 						"method": "POST",
 						"header": [
 							{
@@ -1632,16 +1828,6 @@
 						}
 					],
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE0NTA3ODcsImlhdCI6MTc1MTM2NDM4Nywicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjEwNzR9.gaMCIXGbw32SlNRZVy53LVfkhA1Ge9TwDmyKbau1BFE",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [
 							{
@@ -1676,16 +1862,6 @@
 						}
 					],
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE0NDU1NTgsImlhdCI6MTc1MTM1OTE1OCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjEwODB9.Oj5y8zirpX8gJ-mAeOU9cUOU0J9juQ_s8W3BPGkzspo",
-									"type": "string"
-								}
-							]
-						},
 						"method": "POST",
 						"header": [
 							{
@@ -1730,16 +1906,6 @@
 						}
 					],
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE0NDU1NTgsImlhdCI6MTc1MTM1OTE1OCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjEwODB9.Oj5y8zirpX8gJ-mAeOU9cUOU0J9juQ_s8W3BPGkzspo",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [
 							{
@@ -1772,6 +1938,39 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Get All Users",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{admin_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{SERVER_URL}}/users/all",
+					"host": [
+						"{{SERVER_URL}}"
+					],
+					"path": [
+						"users",
+						"all"
+					]
+				}
+			},
+			"response": []
 		}
 	],
 	"event": [
@@ -1803,19 +2002,19 @@
 		},
 		{
 			"key": "token",
-			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDk1OTEwNzIsImlhdCI6MTc0OTUwNDY3Miwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjZ9.r6AVsDLyrpuOHqV43ny5p8DhaAp8VPd2R3yDDSBhiF8"
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTE5MDg5MDQsImlhdCI6MTc1MTgyMjUwNCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjE0NDJ9.rC5JzjTXHVtih5FCOXblruEbR0f0-umefVRAZ6J1gwA"
 		},
 		{
 			"key": "creator_token",
-			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDk1OTEwNTEsImlhdCI6MTc0OTUwNDY1MSwicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjN9.0pzPUi6XGssxRTft9JVI8dZ5ZDxSfMcGhsvNAF1-EKA"
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTAxMDM4ODUsImlhdCI6MTc1MDAxNzQ4NSwicm9sZSI6ImNyZWF0b3IiLCJzdWIiOjN9.OFFuKolWIRCCFfS6ZvidsSDAxR4CJ4phDbFwVkHuJGk"
 		},
 		{
 			"key": "subscriber_token",
-			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDk1OTEwMDgsImlhdCI6MTc0OTUwNDYwOCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjR9.vPvFhP3kZ6vshQZ7AmPiIOu4lxIlAG9HUIW2LdnQ2B4"
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTAxMDM5MjQsImlhdCI6MTc1MDAxNzUyNCwicm9sZSI6InN1YnNjcmliZXIiLCJzdWIiOjR9.sDzXgrqplMwDNl46C3_lZluZbD0IQkY_pzbRTHCeZO4"
 		},
 		{
 			"key": "admin_token",
-			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDk1OTEwMzIsImlhdCI6MTc0OTUwNDYzMiwicm9sZSI6ImFkbWluIiwic3ViIjoyfQ.5vJpFPVm83FycUXxlgLVEqLBQmExnaGP6IE894ArAFM"
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTAxMDM4MTEsImlhdCI6MTc1MDAxNzQxMSwicm9sZSI6ImFkbWluIiwic3ViIjoyfQ.hDxpY3LqcfZad5JYR_9kwEuiVgqIOT_W5O5xkG6ALlw"
 		},
 		{
 			"key": "creatorId",
