@@ -1,4 +1,4 @@
-// lib/widgets/subscription_list_widget.dart
+// lib/features/home/presentation/widgets/subscription_list_widget.dart
 
 import 'package:flutter/material.dart';
 import '../../../../core/models/subscription_model.dart';
@@ -228,10 +228,10 @@ class _SubscriptionListWidgetState extends State<SubscriptionListWidget> {
         leading: CircleAvatar(
           radius: AppConstants.avatarSize / 2,
           backgroundColor: const Color(AppColors.primaryColor),
-          backgroundImage: user.avatarUrl != null 
+          backgroundImage: user.avatarUrl?.isNotEmpty == true 
             ? NetworkImage(user.avatarUrl!)
             : null,
-          child: user.avatarUrl == null
+          child: user.avatarUrl?.isEmpty != false
             ? Text(
                 user.fullName.isNotEmpty 
                   ? user.fullName[0].toUpperCase()
@@ -260,7 +260,7 @@ class _SubscriptionListWidgetState extends State<SubscriptionListWidget> {
                 fontSize: 14,
               ),
             ),
-            if (user.bio != null && user.bio!.isNotEmpty) ...[
+            if (user.bio?.isNotEmpty == true) ...[
               const SizedBox(height: 4),
               Text(
                 user.bio!,

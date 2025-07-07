@@ -1,10 +1,9 @@
-// lib/pages/subscriptions_page.dart
+// lib/features/home/presentation/pages/subscriptions_page.dart
 
 import 'package:flutter/material.dart';
 import '../widgets/subscription_list_widget.dart';
-import ' ../../../../../../core/utils/constants.dart';
-import ' ../../../../../../core/utils/auth_storage.dart';
-
+import '../../../../core/utils/constants.dart';
+import '../../../../core/utils/auth_storage.dart';
 
 class SubscriptionsPage extends StatefulWidget {
   final int userId;

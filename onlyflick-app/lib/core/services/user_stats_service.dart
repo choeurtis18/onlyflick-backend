@@ -1,4 +1,4 @@
-// lib/services/user_stats_service.dart
+// lib/core/services/user_stats_service.dart
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -8,7 +8,7 @@ import '../utils/auth_storage.dart';
 class UserStatsService {
   static const String _baseUrl = ApiConstants.baseUrl;
 
-  // Modèle pour les statistiques utilisateur depuis /profile/stats
+  // Récupérer les statistiques depuis /profile/stats
   static Future<UserStats> getUserStats(int userId) async {
     try {
       final token = await AuthStorage.getToken();
@@ -16,10 +16,10 @@ class UserStatsService {
         throw Exception('Token d\'authentification manquant');
       }
 
-      // ✅ CORRECTION: Essayer d'abord sans /api, puis avec /api
-      String url = 'http://localhost:8080/profile/stats';
+      final url = '$_baseUrl/profile/stats';
+      print('🌐 [UserStatsService] Calling getUserStats: $url'); // Debug
       
-      var response = await http.get(
+      final response = await http.get(
         Uri.parse(url),
         headers: {
           'Authorization': 'Bearer $token',
@@ -27,22 +27,13 @@ class UserStatsService {
         },
       );
 
-      // Si 404, essayer avec /api
-      if (response.statusCode == 404) {
-        url = 'http://localhost:8080/api/profile/stats';
-        response = await http.get(
-          Uri.parse(url),
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Content-Type': 'application/json',
-          },
-        );
-      }
+      print('🔍 [UserStatsService] getUserStats status: ${response.statusCode}'); // Debug
+      print('🔍 [UserStatsService] getUserStats body: ${response.body}'); // Debug
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         
-        // ✅ CORRECTION: Parser la réponse directement (pas de nested 'stats')
+        // Parser la réponse directement 
         return UserStats(
           postsCount: data['posts_count'] ?? 0,
           followersCount: data['followers_count'] ?? 0,
@@ -52,10 +43,13 @@ class UserStatsService {
         );
       } else if (response.statusCode == 401) {
         throw Exception('Session expirée, veuillez vous reconnecter');
+      } else if (response.statusCode == 404) {
+        throw Exception('Endpoint non trouvé: $url');
       } else {
-        throw Exception('Erreur lors de la récupération des statistiques: ${response.statusCode} - URL testée: $url');
+        throw Exception('Erreur lors de la récupération des statistiques: ${response.statusCode}');
       }
     } catch (e) {
+      print('❌ [UserStatsService] Error: $e'); // Debug
       throw Exception('Erreur réseau: $e');
     }
   }
@@ -72,9 +66,59 @@ class UserStatsService {
       throw Exception('Erreur récupération stats abonnements: $e');
     }
   }
+
+  // Récupérer les statistiques pour un utilisateur spécifique (public)
+  static Future<PublicUserStats> getPublicUserStats(int userId) async {
+    try {
+      final token = await AuthStorage.getToken();
+      if (token == null) {
+        throw Exception('Token d\'authentification manquant');
+      }
+
+      final url = '$_baseUrl/users/$userId/stats';
+      print('🌐 [UserStatsService] Calling getPublicUserStats: $url'); // Debug
+      
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🔍 [UserStatsService] getPublicUserStats status: ${response.statusCode}'); // Debug
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        
+        return PublicUserStats(
+          postsCount: data['posts_count'] ?? 0,
+          followersCount: data['followers_count'] ?? 0,
+          followingCount: data['following_count'] ?? 0,
+        );
+      } else if (response.statusCode == 404) {
+        // Si l'endpoint n'existe pas, retourner des stats vides
+        return PublicUserStats(
+          postsCount: 0,
+          followersCount: 0,
+          followingCount: 0,
+        );
+      } else {
+        throw Exception('Erreur lors de la récupération des statistiques publiques: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ [UserStatsService] getPublicUserStats error: $e'); // Debug
+      // Retourner des stats vides en cas d'erreur
+      return PublicUserStats(
+        postsCount: 0,
+        followersCount: 0,
+        followingCount: 0,
+      );
+    }
+  }
 }
 
-// ✅ CORRECTION: Modèle mis à jour avec tous les champs
+// Modèle complet pour les statistiques utilisateur
 class UserStats {
   final int postsCount;
   final int followersCount;
@@ -130,6 +174,35 @@ class SubscriptionStats {
 
   Map<String, dynamic> toJson() {
     return {
+      'followers_count': followersCount,
+      'following_count': followingCount,
+    };
+  }
+}
+
+// Modèle pour les statistiques publiques d'un autre utilisateur
+class PublicUserStats {
+  final int postsCount;
+  final int followersCount;
+  final int followingCount;
+
+  PublicUserStats({
+    required this.postsCount,
+    required this.followersCount,
+    required this.followingCount,
+  });
+
+  factory PublicUserStats.fromJson(Map<String, dynamic> json) {
+    return PublicUserStats(
+      postsCount: json['posts_count'] ?? 0,
+      followersCount: json['followers_count'] ?? 0,
+      followingCount: json['following_count'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'posts_count': postsCount,
       'followers_count': followersCount,
       'following_count': followingCount,
     };
