@@ -6,7 +6,7 @@ import '../../../../core/models/user_models.dart';
 import '../../../../core/models/subscription_model.dart';
 import '../../../../core/services/user_service.dart';
 import '../../../../features/auth/auth_provider.dart';
-import '../widgets/buttons/subscription_button.dart';
+import '../../../home/presentation/widgets/buttons/subscription_button.dart';
 
 /// Page pour afficher le profil public d'un utilisateur avec statistiques
 /// Permet de s'abonner si c'est un créateur avec système de paiement intégré
@@ -32,7 +32,6 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
   SubscriptionStatus? _subscriptionStatus;
   bool _isLoadingProfile = false;
   bool _isLoadingSubscription = false;
-  bool _isSubscriptionAction = false;
   String? _profileError;
   
   // État des posts
@@ -167,40 +166,6 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
     }
   }
 
-  /// 🔄 GÈRE L'ABONNEMENT/DÉSABONNEMENT SIMPLE (sans paiement)
-  Future<void> _toggleSubscription() async {
-    if (_profile == null || !_profile!.isCreator || _isSubscriptionAction) return;
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    if (!authProvider.isAuthenticated) {
-      _showSnackBar('Vous devez être connecté pour vous abonner', isError: true);
-      return;
-    }
-
-    setState(() => _isSubscriptionAction = true);
-
-    try {
-      UserServiceResult<String> result;
-      
-      if (_subscriptionStatus?.isActive == true) {
-        result = await _userService.unsubscribeFromCreator(widget.userId);
-      } else {
-        result = await _userService.subscribeToCreator(widget.userId);
-      }
-
-      if (result.isSuccess) {
-        _showSnackBar(result.data ?? 'Action réussie', isError: false);
-        await _loadSubscriptionStatus();
-      } else {
-        _showSnackBar(result.error?.message ?? 'Erreur lors de l\'action', isError: true);
-      }
-    } catch (e) {
-      _showSnackBar('Erreur inattendue: $e', isError: true);
-    } finally {
-      setState(() => _isSubscriptionAction = false);
-    }
-  }
-
   /// 📢 AFFICHE UNE SNACKBAR
   void _showSnackBar(String message, {required bool isError}) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -294,7 +259,6 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
               const SizedBox(height: 24),
             ],
             if (_profile!.isCreator) ...[
-              _buildSubscriptionSection(),
               const SizedBox(height: 24),
             ],
             _buildPublicationsSection(),
@@ -375,65 +339,73 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
           
           // Informations utilisateur
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _profile!.displayName,
-                  style: GoogleFonts.inter(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '@${_profile!.username}',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                
-                // Badge du rôle moderne
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    gradient: _profile!.isCreator 
-                        ? LinearGradient(
-                            colors: [Colors.purple.withOpacity(0.1), Colors.pink.withOpacity(0.1)],
-                          )
-                        : null,
-                    color: _profile!.isCreator ? null : Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: _profile!.isCreator ? Colors.purple : Colors.blue,
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _profile!.isCreator ? '✨' : '👤',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _profile!.isCreator ? 'Créateur' : 'Abonné',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: _profile!.isCreator ? Colors.purple : Colors.blue,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        _profile!.displayName,
+        style: GoogleFonts.inter(
+          fontSize: 24,
+          fontWeight: FontWeight.w700,
+          color: Colors.black,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        '@${_profile!.username}',
+        style: GoogleFonts.inter(
+          fontSize: 16,
+          color: Colors.grey[600],
+        ),
+      ),
+      const SizedBox(height: 12),
+
+      // Badge du rôle
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          gradient: _profile!.isCreator
+              ? LinearGradient(
+                  colors: [Colors.purple.withOpacity(0.1), Colors.pink.withOpacity(0.1)],
+                )
+              : null,
+          color: _profile!.isCreator ? null : Colors.blue.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: _profile!.isCreator ? Colors.purple : Colors.blue,
+            width: 1.5,
           ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _profile!.isCreator ? '✨' : '👤',
+              style: const TextStyle(fontSize: 12),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              _profile!.isCreator ? 'Créateur' : 'Abonné',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: _profile!.isCreator ? Colors.purple : Colors.blue,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      // Ajout du bouton d'abonnement juste après
+      if (_profile!.isCreator)
+        Padding(
+          padding: const EdgeInsets.only(top: 12), // 👈 Padding espacé
+          child: _buildInlineSubscriptionButton(),
+        ),
+    ],
+  ),
+),
+
         ],
       ),
     );
@@ -587,225 +559,6 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
     );
   }
 
-  /// 💎 SECTION ABONNEMENT MODERNE AVEC PAIEMENT INTÉGRÉ
-  Widget _buildSubscriptionSection() {
-    if (!_profile!.isCreator) return const SizedBox.shrink();
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.purple.withOpacity(0.05), Colors.pink.withOpacity(0.05)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.purple.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.star, color: Colors.amber[600], size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Abonnement Premium',
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
-              ),
-            ],
-          ),
-          
-          if (_profile!.subscriptionPriceFormatted.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              _profile!.subscriptionPriceFormatted,
-              style: GoogleFonts.inter(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color: Colors.purple,
-              ),
-            ),
-          ],
-          
-          const SizedBox(height: 16),
-          
-          if (_isLoadingSubscription)
-            const Center(child: CircularProgressIndicator(color: Colors.purple))
-          else
-            _buildSubscriptionButtons(),
-        ],
-      ),
-    );
-  }
-
-  /// 🔘 BOUTONS D'ABONNEMENT MODERNES AVEC PAIEMENT INTÉGRÉ
-  Widget _buildSubscriptionButtons() {
-    // Conversion du profil vers notre modèle UserProfile pour compatibilité
-    final creatorProfile = UserProfile(
-      id: _profile!.id,
-      username: _profile!.username,
-      firstName: _profile!.firstName ?? '',
-      lastName: _profile!.lastName ?? '',
-      fullName: _profile!.displayName,
-      role: _profile!.isCreator ? 'creator' : 'subscriber',
-      avatarUrl: _profile!.avatarUrl,
-      bio: _profile!.bio,
-      createdAt: DateTime.now(),
-    );
-
-    if (_subscriptionStatus?.isActive == true) {
-      return Column(
-        children: [
-          // Statut abonné
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.green),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green, size: 24),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Vous êtes abonné',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.green[800],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          
-          // 🎯 BOUTON MODERNE DE DÉSABONNEMENT
-          SizedBox(
-            width: double.infinity,
-            child: SubscriptionButton(
-              creatorId: _profile!.id,
-              creatorProfile: creatorProfile,
-              showPrice: false,
-              onSubscriptionChanged: () {
-                print('🔄 Rafraîchissement après changement d\'abonnement');
-                _loadSubscriptionStatus();
-                _loadUserPosts(refresh: true);
-              },
-              customStyle: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    // Utilisateur non abonné - afficher nos boutons modernes
-    return Column(
-      children: [
-        // 🎯 BOUTON PRINCIPAL AVEC PAIEMENT STRIPE INTÉGRÉ
-        SizedBox(
-          width: double.infinity,
-          child: SubscriptionButton(
-            creatorId: _profile!.id,
-            creatorProfile: creatorProfile,
-            showPrice: true,
-            onSubscriptionChanged: () {
-              print('🎉 Abonnement réussi !');
-              // Rafraîchir le statut
-              _loadSubscriptionStatus();
-              // Rafraîchir les posts pour voir le contenu premium
-              _loadUserPosts(refresh: true);
-              // Afficher un message de succès
-              _showSnackBar(
-                'Abonnement activé ! Vous pouvez maintenant voir le contenu premium.',
-                isError: false,
-              );
-            },
-          ),
-        ),
-        
-        const SizedBox(height: 12),
-        
-        // 💡 Bouton alternatif sans paiement (pour les tests/développement)
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: _isSubscriptionAction ? null : _toggleSubscription,
-            icon: Icon(
-              _isSubscriptionAction ? Icons.hourglass_empty : Icons.person_add,
-              size: 18,
-            ),
-            label: Text(
-              _isSubscriptionAction 
-                  ? 'En cours...' 
-                  : 'S\'abonner (sans paiement)',
-              style: const TextStyle(fontSize: 16),
-            ),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.purple,
-              side: const BorderSide(color: Colors.purple, width: 2),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ),
-        
-        const SizedBox(height: 16),
-        
-        // 📝 Informations sur l'abonnement
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.purple.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.purple.withOpacity(0.2)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '✨ Avantages de l\'abonnement :',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.purple[800],
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '• Accès au contenu premium exclusif\n'
-                '• Messagerie privée avec le créateur\n'
-                '• Support direct du créateur\n'
-                '• Annulation possible à tout moment',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: Colors.purple[700],
-                  height: 1.4,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 
   /// 📱 SECTION PUBLICATIONS
   Widget _buildPublicationsSection() {
@@ -871,6 +624,41 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
       ),
     );
   }
+
+  /// 💎 BOUTON ABONNEMENT INLINE POUR EN-TÊTE
+Widget _buildInlineSubscriptionButton() {
+  final creatorProfile = UserProfile(
+    id: _profile!.id,
+    username: _profile!.username,
+    firstName: _profile!.firstName ?? '',
+    lastName: _profile!.lastName ?? '',
+    fullName: _profile!.displayName,
+    role: 'creator',
+    avatarUrl: _profile!.avatarUrl,
+    bio: _profile!.bio,
+    createdAt: DateTime.now(),
+  );
+
+  return SubscriptionButton(
+    creatorId: _profile!.id,
+    creatorProfile: creatorProfile,
+    showPrice: true,
+    onSubscriptionChanged: () {
+      _loadSubscriptionStatus();
+      _loadUserPosts(refresh: true);
+      _showSnackBar('Abonnement activé !', isError: false);
+    },
+    customStyle: ElevatedButton.styleFrom(
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+    ),
+  );
+}
+
 
   /// ⏳ CHARGEMENT DES POSTS
   Widget _buildPostsLoading() {

@@ -263,12 +263,16 @@ class SubscriptionService {
   // ========= MÉTHODES POUR PAIEMENTS =========
 
   /// S'abonner à un créateur avec paiement
-  /// Retourne le client_secret pour Stripe
+  /// Retourne le client_secret pour Stripe ou une erreur structurée
   static Future<Map<String, dynamic>> subscribeWithPayment(int creatorId) async {
     try {
       final token = await AuthStorage.getToken();
       if (token == null) {
-        throw Exception('Token d\'authentification manquant');
+        return {
+          'success': false,
+          'error_type': 'authentication',
+          'message': 'Token d\'authentification manquant',
+        };
       }
 
       final url = '$_baseUrl/subscriptions/$creatorId/payment';
@@ -294,51 +298,49 @@ class SubscriptionService {
           'client_secret': data['client_secret'],
         };
       } else if (response.statusCode == 400) {
-        throw Exception(data['error'] ?? 'Vous êtes déjà abonné à ce créateur');
+        // Gérer spécifiquement le cas "déjà abonné"
+        final errorMessage = data['message'] ?? data['error'] ?? 'Bad Request';
+        
+        if (errorMessage.toLowerCase().contains('déjà abonné') || 
+            errorMessage.toLowerCase().contains('already subscribed')) {
+          return {
+            'success': false,
+            'error_type': 'already_subscribed',
+            'message': errorMessage,
+          };
+        } else {
+          return {
+            'success': false,
+            'error_type': 'bad_request',
+            'message': errorMessage,
+          };
+        }
       } else if (response.statusCode == 401) {
-        throw Exception('Session expirée, veuillez vous reconnecter');
+        return {
+          'success': false,
+          'error_type': 'authentication',
+          'message': 'Session expirée, veuillez vous reconnecter',
+        };
+      } else if (response.statusCode == 404) {
+        return {
+          'success': false,
+          'error_type': 'not_found',
+          'message': 'Créateur non trouvé',
+        };
       } else {
-        throw Exception(data['error'] ?? 'Erreur lors de l\'abonnement avec paiement');
+        return {
+          'success': false,
+          'error_type': 'server_error',
+          'message': data['error'] ?? 'Erreur serveur lors de l\'abonnement',
+        };
       }
     } catch (e) {
       print('❌ [SubscriptionService] subscribeWithPayment error: $e'); // Debug
-      throw Exception('Erreur réseau: $e');
-    }
-  }
-
-  /// S'abonner à un créateur sans paiement immédiat
-  static Future<Map<String, dynamic>> subscribe(int creatorId) async {
-    try {
-      final token = await AuthStorage.getToken();
-      if (token == null) {
-        throw Exception('Token d\'authentification manquant');
-      }
-
-      final url = '$_baseUrl/subscription/subscribe/$creatorId';
-      print('🌐 [SubscriptionService] Calling subscribe: $url'); // Debug
-      
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      print('🔍 [SubscriptionService] subscribe status: ${response.statusCode}'); // Debug
-      final data = json.decode(response.body);
-
-      if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'message': data['message'],
-        };
-      } else {
-        throw Exception(data['error'] ?? 'Erreur lors de l\'abonnement');
-      }
-    } catch (e) {
-      print('❌ [SubscriptionService] subscribe error: $e'); // Debug
-      throw Exception('Erreur réseau: $e');
+      return {
+        'success': false,
+        'error_type': 'network_error',
+        'message': 'Erreur de connexion réseau',
+      };
     }
   }
 
@@ -350,7 +352,7 @@ class SubscriptionService {
         throw Exception('Token d\'authentification manquant');
       }
 
-      final url = '$_baseUrl/subscription/unsubscribe/$creatorId';
+      final url = '$_baseUrl/subscriptions/$creatorId';
       print('🌐 [SubscriptionService] Calling unsubscribe: $url'); // Debug
       
       final response = await http.delete(
