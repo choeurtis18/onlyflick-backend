@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/providers/post_creation_provider.dart';
-import '../../../../core/models/post_models.dart'; // ← Import depuis models
+import '../../../../core/models/post_models.dart';
 import '../../../auth/auth_provider.dart';
 
 class CreatePostPage extends StatefulWidget {
@@ -111,6 +111,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
                           _buildTitleInput(creationProvider),
                           const SizedBox(height: 16),
                           _buildDescriptionInput(creationProvider),
+                          const SizedBox(height: 20),
+                          _buildTagsSelector(creationProvider), // ✅ Nouvelle section tags
                           const SizedBox(height: 20),
                           _buildVisibilitySelector(creationProvider, authProvider),
                         ],
@@ -377,6 +379,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
             counterText: '',
           ),
           style: const TextStyle(fontSize: 16),
+          onChanged: (_) => provider.notifyListeners(),
         ),
       ],
     );
@@ -421,8 +424,214 @@ class _CreatePostPageState extends State<CreatePostPage> {
             alignLabelWithHint: true,
           ),
           style: const TextStyle(fontSize: 16),
+          onChanged: (_) => provider.notifyListeners(),
         ),
       ],
+    );
+  }
+
+  // ===== NOUVELLE SECTION : SÉLECTEUR DE TAGS =====
+  Widget _buildTagsSelector(PostCreationProvider provider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'Tags *',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (provider.selectedTagsCount > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${provider.selectedTagsCount}/5',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Choisissez des tags qui décrivent votre contenu (max 5)',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 12),
+        
+        // Tags sélectionnés (si il y en a)
+        if (provider.selectedTags.isNotEmpty) ...[
+          _buildSelectedTagsRow(provider),
+          const SizedBox(height: 12),
+        ],
+        
+        // Grille des tags disponibles
+        _buildAvailableTagsGrid(provider),
+      ],
+    );
+  }
+
+  Widget _buildSelectedTagsRow(PostCreationProvider provider) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green[600], size: 16),
+              const SizedBox(width: 6),
+              Text(
+                'Tags sélectionnés',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.green[700],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: provider.selectedTags.map((tag) {
+              return _buildSelectedTagChip(tag, provider);
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectedTagChip(String tag, PostCreationProvider provider) {
+    final displayName = PostCreationProvider.getTagDisplayName(tag);
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            displayName,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: () => provider.removeTag(tag),
+            child: const Icon(
+              Icons.close,
+              color: Colors.white,
+              size: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvailableTagsGrid(PostCreationProvider provider) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: provider.availableTags.map((tag) {
+        final isSelected = provider.isTagSelected(tag);
+        final isDisabled = !isSelected && provider.isMaxTagsReached;
+        
+        return _buildTagChip(
+          tag: tag,
+          isSelected: isSelected,
+          isDisabled: isDisabled,
+          onTap: isDisabled ? null : () => provider.toggleTag(tag),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildTagChip({
+    required String tag,
+    required bool isSelected,
+    required bool isDisabled,
+    required VoidCallback? onTap,
+  }) {
+    final displayName = PostCreationProvider.getTagDisplayName(tag);
+    
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Colors.black
+              : isDisabled
+                  ? Colors.grey[100]
+                  : Colors.grey[50],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? Colors.black
+                : isDisabled
+                    ? Colors.grey[300]!
+                    : Colors.grey[300]!,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isSelected)
+              const Padding(
+                padding: EdgeInsets.only(right: 6),
+                child: Icon(
+                  Icons.check,
+                  color: Colors.white,
+                  size: 14,
+                ),
+              ),
+            Text(
+              displayName,
+              style: TextStyle(
+                color: isSelected
+                    ? Colors.white
+                    : isDisabled
+                        ? Colors.grey[400]
+                        : Colors.black,
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

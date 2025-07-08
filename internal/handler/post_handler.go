@@ -1,16 +1,17 @@
 package handler
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"onlyflick/internal/domain"
 	"onlyflick/internal/middleware"
 	"onlyflick/internal/repository"
 	"onlyflick/internal/service"
 	"onlyflick/pkg/response"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -21,25 +22,27 @@ import (
 
 // Requête pour la création d'un post
 type CreatePostRequest struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	MediaURL    string `json:"media_url"`
-	Visibility  string `json:"visibility"` // public | subscriber
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	MediaURL    string   `json:"media_url"`
+	Visibility  string   `json:"visibility"` // public | subscriber
+	Tags        []string `json:"tags"`       // ✅ Ajout des tags
 }
 
 // Requête pour la mise à jour d'un post
 type UpdatePostRequest struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	MediaURL    string `json:"media_url"`
-	Visibility  string `json:"visibility"` // public | subscriber
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	MediaURL    string   `json:"media_url"`
+	Visibility  string   `json:"visibility"` // public | subscriber
+	Tags        []string `json:"tags"`       // ✅ Ajout des tags
 }
 
 // ==============================
 // Handlers principaux
 // ==============================
 
-// CreatePost insère un nouveau post, y compris file_id
+// CreatePost insère un nouveau post avec les tags
 func CreatePost(w http.ResponseWriter, r *http.Request) {
 	log.Println("[CreatePost] Handler appelé")
 
@@ -58,10 +61,28 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Récupérer les champs
 	title := r.FormValue("title")
 	description := r.FormValue("description")
 	visibility := r.FormValue("visibility")
+	tagsJSON := r.FormValue("tags") // ✅ Récupérer le champ tags
 
+	log.Printf("[CreatePost] Données reçues: title=%s, description=%s, visibility=%s, tags=%s", 
+		title, description, visibility, tagsJSON)
+
+	// ✅ Parser les tags JSON
+	var tags []string
+	if tagsJSON != "" {
+		if err := json.Unmarshal([]byte(tagsJSON), &tags); err != nil {
+			log.Printf("[CreatePost] Erreur parsing tags JSON: %v", err)
+			response.RespondWithError(w, http.StatusBadRequest, "Format des tags invalide")
+			return
+		}
+	}
+
+	log.Printf("[CreatePost] Tags parsés: %v (%d tags)", tags, len(tags))
+
+	// Upload du fichier média
 	var mediaURL, fileID string
 	file, header, err := r.FormFile("media")
 	if err == nil {
@@ -76,6 +97,7 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[CreatePost] Aucun fichier média fourni ou erreur : %v", err)
 	}
 
+	// Créer le post
 	post := &domain.Post{
 		UserID:      userID,
 		Title:       title,
@@ -85,6 +107,7 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 		Visibility:  domain.Visibility(visibility),
 	}
 
+	// ✅ Créer le post et récupérer l'ID
 	if err := repository.CreatePost(post); err != nil {
 		response.RespondWithError(w, http.StatusInternalServerError, "Impossible de créer le post")
 		log.Printf("[CreatePost] Erreur lors de la création du post : %v", err)
@@ -92,7 +115,57 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("[CreatePost] Post créé avec succès (ID: %d, UserID: %d, Titre: %s)", post.ID, userID, post.Title)
+
+	// ✅ Insérer les tags si présents
+	if len(tags) > 0 {
+		log.Printf("[CreatePost] Insertion de %d tags pour le post %d", len(tags), post.ID)
+		
+		for _, tag := range tags {
+			// Nettoyer et valider le tag
+			cleanTag := strings.TrimSpace(strings.ToLower(tag))
+			if cleanTag == "" || cleanTag == "tous" {
+				continue
+			}
+
+			// Vérifier que le tag est valide
+			if !isValidTag(cleanTag) {
+				log.Printf("[CreatePost] Tag invalide ignoré: %s", cleanTag)
+				continue
+			}
+
+			// Insérer le tag dans post_tags
+			if err := repository.CreatePostTag(post.ID, cleanTag); err != nil {
+				log.Printf("[CreatePost] Erreur insertion tag %s pour post %d: %v", cleanTag, post.ID, err)
+				// Continue avec les autres tags même si un échoue
+			} else {
+				log.Printf("[CreatePost] ✅ Tag '%s' ajouté au post %d", cleanTag, post.ID)
+			}
+		}
+	}
+
+	log.Printf("[CreatePost] Post créé avec succès avec %d tags", len(tags))
 	response.RespondWithJSON(w, http.StatusCreated, post)
+}
+
+// ✅ Valide si un tag est dans la liste autorisée
+func isValidTag(tag string) bool {
+	validTags := map[string]bool{
+		"wellness":    true,
+		"beaute":      true,
+		"art":         true,
+		"musique":     true,
+		"cuisine":     true,
+		"football":    true,
+		"basket":      true,
+		"mode":        true,
+		"cinema":      true,
+		"actualites":  true,
+		"mangas":      true,
+		"memes":       true,
+		"tech":        true,
+	}
+	
+	return validTags[tag]
 }
 
 // GetPostByID récupère un post par son ID
@@ -141,7 +214,7 @@ func ListMyPosts(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, posts)
 }
 
-// UpdatePost met à jour un post existant (avec remplacement d'image possible)
+// UpdatePost met à jour un post existant avec les tags
 func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	log.Println("[UpdatePost] Handler appelé (remplacement d'image possible)")
 
@@ -184,9 +257,20 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Récupérer les champs
 	post.Title = r.FormValue("title")
 	post.Description = r.FormValue("description")
 	post.Visibility = domain.Visibility(r.FormValue("visibility"))
+	tagsJSON := r.FormValue("tags") // ✅ Récupérer le champ tags
+
+	// ✅ Parser les tags JSON
+	var tags []string
+	if tagsJSON != "" {
+		if err := json.Unmarshal([]byte(tagsJSON), &tags); err != nil {
+			response.RespondWithError(w, http.StatusBadRequest, "Format des tags invalide")
+			return
+		}
+	}
 
 	// Nouveau fichier image ?
 	file, header, err := r.FormFile("media")
@@ -221,7 +305,26 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("[UpdatePost] Post %d mis à jour avec succès par l'utilisateur %d", postID, userID)
+	// ✅ Supprimer tous les anciens tags et ajouter les nouveaux
+	if err := repository.DeletePostTags(postID); err != nil {
+		log.Printf("[UpdatePost] Erreur suppression anciens tags: %v", err)
+	}
+
+	// ✅ Insérer les nouveaux tags
+	if len(tags) > 0 {
+		for _, tag := range tags {
+			cleanTag := strings.TrimSpace(strings.ToLower(tag))
+			if cleanTag == "" || cleanTag == "tous" || !isValidTag(cleanTag) {
+				continue
+			}
+
+			if err := repository.CreatePostTag(postID, cleanTag); err != nil {
+				log.Printf("[UpdatePost] Erreur insertion tag %s: %v", cleanTag, err)
+			}
+		}
+	}
+
+	log.Printf("[UpdatePost] Post %d mis à jour avec succès par l'utilisateur %d avec %d tags", postID, userID, len(tags))
 	response.RespondWithJSON(w, http.StatusOK, post)
 }
 
@@ -262,7 +365,7 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Suppression en base de données
+	// Suppression en base de données (les tags seront supprimés automatiquement via CASCADE)
 	if err := repository.DeletePost(postID); err != nil {
 		response.RespondWithError(w, http.StatusInternalServerError, "Impossible de supprimer le post")
 		log.Printf("[DeletePost] Erreur lors de la suppression du post (ID: %d) : %v", postID, err)
@@ -371,7 +474,7 @@ func ListSubscriberOnlyPostsFromCreator(w http.ResponseWriter, r *http.Request) 
 	// Récupération sécurisée du rôle
 	role, _ := r.Context().Value(middleware.ContextUserRoleKey).(string) // par défaut "", pas de panic
 
-	// Lecture du paramètre d’URL
+	// Lecture du paramètre d'URL
 	creatorIDStr := chi.URLParam(r, "creator_id")
 	creatorID, err := strconv.ParseInt(creatorIDStr, 10, 64)
 	if err != nil {
