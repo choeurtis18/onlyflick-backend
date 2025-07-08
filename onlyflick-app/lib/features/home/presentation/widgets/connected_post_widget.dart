@@ -6,6 +6,8 @@ import '../../../../core/providers/posts_providers.dart';
 import '../../../../../core/services/posts_service.dart';
 import '../../../../core/models/post_models.dart' as models;
 import '../pages/public_profile_page.dart';
+import '../../../auth/auth_provider.dart';
+
 class ConnectedPostWidget extends StatefulWidget {
   final models.Post post;
   final VoidCallback onLike;
@@ -231,27 +233,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
                         ),
                       ),
                       
-                      // Badge Créateur
-                      if (widget.post.isFromCreator) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Colors.purple, Colors.pink],
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            '✨ Créateur',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
+
                       
                       // Badge Premium
                       if (widget.post.visibility == 'subscriber') ...[
@@ -479,14 +461,24 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
           
           const SizedBox(width: 16),
           
-          // Bouton Commentaire
-          GestureDetector(
-            onTap: () => _commentFocusNode.requestFocus(),
-            child: const Icon(
-              Icons.mode_comment_outlined,
-              color: Colors.black,
-              size: 24,
-            ),
+          // Bouton Commentaire - FONCTIONNEL
+          Consumer<PostsProvider>(
+            builder: (context, postsProvider, _) {
+              return FutureBuilder<List<models.Comment>>(
+                future: postsProvider.getComments(widget.post.id),
+                builder: (context, snapshot) {
+                  final comments = snapshot.data ?? [];
+                  return GestureDetector(
+                    onTap: () => _showCommentsModal(context, comments),
+                    child: const Icon(
+                      Icons.mode_comment_outlined,
+                      color: Colors.black,
+                      size: 24,
+                    ),
+                  );
+                },
+              );
+            },
           ),
           
           const SizedBox(width: 16),
@@ -606,24 +598,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Lien pour voir tous les commentaires
-              if (comments.length > 1) ...[
-                GestureDetector(
-                  onTap: () => _showCommentsModal(context, comments),
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      'Voir les ${comments.length} commentaires',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-              
-              // Commentaire le plus récent
+              // Commentaire le plus récent seulement
               _buildCompactComment(comments.last),
             ],
           ),
@@ -655,7 +630,9 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
                   );
                 },
                 child: Text(
-                  '${comment.authorDisplayName} ',
+                  comment.authorUsername.isNotEmpty 
+                      ? comment.authorUsername 
+                      : comment.authorDisplayName,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     color: Colors.black,
@@ -681,51 +658,77 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
   Widget _buildCleanAddCommentSection() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundImage: NetworkImage(widget.post.authorAvatarFallback),
-            radius: 14,
-          ),
-          const SizedBox(width: 12),
+      child: Consumer<AuthProvider>(  // ← Ajout du Consumer pour accéder à l'utilisateur connecté
+        builder: (context, authProvider, child) {
+          final currentUser = authProvider.user;
           
-          Expanded(
-            child: TextField(
-              controller: _commentController,
-              focusNode: _commentFocusNode,
-              decoration: InputDecoration(
-                hintText: 'Ajouter un commentaire...',
-                hintStyle: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
+          return Row(
+            children: [
+              CircleAvatar(
+                backgroundImage: currentUser != null && currentUser.avatarUrl.isNotEmpty  // ← Utiliser l'avatarUrl de l'utilisateur connecté
+                    ? NetworkImage(currentUser.avatarUrl)
+                    : const NetworkImage('https://i.pravatar.cc/150?img=1'), // Avatar par défaut
+                radius: 14,
               ),
-              style: const TextStyle(fontSize: 14),
-              onSubmitted: (_) => _handleAddComment(),
-            ),
-          ),
-          
-          if (_isAddingComment)
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          else
-            GestureDetector(
-              onTap: _handleAddComment,
-              child: Text(
-                'Publier',
-                style: TextStyle(
-                  color: Colors.blue[600],
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+              const SizedBox(width: 12),
+              
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.grey[300]!,
+                      width: 1,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: _commentController,
+                    focusNode: _commentFocusNode,
+                    decoration: InputDecoration(
+                      hintText: 'Ajouter un commentaire...',
+                      hintStyle: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 14,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                      isDense: true,
+                    ),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    onSubmitted: (_) => _handleAddComment(),
+                  ),
                 ),
               ),
-            ),
-        ],
+              
+              const SizedBox(width: 8),
+              
+              if (_isAddingComment)
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                GestureDetector(
+                  onTap: _handleAddComment,
+                  child: Text(
+                    'Publier',
+                    style: TextStyle(
+                      color: Colors.blue[600],
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -772,75 +775,660 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
-  /// 💬 MODAL COMMENTAIRES COMPLETS
+  /// 💬 MODAL COMMENTAIRES COMPLETS - REDESIGN MODERNE
   void _showCommentsModal(BuildContext context, List<models.Comment> comments) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.5),
       builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.3,
-        maxChildSize: 0.9,
+        initialChildSize: 0.75,
+        minChildSize: 0.4,
+        maxChildSize: 0.95,
         builder: (context, scrollController) => Container(
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 20,
+                offset: Offset(0, -5),
+              ),
+            ],
           ),
           child: Column(
             children: [
-              // Handle
+              // ===== HANDLE & HEADER MODERNE =====
               Container(
-                margin: const EdgeInsets.only(top: 8, bottom: 16),
-                width: 32,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              
-              // Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
+                padding: const EdgeInsets.only(top: 12, bottom: 8),
+                child: Column(
                   children: [
-                    const Text(
-                      'Commentaires',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
+                    // Handle bar
+                    Container(
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(3),
                       ),
                     ),
-                    const Spacer(),
-                    Text(
-                      '${comments.length}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
+                    const SizedBox(height: 16),
+                    
+                    // Header avec stats
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          // Icône commentaires
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.chat_bubble_rounded,
+                              color: Colors.blue[600],
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          
+                          // Titre et compteur
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Commentaires',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                Text(
+                                  '${comments.length} ${comments.length > 1 ? 'commentaires' : 'commentaire'}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          
+                          // Bouton fermer
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).pop(),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.close_rounded,
+                                color: Colors.grey[600],
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
               
-              const Divider(height: 24),
+              // Divider subtil
+              Container(
+                height: 1,
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      Colors.grey[200]!,
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
               
-              // Liste des commentaires
+              // ===== LISTE DES COMMENTAIRES =====
               Expanded(
-                child: ListView.builder(
-                  controller: scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: comments.length,
-                  itemBuilder: (context, index) {
-                    final comment = comments[index];
-                    return _buildModalCommentItem(comment);
-                  },
+                child: comments.isEmpty
+                    ? _buildEmptyCommentsState()
+                    : ListView.builder(
+                        controller: scrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        itemCount: comments.length,
+                        itemBuilder: (context, index) {
+                          final comment = comments[index];
+                          return _buildModernCommentItem(comment, index);
+                        },
+                      ),
+              ),
+              
+              // ===== ZONE DE SAISIE MODERNE =====
+              _buildModernCommentInput(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 📝 ÉTAT VIDE MODERNE
+  Widget _buildEmptyCommentsState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.chat_bubble_outline_rounded,
+              size: 48,
+              color: Colors.grey[400],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Aucun commentaire',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Soyez le premier à partager votre avis !',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 💬 ITEM COMMENTAIRE MODERNE
+  Widget _buildModernCommentItem(models.Comment comment, int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.grey[200]!,
+          width: 0.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header du commentaire
+          Row(
+            children: [
+              // Avatar avec indicateur en ligne
+              Stack(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => PublicProfilePage(
+                            userId: comment.userId,
+                            username: comment.authorUsername.isNotEmpty 
+                                ? comment.authorUsername 
+                                : 'user${comment.userId}',
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        backgroundImage: NetworkImage(
+                          comment.authorAvatarFallback,
+                        ),
+                        radius: 20,
+                        backgroundColor: Colors.grey[300],
+                      ),
+                    ),
+                  ),
+                  // Indicateur en ligne (optionnel)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: Colors.green[400],
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 12),
+              
+              // Informations utilisateur
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Nom d'utilisateur cliquable
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => PublicProfilePage(
+                              userId: comment.userId,
+                              username: comment.authorUsername.isNotEmpty 
+                                  ? comment.authorUsername 
+                                  : 'user${comment.userId}',
+                            ),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        comment.authorUsername.isNotEmpty 
+                            ? comment.authorUsername 
+                            : comment.authorDisplayName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    
+                    // Timestamp avec icône
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time_rounded,
+                          size: 12,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          comment.timeAgo,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Menu d'actions
+              PopupMenuButton<String>(
+                icon: Icon(
+                  Icons.more_horiz_rounded,
+                  color: Colors.grey[400],
+                  size: 20,
+                ),
+                onSelected: (value) {
+                  switch (value) {
+                    case 'profile':
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => PublicProfilePage(
+                            userId: comment.userId,
+                            username: comment.authorUsername.isNotEmpty 
+                                ? comment.authorUsername 
+                                : 'user${comment.userId}',
+                          ),
+                        ),
+                      );
+                      break;
+                    case 'report':
+                      _showReportCommentDialog(comment);
+                      break;
+                  }
+                },
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem<String>(
+                    value: 'profile',
+                    child: Row(
+                      children: [
+                        Icon(Icons.person_rounded, size: 18, color: Colors.grey[700]),
+                        const SizedBox(width: 8),
+                        const Text('Voir le profil'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'report',
+                    child: Row(
+                      children: [
+                        Icon(Icons.flag_rounded, size: 18, color: Colors.red[400]),
+                        const SizedBox(width: 8),
+                        Text('Signaler', style: TextStyle(color: Colors.red[400])),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Contenu du commentaire
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.grey[200]!,
+                width: 0.5,
+              ),
+            ),
+            child: Text(
+              comment.content,
+              style: const TextStyle(
+                fontSize: 15,
+                height: 1.4,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Actions du commentaire
+          Row(
+            children: [
+              // Bouton like
+              GestureDetector(
+                onTap: () {
+                  // TODO: Implémenter like commentaire
+                  HapticFeedback.lightImpact();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.favorite_border_rounded,
+                        size: 14,
+                        color: Colors.grey[600],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'J\'aime',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(width: 8),
+              
+              // Bouton répondre
+              GestureDetector(
+                onTap: () {
+                  // TODO: Implémenter réponse
+                  HapticFeedback.lightImpact();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.reply_rounded,
+                        size: 14,
+                        color: Colors.blue[600],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Répondre',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  /// 📝 ZONE DE SAISIE MODERNE
+  Widget _buildModernCommentInput() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: Colors.grey[200]!,
+            width: 0.5,
+          ),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Consumer<AuthProvider>(
+          builder: (context, authProvider, child) {
+            final currentUser = authProvider.user;
+            
+            return Row(
+              children: [
+                // Avatar de l'utilisateur connecté
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    backgroundImage: currentUser != null && currentUser.avatarUrl.isNotEmpty
+                        ? NetworkImage(currentUser.avatarUrl)
+                        : const NetworkImage('https://i.pravatar.cc/150?img=1'),
+                    radius: 18,
+                    backgroundColor: Colors.grey[300],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                
+                // Champ de saisie moderne
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: _commentFocusNode.hasFocus 
+                            ? Colors.blue[300]! 
+                            : Colors.grey[300]!,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: TextField(
+                      controller: _commentController,
+                      focusNode: _commentFocusNode,
+                      maxLines: null,
+                      decoration: InputDecoration(
+                        hintText: 'Ajouter un commentaire...',
+                        hintStyle: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        height: 1.3,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      onSubmitted: (_) => _handleAddComment(),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(width: 8),
+                
+                // Bouton publier moderne
+                _isAddingComment
+                    ? Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                            ),
+                          ),
+                        ),
+                      )
+                    : GestureDetector(
+                        onTap: _handleAddComment,
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Colors.blue[400]!, Colors.blue[600]!],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.blue.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.send_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// 🚩 DIALOG DE SIGNALEMENT DE COMMENTAIRE
+  void _showReportCommentDialog(models.Comment comment) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text('Signaler ce commentaire'),
+        content: Text('Voulez-vous signaler le commentaire de ${comment.authorUsername.isNotEmpty ? comment.authorUsername : comment.authorDisplayName} ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Commentaire signalé avec succès'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            child: Text(
+              'Signaler',
+              style: TextStyle(color: Colors.red[600]),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -895,7 +1483,9 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
                             );
                           },
                           child: Text(
-                            '${comment.authorDisplayName} ',
+                            comment.authorUsername.isNotEmpty 
+                                ? comment.authorUsername 
+                                : comment.authorDisplayName,
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Colors.black,

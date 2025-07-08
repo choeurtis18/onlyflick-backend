@@ -50,9 +50,6 @@ class _TagsFilterWidgetState extends State<TagsFilterWidget> {
     });
 
     try {
-      // Importer le service au début du fichier :
-      // import '../../../../core/services/tags_service.dart';
-      
       // Récupérer les vraies statistiques depuis le backend
       final tagsWithStats = await TagsService.getTagsWithStats();
       
@@ -143,15 +140,12 @@ class _TagsFilterWidgetState extends State<TagsFilterWidget> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Icône du tag corrigée pour correspondre au backend
-            if (_getTagIcon(tag) != null) ...[
-              Icon(
-                _getTagIcon(tag),
-                size: 16,
-                color: isSelected ? Colors.white : const Color(0xFF666666),
-              ),
-              const SizedBox(width: 6),
-            ],
+            // Icône du tag mise à jour pour correspondre aux nouveaux tags
+            Text(
+              _getTagEmoji(tag),
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(width: 6),
             
             // Texte du tag
             Text(
@@ -201,46 +195,57 @@ class _TagsFilterWidgetState extends State<TagsFilterWidget> {
     );
   }
 
-  /// Retourne l'icône correspondant au tag backend
-  IconData? _getTagIcon(String tag) {
+  /// Retourne l'emoji correspondant aux NOUVEAUX tags de votre base de données
+  String _getTagEmoji(String tag) {
     switch (tag.toLowerCase()) {
       case 'tous':
-        return Icons.apps;
+        return '🏷️';
       
-      // Tags du backend avec leurs icônes appropriées
-      case 'yoga':
-        return Icons.self_improvement; // Icône de méditation/yoga
-      
+      // ✅ NOUVEAUX TAGS de votre base de données avec emojis
       case 'wellness':
-        return Icons.spa; // Icône de spa/wellness
+        return '🌿';
       
       case 'beauté':
       case 'beaute':
-        return Icons.face; // Icône de beauté
-      
-      case 'diy':
-        return Icons.handyman; // Icône d'outils/bricolage
+        return '💄';
       
       case 'art':
-        return Icons.palette; // Icône d'art
+        return '🎨';
       
       case 'musique':
-        return Icons.music_note; // Icône de musique
+        return '🎵';
       
       case 'cuisine':
-        return Icons.restaurant; // Icône de cuisine
+        return '👨‍🍳';
       
-      case 'musculation':
-        return Icons.fitness_center; // Icône de musculation
+      case 'football':
+        return '⚽';
+      
+      case 'basket':
+        return '🏀';
       
       case 'mode':
-        return Icons.style; // Icône de mode
+        return '👗';
       
-      case 'fitness':
-        return Icons.directions_run; // Icône de course/fitness
+      case 'cinéma':
+      case 'cinema':
+        return '🎬';
+      
+      case 'actualités':
+      case 'actualites':
+        return '📰';
+      
+      case 'mangas':
+        return '📚';
+      
+      case 'memes':
+        return '😂';
+      
+      case 'tech':
+        return '💻';
       
       default:
-        return Icons.tag; // Icône générique pour les tags non reconnus
+        return '🏷️'; // Emoji générique pour les tags non reconnus
     }
   }
 
@@ -253,34 +258,41 @@ class _TagsFilterWidgetState extends State<TagsFilterWidget> {
     return _tagCounts[tag] ?? 0;
   }
 
-  /// Génère un nombre cohérent basé sur le tag (temporaire jusqu'à intégration backend)
+  /// Génère un nombre cohérent basé sur les NOUVEAUX tags (avec les vraies données de votre DB)
   int _generateConsistentCount(String tag) {
-    final seed = tag.hashCode.abs();
-    
+    // Utiliser les vraies données de votre base de données comme fallback
     switch (tag.toLowerCase()) {
-      case 'yoga':
-        return 25 + (seed % 15); // 25-40 posts
       case 'wellness':
-        return 18 + (seed % 12); // 18-30 posts
+        return 7; // Basé sur vos vraies données
       case 'beauté':
       case 'beaute':
-        return 22 + (seed % 8); // 22-30 posts
-      case 'diy':
-        return 15 + (seed % 10); // 15-25 posts
+        return 7; // Basé sur vos vraies données
       case 'art':
-        return 30 + (seed % 20); // 30-50 posts
+        return 10; // Basé sur vos vraies données
       case 'musique':
-        return 20 + (seed % 15); // 20-35 posts
+        return 10; // Basé sur vos vraies données
       case 'cuisine':
-        return 35 + (seed % 25); // 35-60 posts
-      case 'musculation':
-        return 40 + (seed % 20); // 40-60 posts
+        return 8; // Basé sur vos vraies données
+      case 'football':
+        return 5; // Basé sur vos vraies données
+      case 'basket':
+        return 5; // Basé sur vos vraies données
       case 'mode':
-        return 28 + (seed % 12); // 28-40 posts
-      case 'fitness':
-        return 45 + (seed % 30); // 45-75 posts
+        return 5; // Basé sur vos vraies données
+      case 'cinéma':
+      case 'cinema':
+        return 5; // Basé sur vos vraies données
+      case 'actualités':
+      case 'actualites':
+        return 5; // Basé sur vos vraies données
+      case 'mangas':
+        return 5; // Basé sur vos vraies données
+      case 'memes':
+        return 5; // Basé sur vos vraies données
+      case 'tech':
+        return 7; // Basé sur vos vraies données
       default:
-        return 5 + (seed % 10); // 5-15 posts pour les tags inconnus
+        return 0; // Tags inconnus
     }
   }
 }
@@ -349,12 +361,18 @@ class TagChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Icône
+            // Icône ou emoji
             if (icon != null) ...[
               Icon(
                 icon,
                 size: 16,
                 color: isSelected ? Colors.white : const Color(0xFF666666),
+              ),
+              const SizedBox(width: 6),
+            ] else if (label.isNotEmpty) ...[
+              Text(
+                _getEmojiForLabel(label),
+                style: TextStyle(fontSize: 16),
               ),
               const SizedBox(width: 6),
             ],
@@ -405,5 +423,44 @@ class TagChip extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Méthode utilitaire pour obtenir l'emoji d'un label
+  String _getEmojiForLabel(String label) {
+    switch (label.toLowerCase()) {
+      case 'tous':
+        return '🏷️';
+      case 'wellness':
+        return '🌿';
+      case 'beauté':
+      case 'beaute':
+        return '💄';
+      case 'art':
+        return '🎨';
+      case 'musique':
+        return '🎵';
+      case 'cuisine':
+        return '👨‍🍳';
+      case 'football':
+        return '⚽';
+      case 'basket':
+        return '🏀';
+      case 'mode':
+        return '👗';
+      case 'cinéma':
+      case 'cinema':
+        return '🎬';
+      case 'actualités':
+      case 'actualites':
+        return '📰';
+      case 'mangas':
+        return '📚';
+      case 'memes':
+        return '😂';
+      case 'tech':
+        return '💻';
+      default:
+        return '🏷️';
+    }
   }
 }

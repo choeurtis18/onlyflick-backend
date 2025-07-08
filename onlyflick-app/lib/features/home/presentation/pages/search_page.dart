@@ -209,8 +209,19 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
                     absorbing: _showSuggestions,
                     child: Column(
                       children: [
+                        // ✅ BARRE DE RECHERCHE avec espacement amélioré
                         _buildSearchSection(),
+                        
+                        // ✅ ESPACEMENT entre recherche et tags
+                        const SizedBox(height: 32),
+                        
+                        // ✅ TAGS avec espacement amélioré
                         _buildTagsSection(),
+                        
+                        // ✅ ESPACEMENT entre tags et contenu
+                        const SizedBox(height: 40),
+                        
+                        // ✅ CONTENU PRINCIPAL
                         Expanded(child: _buildContent()),
                       ],
                     ),
@@ -246,36 +257,58 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
   }
 
   Widget _buildSearchSection() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0), // ✅ Plus d'espace en haut
       child: TextField(
         controller: _searchController,
         focusNode: _searchFocusNode,
         onSubmitted: _onSearchSubmitted,
-        style: const TextStyle(
+        style: GoogleFonts.inter(
           fontSize: 16,
           color: Colors.black,
+          fontWeight: FontWeight.w400,
         ),
         decoration: InputDecoration(
           hintText: 'Nom, prénom ou @username...',
-          hintStyle: TextStyle(color: Colors.grey[500]),
-          prefixIcon: const Icon(Icons.search, color: Colors.black54),
+          hintStyle: GoogleFonts.inter(
+            color: Colors.grey[500],
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+          ),
+          prefixIcon: Container(
+            padding: const EdgeInsets.all(12),
+            child: Icon(
+              Icons.search, 
+              color: Colors.grey[600],
+              size: 24,
+            ),
+          ),
           suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear, color: Colors.black54),
-                  onPressed: _clearSearch,
+              ? Container(
+                  padding: const EdgeInsets.all(4),
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.clear, 
+                      color: Colors.grey[600],
+                      size: 20,
+                    ),
+                    onPressed: _clearSearch,
+                  ),
                 )
               : null,
           filled: true,
-          fillColor: Colors.grey[100],
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          fillColor: Colors.grey[50], // ✅ Couleur plus douce
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18), // ✅ Plus de padding
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16), // ✅ Plus arrondi
             borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Colors.grey[400]!),
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(
+              color: Colors.grey[300]!,
+              width: 1.5,
+            ),
           ),
         ),
       ),
@@ -286,7 +319,7 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
     // Section des tags avec gestion du chargement
     if (_isLoadingTags && _tags.length == 1) {
       return Container(
-        height: 60,
+        height: 50, // ✅ Hauteur fixe pour consistance
         child: const Center(
           child: SizedBox(
             width: 20,
@@ -304,10 +337,52 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
       children: [
         // Afficher les tags même pendant le chargement si on a plus que "Tous"
         if (_tags.length > 1)
-          TagsFilterWidget(
-            tags: _tags,
-            selectedTag: _selectedTag,
-            onTagSelected: _onTagSelected,
+          Container(
+            height: 50, // ✅ Hauteur fixe pour les tags
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _tags.length,
+              itemBuilder: (context, index) {
+                final tag = _tags[index];
+                final isSelected = tag == _selectedTag;
+                
+                return Container(
+                  margin: EdgeInsets.only(
+                    right: index == _tags.length - 1 ? 0 : 12, // ✅ Espacement entre tags
+                  ),
+                  child: FilterChip(
+                    label: Text(
+                      tag,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: isSelected ? Colors.white : Colors.grey[700],
+                      ),
+                    ),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      if (selected) {
+                        _onTagSelected(tag);
+                      }
+                    },
+                    backgroundColor: Colors.grey[100],
+                    selectedColor: Colors.black,
+                    checkmarkColor: Colors.white,
+                    elevation: 0,
+                    pressElevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20), // ✅ Plus arrondi
+                      side: BorderSide(
+                        color: isSelected ? Colors.black : Colors.grey[200]!,
+                        width: 1,
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // ✅ Plus de padding
+                  ),
+                );
+              },
+            ),
           ),
         
         // Message d'erreur pour les tags
@@ -347,9 +422,13 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
 
   // Contenu principal : afficher les posts recommandés avec le tag sélectionné
   Widget _buildContent() {
-    return SingleChildScrollView(
-      child: RecommendedPostsSection(
-        selectedTag: _selectedTag,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16), // ✅ Padding horizontal consistant
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        child: RecommendedPostsSection(
+          selectedTag: _selectedTag,
+        ),
       ),
     );
   }
@@ -392,31 +471,53 @@ class NoResultsSuggestionWidget extends StatelessWidget {
         color: Colors.black54,
         child: Center(
           child: Container(
-            margin: const EdgeInsets.all(20),
-            padding: const EdgeInsets.all(20),
+            margin: const EdgeInsets.all(24), // ✅ Plus de marge
+            padding: const EdgeInsets.all(32), // ✅ Plus de padding
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(20), // ✅ Plus arrondi
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.search_off, size: 48, color: Colors.grey[400]),
-                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.search_off,
+                    size: 48,
+                    color: Colors.grey[400],
+                  ),
+                ),
+                const SizedBox(height: 24), // ✅ Plus d'espace
                 Text(
                   'Aucun résultat pour "$query"',
                   style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
                   ),
+                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12), // ✅ Plus d'espace
                 Text(
                   'Essayez avec un autre terme de recherche',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: Colors.grey[600],
+                    fontWeight: FontWeight.w400,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),

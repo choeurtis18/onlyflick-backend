@@ -1,4 +1,4 @@
-// onlyflick-app/lib/core/services/tags_service.dart
+// lib/core/services/tags_service.dart
 
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -50,6 +50,12 @@ class TagsService {
   /// Récupère tous les tags disponibles avec leurs statistiques depuis l'API
   static Future<List<TagData>> getTagsWithStats() async {
     try {
+      // ⚠️ TEMPORAIRE : Forcer l'utilisation des nouveaux tags pendant le développement
+      debugPrint('🔄 Utilisation forcée des nouveaux tags');
+      return await _getFallbackTags();
+      
+      // Code original commenté temporairement
+      /*
       // Vérifier le cache
       if (_cachedTags != null && 
           _lastCacheUpdate != null && 
@@ -99,11 +105,12 @@ class TagsService {
         debugPrint('❌ Erreur lors de la récupération des stats tags: ${response.error}');
         throw Exception('Failed to load tag stats: ${response.error}');
       }
+      */
       
     } catch (e) {
       debugPrint('❌ Erreur lors de la récupération des stats tags: $e');
       
-      // Fallback : utiliser les tags par défaut avec comptages réalistes
+      // Fallback : utiliser les nouveaux tags par défaut
       return await _getFallbackTags();
     }
   }
@@ -112,9 +119,17 @@ class TagsService {
   static Future<List<String>> getAvailableTags() async {
     try {
       final tagsWithStats = await getTagsWithStats();
-      return tagsWithStats.map((tag) => tag.displayName).toList();
+      final tags = tagsWithStats.map((tag) => tag.displayName).toList();
+      
+      // Si on récupère des tags depuis l'API, les utiliser
+      if (tags.isNotEmpty && tags.length > 1) { // Plus que juste "Tous"
+        return tags;
+      }
+      
+      // Sinon, utiliser les nouveaux tags par défaut
+      return _getFallbackTagNames();
     } catch (e) {
-      debugPrint('❌ Erreur récupération tags, utilisation fallback: $e');
+      debugPrint('❌ Erreur récupération tags, utilisation nouveaux tags: $e');
       return _getFallbackTagNames();
     }
   }
@@ -157,19 +172,44 @@ class TagsService {
   static String getTagKey(String displayName) {
     const Map<String, String> tagDisplayToKey = {
       'Tous': 'tous',
-      'Yoga': 'yoga',
       'Wellness': 'wellness',
       'Beauté': 'beaute',
-      'DIY': 'diy',
       'Art': 'art',
       'Musique': 'musique',
       'Cuisine': 'cuisine',
-      'Musculation': 'musculation',
+      'Football': 'football',
+      'Basket': 'basket',
       'Mode': 'mode',
-      'Fitness': 'fitness',
+      'Cinéma': 'cinema',
+      'Actualités': 'actualites',
+      'Mangas': 'mangas',
+      'Memes': 'memes',
+      'Tech': 'tech',
     };
     
     return tagDisplayToKey[displayName] ?? displayName.toLowerCase();
+  }
+
+  /// Convertit une clé backend en nom d'affichage
+  static String getTagDisplayName(String key) {
+    const Map<String, String> tagKeyToDisplay = {
+      'tous': 'Tous',
+      'wellness': 'Wellness',
+      'beaute': 'Beauté',
+      'art': 'Art',
+      'musique': 'Musique',
+      'cuisine': 'Cuisine',
+      'football': 'Football',
+      'basket': 'Basket',
+      'mode': 'Mode',
+      'cinema': 'Cinéma',
+      'actualites': 'Actualités',
+      'mangas': 'Mangas',
+      'memes': 'Memes',
+      'tech': 'Tech',
+    };
+    
+    return tagKeyToDisplay[key.toLowerCase()] ?? key;
   }
 
   /// Invalide le cache pour forcer un rechargement
@@ -192,22 +232,25 @@ class TagsService {
     }
   }
 
-  /// Tags de fallback en cas d'erreur API (avec comptages plus réalistes)
+  /// Tags de fallback en cas d'erreur API (avec comptages réalistes basés sur votre DB)
   static Future<List<TagData>> _getFallbackTags() async {
     // debugPrint('🔄 Utilisation des tags de fallback avec comptages réalistes');
     
     return [
       const TagData(key: 'tous', displayName: 'Tous', emoji: '🏷️', count: 0),
-      const TagData(key: 'yoga', displayName: 'Yoga', emoji: '🧘', count: 3),      // Plus réaliste
-      const TagData(key: 'wellness', displayName: 'Wellness', emoji: '🌿', count: 5),   // Plus réaliste
-      const TagData(key: 'beaute', displayName: 'Beauté', emoji: '💄', count: 2),      // Plus réaliste
-      const TagData(key: 'diy', displayName: 'DIY', emoji: '🔨', count: 1),            // Plus réaliste
-      const TagData(key: 'art', displayName: 'Art', emoji: '🎨', count: 4),            // Plus réaliste
-      const TagData(key: 'musique', displayName: 'Musique', emoji: '🎵', count: 2),    // Plus réaliste
-      const TagData(key: 'cuisine', displayName: 'Cuisine', emoji: '🍳', count: 6),    // Plus réaliste
-      const TagData(key: 'musculation', displayName: 'Musculation', emoji: '💪', count: 8), // Plus réaliste
-      const TagData(key: 'mode', displayName: 'Mode', emoji: '👗', count: 3),          // Plus réaliste
-      const TagData(key: 'fitness', displayName: 'Fitness', emoji: '🏃', count: 7),    // Plus réaliste
+      const TagData(key: 'wellness', displayName: 'Wellness', emoji: '🌿', count: 7),
+      const TagData(key: 'beaute', displayName: 'Beauté', emoji: '💄', count: 7),
+      const TagData(key: 'art', displayName: 'Art', emoji: '🎨', count: 10),
+      const TagData(key: 'musique', displayName: 'Musique', emoji: '🎵', count: 10),
+      const TagData(key: 'cuisine', displayName: 'Cuisine', emoji: '👨‍🍳', count: 8),
+      const TagData(key: 'football', displayName: 'Football', emoji: '⚽', count: 5),
+      const TagData(key: 'basket', displayName: 'Basket', emoji: '🏀', count: 5),
+      const TagData(key: 'mode', displayName: 'Mode', emoji: '👗', count: 5),
+      const TagData(key: 'cinema', displayName: 'Cinéma', emoji: '🎬', count: 5),
+      const TagData(key: 'actualites', displayName: 'Actualités', emoji: '📰', count: 5),
+      const TagData(key: 'mangas', displayName: 'Mangas', emoji: '📚', count: 5),
+      const TagData(key: 'memes', displayName: 'Memes', emoji: '😂', count: 5),
+      const TagData(key: 'tech', displayName: 'Tech', emoji: '💻', count: 7),
     ];
   }
 
@@ -215,16 +258,19 @@ class TagsService {
   static List<String> _getFallbackTagNames() {
     return [
       'Tous',
-      'Yoga',
       'Wellness',
       'Beauté',
-      'DIY',
       'Art',
       'Musique',
       'Cuisine',
-      'Musculation',
+      'Football',
+      'Basket',
       'Mode',
-      'Fitness',
+      'Cinéma',
+      'Actualités',
+      'Mangas',
+      'Memes',
+      'Tech',
     ];
   }
 
