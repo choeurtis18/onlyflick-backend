@@ -175,6 +175,7 @@ class _RecommendedPostsSectionState extends State<RecommendedPostsSection> {
       'Memes': 'memes',       
       'Tech': 'tech',          
       'Yoga': 'yoga',
+      'DIY': 'diy',
       'Musculation': 'musculation',
       'Fitness': 'fitness',
     };
