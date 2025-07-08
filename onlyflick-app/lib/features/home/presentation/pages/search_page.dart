@@ -18,7 +18,8 @@ class SearchPage extends StatefulWidget {
   State<SearchPage> createState() => _SearchPageState();
 }
 
-class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
+class _SearchPageState extends State<SearchPage> 
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
@@ -35,12 +36,19 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
   bool _isLoadingTags = true;
   bool _hasTagsError = false;
 
+  // ✅ Variables pour le rafraîchissement
+  bool _needsRefresh = false;
+  String _currentKey = 'initial'; // Clé unique pour forcer le rebuild
+
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchTextChanged);
     _setupScrollListener();
     _loadAvailableTags(); // Charger les tags depuis l'API
+    
+    // ✅ Écouter les changements d'état de l'app
+    WidgetsBinding.instance.addObserver(this);
     
     // Animation pour l'arrière-plan
     _backgroundAnimationController = AnimationController(
@@ -56,6 +64,55 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
     ));
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _searchController.removeListener(_onSearchTextChanged);
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _scrollController.dispose();
+    _backgroundAnimationController.dispose();
+    super.dispose();
+  }
+
+  // ✅ Détection quand l'app revient au premier plan
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    if (state == AppLifecycleState.resumed && _needsRefresh) {
+      debugPrint('🔄 App resumed - Rafraîchissement automatique des données');
+      _refreshAllData();
+      _needsRefresh = false;
+    }
+  }
+
+  // ✅ Rafraîchissement complet des données
+  Future<void> _refreshAllData() async {
+    debugPrint('🔄 Rafraîchissement complet des données...');
+    
+    try {
+      // 1. Recharger les tags
+      await _loadAvailableTags();
+      
+      // 2. Forcer le rafraîchissement des posts en changeant la clé
+      setState(() {
+        _currentKey = 'refresh_${DateTime.now().millisecondsSinceEpoch}';
+      });
+      
+      debugPrint('✅ Rafraîchissement terminé avec nouvelle clé: $_currentKey');
+      
+    } catch (e) {
+      debugPrint('❌ Erreur lors du rafraîchissement: $e');
+    }
+  }
+
+  // ✅ Pull-to-refresh handler
+  Future<void> _onRefresh() async {
+    debugPrint('🔄 Pull-to-refresh déclenché');
+    await _refreshAllData();
+  }
+
   // Charge les tags disponibles depuis l'API
   Future<void> _loadAvailableTags() async {
     try {
@@ -64,7 +121,8 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
         _hasTagsError = false;
       });
 
-      final tags = await TagsService.getAvailableTags();
+      // ✅ Utiliser la nouvelle méthode avec rafraîchissement forcé
+      final tags = await TagsService.refreshTags();
       
       if (mounted) {
         setState(() {
@@ -82,14 +140,22 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
         setState(() {
           _isLoadingTags = false;
           _hasTagsError = true;
-          // Garder les tags par défaut en cas d'erreur
+          // ✅ Utiliser les bons tags par défaut en cas d'erreur
           _tags = [
             'Tous',
             'Art',
-            'Fitness',
+            'Musique',
+            'Tech',
             'Cuisine',
+            'Wellness',
+            'Beauté',
             'Mode',
-            'Musique'
+            'Football',
+            'Basketball',
+            'Cinéma',
+            'Actualités',
+            'Mangas',
+            'Memes',
           ];
         });
       }
@@ -129,22 +195,20 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
     }
   }
 
+  // ✅ Gestion du changement de tag avec rafraîchissement
   void _onTagSelected(String tag) async {
-    setState(() {
-      _selectedTag = tag;
-    });
+    if (_selectedTag != tag) {
+      setState(() {
+        _selectedTag = tag;
+        // Changer la clé pour forcer le refresh du RecommendedPostsSection
+        _currentKey = 'tag_${tag}_${DateTime.now().millisecondsSinceEpoch}';
+      });
 
-    final provider = context.read<SearchProvider>();
-    
-    // Convertir le nom d'affichage en clé backend
-    final tagKey = TagsService.getTagKey(tag);
-    
-    // Utiliser la clé backend pour la recherche
-    await provider.searchPosts(
-      tags: tagKey == 'tous' ? [] : [tagKey],
-    );
+      debugPrint('🏷️ Tag sélectionné: $tag (nouvelle clé: $_currentKey)');
 
-    debugPrint('Tag sélectionné: $tag -> clé backend: $tagKey');
+      // Le widget RecommendedPostsSection se rechargera automatiquement
+      // grâce à la nouvelle clé unique
+    }
   }
 
   void _hideSuggestions() {
@@ -183,20 +247,12 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
   }
 
   @override
-  void dispose() {
-    _searchController.removeListener(_onSearchTextChanged);
-    _searchController.dispose();
-    _searchFocusNode.dispose();
-    _scrollController.dispose();
-    _backgroundAnimationController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
+      appBar: _buildAppBar(), // ✅ AppBar avec bouton refresh
+      body: RefreshIndicator(
+        onRefresh: _onRefresh, // ✅ Pull-to-refresh
         child: Stack(
           children: [
             // Contenu principal avec animation d'opacité
@@ -207,22 +263,30 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
                   opacity: _backgroundAnimation.value,
                   child: AbsorbPointer(
                     absorbing: _showSuggestions,
-                    child: Column(
-                      children: [
-                        // ✅ BARRE DE RECHERCHE avec espacement amélioré
-                        _buildSearchSection(),
-                        
-                        // ✅ ESPACEMENT entre recherche et tags
-                        const SizedBox(height: 32),
-                        
-                        // ✅ TAGS avec espacement amélioré
-                        _buildTagsSection(),
-                        
-                        // ✅ ESPACEMENT entre tags et contenu
-                        const SizedBox(height: 40),
-                        
-                        // ✅ CONTENU PRINCIPAL
-                        Expanded(child: _buildContent()),
+                    child: CustomScrollView(
+                      controller: _scrollController,
+                      slivers: [
+                        // Contenu principal
+                        SliverToBoxAdapter(
+                          child: Column(
+                            children: [
+                              // ✅ BARRE DE RECHERCHE
+                              _buildSearchSection(),
+                              
+                              // ✅ ESPACEMENT entre recherche et tags
+                              const SizedBox(height: 24),
+                              
+                              // ✅ TAGS avec espacement amélioré
+                              _buildTagsSection(),
+                              
+                              // ✅ ESPACEMENT entre tags et contenu
+                              const SizedBox(height: 32),
+                              
+                              // ✅ CONTENU PRINCIPAL avec clé unique
+                              _buildContent(),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -233,7 +297,7 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
             // Overlay des suggestions
             if (_showSuggestions) ...[
               Positioned(
-                top: 80,
+                top: 0,
                 left: 0,
                 right: 0,
                 bottom: 0,
@@ -256,9 +320,41 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
     );
   }
 
+  // ✅ AppBar avec bouton de rafraîchissement
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      automaticallyImplyLeading: false,
+      title: Text(
+        'Recherche',
+        style: GoogleFonts.inter(
+          fontSize: 22,
+          fontWeight: FontWeight.w600,
+          color: Colors.black87,
+        ),
+      ),
+      actions: [
+        IconButton(
+          icon: Icon(
+            Icons.refresh_rounded,
+            color: Colors.grey[600],
+            size: 24,
+          ),
+          onPressed: () {
+            debugPrint('🔄 Rafraîchissement manuel déclenché');
+            _refreshAllData();
+          },
+          tooltip: 'Actualiser',
+        ),
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+
   Widget _buildSearchSection() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0), // ✅ Plus d'espace en haut
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: TextField(
         controller: _searchController,
         focusNode: _searchFocusNode,
@@ -278,9 +374,9 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
           prefixIcon: Container(
             padding: const EdgeInsets.all(12),
             child: Icon(
-              Icons.search, 
+              Icons.search_rounded, 
               color: Colors.grey[600],
-              size: 24,
+              size: 22,
             ),
           ),
           suffixIcon: _searchController.text.isNotEmpty
@@ -288,7 +384,7 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
                   padding: const EdgeInsets.all(4),
                   child: IconButton(
                     icon: Icon(
-                      Icons.clear, 
+                      Icons.clear_rounded, 
                       color: Colors.grey[600],
                       size: 20,
                     ),
@@ -297,14 +393,14 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
                 )
               : null,
           filled: true,
-          fillColor: Colors.grey[50], // ✅ Couleur plus douce
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18), // ✅ Plus de padding
+          fillColor: Colors.grey[50],
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16), // ✅ Plus arrondi
+            borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide(
               color: Colors.grey[300]!,
               width: 1.5,
@@ -319,7 +415,7 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
     // Section des tags avec gestion du chargement
     if (_isLoadingTags && _tags.length == 1) {
       return Container(
-        height: 50, // ✅ Hauteur fixe pour consistance
+        height: 50,
         child: const Center(
           child: SizedBox(
             width: 20,
@@ -338,7 +434,7 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
         // Afficher les tags même pendant le chargement si on a plus que "Tous"
         if (_tags.length > 1)
           Container(
-            height: 50, // ✅ Hauteur fixe pour les tags
+            height: 50,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
@@ -349,7 +445,7 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
                 
                 return Container(
                   margin: EdgeInsets.only(
-                    right: index == _tags.length - 1 ? 0 : 12, // ✅ Espacement entre tags
+                    right: index == _tags.length - 1 ? 0 : 12,
                   ),
                   child: FilterChip(
                     label: Text(
@@ -367,18 +463,18 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
                       }
                     },
                     backgroundColor: Colors.grey[100],
-                    selectedColor: Colors.black,
+                    selectedColor: Colors.black87,
                     checkmarkColor: Colors.white,
                     elevation: 0,
                     pressElevation: 2,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20), // ✅ Plus arrondi
+                      borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
-                        color: isSelected ? Colors.black : Colors.grey[200]!,
+                        color: isSelected ? Colors.black87 : Colors.grey[200]!,
                         width: 1,
                       ),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // ✅ Plus de padding
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
                 );
               },
@@ -388,11 +484,11 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
         // Message d'erreur pour les tags
         if (_hasTagsError)
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.warning, size: 16, color: Colors.orange[600]),
+                Icon(Icons.warning_rounded, size: 16, color: Colors.orange[600]),
                 const SizedBox(width: 8),
                 Text(
                   'Erreur de chargement des catégories',
@@ -420,27 +516,25 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
     );
   }
 
-  // Contenu principal : afficher les posts recommandés avec le tag sélectionné
+  // ✅ Contenu principal avec clé unique pour forcer le rebuild
   Widget _buildContent() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16), // ✅ Padding horizontal consistant
-      child: SingleChildScrollView(
-        controller: _scrollController,
-        child: RecommendedPostsSection(
-          selectedTag: _selectedTag,
-        ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: RecommendedPostsSection(
+        key: ValueKey(_currentKey), // ✅ Clé unique qui change lors du refresh
+        selectedTag: _selectedTag,
       ),
     );
   }
 
-  // 🔥 NOUVELLE MÉTHODE : Navigation réelle vers le profil public avec abonnement
+  // Navigation réelle vers le profil public avec abonnement
   void _navigateToUserProfile(UserSearchResult user, SearchProvider provider) {
     // Enregistrer l'interaction de vue de profil
     provider.trackProfileView(user);
     
     debugPrint('🔗 Navigation vers le profil de ${user.username} (ID: ${user.id})');
     
-    // 🎯 NAVIGATION VERS LE PROFIL PUBLIC AVEC SYSTÈME D'ABONNEMENT
+    // Navigation vers le profil public avec système d'abonnement
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => PublicProfilePage(
@@ -452,7 +546,7 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
   }
 }
 
-// Widget pour les suggestions vides (si vous ne l'avez pas déjà)
+// ✅ Widget pour les suggestions vides (amélioré)
 class NoResultsSuggestionWidget extends StatelessWidget {
   final String query;
   final VoidCallback onDismiss;
@@ -471,11 +565,11 @@ class NoResultsSuggestionWidget extends StatelessWidget {
         color: Colors.black54,
         child: Center(
           child: Container(
-            margin: const EdgeInsets.all(24), // ✅ Plus de marge
-            padding: const EdgeInsets.all(32), // ✅ Plus de padding
+            margin: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20), // ✅ Plus arrondi
+              borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
@@ -494,12 +588,12 @@ class NoResultsSuggestionWidget extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.search_off,
+                    Icons.search_off_rounded,
                     size: 48,
                     color: Colors.grey[400],
                   ),
                 ),
-                const SizedBox(height: 24), // ✅ Plus d'espace
+                const SizedBox(height: 24),
                 Text(
                   'Aucun résultat pour "$query"',
                   style: GoogleFonts.inter(
@@ -509,7 +603,7 @@ class NoResultsSuggestionWidget extends StatelessWidget {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12), // ✅ Plus d'espace
+                const SizedBox(height: 12),
                 Text(
                   'Essayez avec un autre terme de recherche',
                   style: GoogleFonts.inter(
@@ -518,6 +612,18 @@ class NoResultsSuggestionWidget extends StatelessWidget {
                     fontWeight: FontWeight.w400,
                   ),
                   textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: onDismiss,
+                  child: Text(
+                    'Fermer',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Colors.blue[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               ],
             ),
