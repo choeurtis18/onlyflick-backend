@@ -511,7 +511,7 @@ func ListPostsRecommendedForUserWithTags(userID int64, tags []string, limit, off
 	return getRecommendedPostsWithTags(userID, tags, limit, offset)
 }
 
-// getRecommendedPostsWithoutTags - VERSION CORRIGÉE avec nettoyage des prepared statements
+// getRecommendedPostsWithoutTags - VERSION CORRIGÉE avec avatar
 func getRecommendedPostsWithoutTags(userID int64, limit, offset int) ([]interface{}, int, error) {
 	log.Printf("[PostRepo] Recommandations sans filtrage tags pour user %d", userID)
 
@@ -521,6 +521,7 @@ func getRecommendedPostsWithoutTags(userID int64, limit, offset int) ([]interfac
 		log.Printf("[PostRepo][WARN] Impossible de nettoyer les prepared statements: %v", err)
 	}
 
+	// 🔥 CORRECTION : Ajouter author_avatar dans le SELECT
 	query := `
 		SELECT 
 			p.id,
@@ -531,6 +532,7 @@ func getRecommendedPostsWithoutTags(userID int64, limit, offset int) ([]interfac
 			p.created_at,
 			p.user_id AS author_id,
 			COALESCE(u.username, CONCAT(u.first_name, ' ', u.last_name)) as author_name,
+			COALESCE(u.avatar_url, '') as author_avatar,
 			COALESCE(COUNT(DISTINCT l.user_id), 0) as likes_count,
 			COALESCE(COUNT(DISTINCT c.id), 0) as comments_count,
 			ARRAY_AGG(DISTINCT pt.category) FILTER (WHERE pt.category IS NOT NULL) as tags
@@ -540,15 +542,14 @@ func getRecommendedPostsWithoutTags(userID int64, limit, offset int) ([]interfac
 		LEFT JOIN comments c ON p.id = c.post_id
 		LEFT JOIN post_tags pt ON p.id = pt.post_id
 		WHERE p.visibility = 'public'
-			AND p.user_id != $1
-		GROUP BY p.id, u.id
+		GROUP BY p.id, u.id, u.username, u.first_name, u.last_name, u.avatar_url
 		ORDER BY 
 			COUNT(DISTINCT l.user_id) * 2 + COUNT(DISTINCT c.id) * 3 DESC,
 			p.created_at DESC
-		LIMIT $2 OFFSET $3
+		LIMIT $1 OFFSET $2
 	`
 
-	args := []interface{}{userID, limit, offset}
+	args := []interface{}{limit, offset}
 
 	// Préparer explicitement la requête
 	stmt, err := database.DB.Prepare(query)
@@ -571,8 +572,8 @@ func getRecommendedPostsWithoutTags(userID int64, limit, offset int) ([]interfac
 		return nil, 0, err
 	}
 
-	// Compter le total
-	total, err := countRecommendedPostsWithoutTags(userID)
+	// Compter le total (sans exclure utilisateur)
+	total, err := countRecommendedPostsWithoutTags(0) // 0 = ne pas exclure
 	if err != nil {
 		log.Printf("[PostRepo][WARN] Erreur count total : %v", err)
 		total = len(posts)
@@ -581,8 +582,7 @@ func getRecommendedPostsWithoutTags(userID int64, limit, offset int) ([]interfac
 	log.Printf("[PostRepo] ✅ %d posts recommandés trouvés (total: %d)", len(posts), total)
 	return posts, total, nil
 }
-
-// getRecommendedPostsWithTags - VERSION CORRIGÉE avec même approche
+// getRecommendedPostsWithTags - AVEC AVATAR
 func getRecommendedPostsWithTags(userID int64, tags []string, limit, offset int) ([]interface{}, int, error) {
 	log.Printf("[PostRepo] Recommandations avec filtrage tags: %v pour user %d", tags, userID)
 
@@ -601,14 +601,13 @@ func getRecommendedPostsWithTags(userID int64, tags []string, limit, offset int)
 	var args []interface{}
 	var tagPlaceholders []string
 
-	args = append(args, userID)
 	for i, tag := range tags {
 		args = append(args, tag)
-		tagPlaceholders = append(tagPlaceholders, fmt.Sprintf("$%d", i+2))
+		tagPlaceholders = append(tagPlaceholders, fmt.Sprintf("$%d", i+1))
 	}
 	args = append(args, limit, offset)
-	limitPos := len(tags) + 2
-	offsetPos := len(tags) + 3
+	limitPos := len(tags) + 1
+	offsetPos := len(tags) + 2
 
 	query := fmt.Sprintf(`
 		SELECT 
@@ -620,6 +619,7 @@ func getRecommendedPostsWithTags(userID int64, tags []string, limit, offset int)
 			p.created_at,
 			p.user_id AS author_id,
 			COALESCE(u.username, CONCAT(u.first_name, ' ', u.last_name)) as author_name,
+			COALESCE(u.avatar_url, '') as author_avatar,
 			COALESCE(COUNT(DISTINCT l.user_id), 0) as likes_count,
 			COALESCE(COUNT(DISTINCT c.id), 0) as comments_count,
 			ARRAY_AGG(DISTINCT pt.category) FILTER (WHERE pt.category IS NOT NULL) as tags
@@ -629,9 +629,8 @@ func getRecommendedPostsWithTags(userID int64, tags []string, limit, offset int)
 		LEFT JOIN likes l ON p.id = l.post_id
 		LEFT JOIN comments c ON p.id = c.post_id
 		WHERE p.visibility = 'public'
-			AND p.user_id != $1
 			AND pt.category IN (%s)
-		GROUP BY p.id, u.id
+		GROUP BY p.id, u.id, u.username, u.first_name, u.last_name, u.avatar_url
 		ORDER BY 
 			COUNT(DISTINCT l.user_id) * 2 + COUNT(DISTINCT c.id) * 3 DESC,
 			p.created_at DESC
@@ -660,7 +659,7 @@ func getRecommendedPostsWithTags(userID int64, tags []string, limit, offset int)
 	}
 
 	// Compter le total avec la même logique
-	total, err := countRecommendedPostsWithTags(userID, tags)
+	total, err := countRecommendedPostsWithTags(0, tags) // 0 = ne pas exclure
 	if err != nil {
 		log.Printf("[PostRepo][WARN] Erreur count total avec tags : %v", err)
 		total = len(posts)
@@ -726,7 +725,7 @@ func countRecommendedPostsWithTags(userID int64, tags []string) (int, error) {
 	return total, nil
 }
 
-// scanPostsResults - fonction utilitaire pour scanner les résultats
+// scanPostsResults - fonction utilitaire pour scanner les résultats avec mapping frontend
 func scanPostsResults(rows *sql.Rows) ([]interface{}, error) {
 	var posts []interface{}
 
@@ -739,7 +738,8 @@ func scanPostsResults(rows *sql.Rows) ([]interface{}, error) {
 			Visibility    string    `json:"visibility"`
 			CreatedAt     time.Time `json:"created_at"`
 			AuthorID      int64     `json:"author_id"`
-			AuthorName    string    `json:"author_name"`
+			AuthorName    string    `json:"author_username"`    // 🔥 MAPPING FRONTEND
+			AuthorAvatar  string    `json:"author_avatar_url"`  // 🔥 MAPPING FRONTEND
 			LikesCount    int64     `json:"likes_count"`
 			CommentsCount int64     `json:"comments_count"`
 			Tags          []string  `json:"tags"`
@@ -756,6 +756,7 @@ func scanPostsResults(rows *sql.Rows) ([]interface{}, error) {
 			&post.CreatedAt,
 			&post.AuthorID,
 			&post.AuthorName,
+			&post.AuthorAvatar,
 			&post.LikesCount,
 			&post.CommentsCount,
 			&tagsArray,
@@ -771,6 +772,10 @@ func scanPostsResults(rows *sql.Rows) ([]interface{}, error) {
 			tagsStr := strings.Trim(tagsArray.String, "{}")
 			if tagsStr != "" {
 				post.Tags = strings.Split(tagsStr, ",")
+				// Nettoyer chaque tag individuellement
+				for i, tag := range post.Tags {
+					post.Tags[i] = strings.TrimSpace(tag)
+				}
 			}
 		}
 
