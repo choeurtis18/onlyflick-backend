@@ -6,6 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/models/post_models.dart';
 import '../../../../core/providers/posts_providers.dart';
 import '../../../../core/services/posts_service.dart';
+import '../../../../core/models/report_models.dart'; // ✅ AJOUT
+import '../../../home/presentation/widgets/report_dialog.dart'; // ✅ AJOUT
 import '../pages/public_profile_page.dart';
 
 /// Page de détail d'un post avec design moderne (style TikTok/Instagram)
@@ -202,6 +204,54 @@ class _PostDetailPageState extends State<PostDetailPage>
         ),
       ),
     );
+  }
+
+  /// 🚩 SIGNALEMENT DU POST - NOUVELLE IMPLÉMENTATION
+  void _showReportDialog() {
+    if (_post == null) return;
+    
+    // Construire le titre pour l'aperçu
+    String contentPreview = _post!.title.isNotEmpty 
+        ? _post!.title 
+        : _post!.description.isNotEmpty 
+            ? _post!.description 
+            : 'Post de ${_post!.authorDisplayName}';
+    
+    // Limiter la longueur de l'aperçu
+    if (contentPreview.length > 60) {
+      contentPreview = '${contentPreview.substring(0, 60)}...';
+    }
+
+    ReportDialog.show(
+      context,
+      contentType: ContentType.post,
+      contentId: _post!.id,
+      contentTitle: contentPreview,
+    ).then((result) {
+      if (result == true) {
+        debugPrint('✅ Post ${_post!.id} signalé avec succès');
+      }
+    });
+  }
+
+  /// 🚩 SIGNALEMENT DE COMMENTAIRE - NOUVELLE IMPLÉMENTATION
+  void _showReportCommentDialog(Comment comment) {
+    // Construire l'aperçu du commentaire
+    String contentPreview = comment.content;
+    if (contentPreview.length > 60) {
+      contentPreview = '${contentPreview.substring(0, 60)}...';
+    }
+
+    ReportDialog.show(
+      context,
+      contentType: ContentType.comment,
+      contentId: comment.id,
+      contentTitle: contentPreview,
+    ).then((result) {
+      if (result == true) {
+        debugPrint('✅ Comment ${comment.id} signalé avec succès');
+      }
+    });
   }
 
   /// 📱 SNACKBAR
@@ -928,7 +978,7 @@ class _PostDetailPageState extends State<PostDetailPage>
     );
   }
 
-  /// 💬 ITEM COMMENTAIRE
+  /// 💬 ITEM COMMENTAIRE AVEC SIGNALEMENT
   Widget _buildCommentItem(Comment comment) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -950,25 +1000,71 @@ class _PostDetailPageState extends State<PostDetailPage>
               children: [
                 Row(
                   children: [
-                    GestureDetector(
-                      onTap: () => _navigateToUserProfile(comment.userId, comment.authorUsername),
-                      child: Text(
-                        comment.authorDisplayName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: Colors.black,
-                        ),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () => _navigateToUserProfile(comment.userId, comment.authorUsername),
+                            child: Text(
+                              comment.authorDisplayName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            comment.timeAgo,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[500],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      comment.timeAgo,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                        fontWeight: FontWeight.w500,
+                    // Menu pour signaler le commentaire
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_horiz,
+                        size: 18,
+                        color: Colors.grey[400],
                       ),
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'profile':
+                            _navigateToUserProfile(comment.userId, comment.authorUsername);
+                            break;
+                          case 'report':
+                            _showReportCommentDialog(comment);
+                            break;
+                        }
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        PopupMenuItem<String>(
+                          value: 'profile',
+                          child: Row(
+                            children: [
+                              Icon(Icons.person, size: 16, color: Colors.grey[700]),
+                              const SizedBox(width: 8),
+                              const Text('Voir le profil'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'report',
+                          child: Row(
+                            children: [
+                              Icon(Icons.flag, size: 16, color: Colors.red[400]),
+                              const SizedBox(width: 8),
+                              Text('Signaler', style: TextStyle(color: Colors.red[400])),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1085,39 +1181,96 @@ class _PostDetailPageState extends State<PostDetailPage>
     );
   }
 
-  /// 🔧 UTILITAIRES
+  /// 🔧 MENU D'OPTIONS - MISE À JOUR AVEC SIGNALEMENT
   void _showOptionsMenu() {
     showModalBottomSheet(
       context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => Container(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Handle
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Titre
+            Text(
+              'Options',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Voir le profil
             ListTile(
-              leading: const Icon(Icons.person),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.person, color: Colors.blue),
+              ),
               title: const Text('Voir le profil'),
+              subtitle: Text('Profil de ${_post!.authorDisplayName}'),
               onTap: () {
                 Navigator.pop(context);
                 _navigateToUserProfile(_post!.userId, _post!.authorUsername);
               },
             ),
+            
+            // Partager
             ListTile(
-              leading: const Icon(Icons.share),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.share, color: Colors.green),
+              ),
               title: const Text('Partager'),
+              subtitle: const Text('Partager ce post'),
               onTap: () {
                 Navigator.pop(context);
                 _showSnackBar('Fonctionnalité de partage à venir !');
               },
             ),
+            
+            // Signaler - NOUVEAU SYSTÈME
             ListTile(
-              leading: const Icon(Icons.flag, color: Colors.red),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.flag, color: Colors.red),
+              ),
               title: const Text('Signaler', style: TextStyle(color: Colors.red)),
+              subtitle: const Text('Signaler ce contenu'),
               onTap: () {
                 Navigator.pop(context);
-                _showSnackBar('Post signalé');
+                _showReportDialog(); // ✅ NOUVEAU SYSTÈME
               },
             ),
+            
+            // Espace en bas
+            const SizedBox(height: 10),
           ],
         ),
       ),

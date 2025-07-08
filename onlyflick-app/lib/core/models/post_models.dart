@@ -216,6 +216,66 @@ class Post {
   int get hashCode => id.hashCode;
 }
 
+/// ===== CLASSE POUR LA CRÉATION D'UN POST =====
+
+/// Modèle pour créer un nouveau post (envoi au backend)
+class CreatePostRequest {
+  final String title;
+  final String description;
+  final File? imageFile;
+  final String visibility;
+  final List<String> tags; // ✅ Ajout des tags
+
+  const CreatePostRequest({
+    required this.title,
+    required this.description,
+    this.imageFile,
+    required this.visibility,
+    this.tags = const [], // ✅ Tags par défaut vide
+  });
+
+  /// Convertit en JSON pour l'envoi au backend
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'description': description,
+      'visibility': visibility,
+      'tags': tags, // ✅ Inclure les tags
+    };
+  }
+
+  /// Validation des données avant envoi
+  bool get isValid {
+    return title.trim().isNotEmpty && 
+           description.trim().isNotEmpty && 
+           imageFile != null &&
+           ['public', 'subscriber'].contains(visibility);
+  }
+
+  /// Messages d'erreur de validation
+  List<String> get validationErrors {
+    List<String> errors = [];
+    
+    if (title.trim().isEmpty) {
+      errors.add('Le titre est requis');
+    }
+    if (description.trim().isEmpty) {
+      errors.add('La description est requise');
+    }
+    if (imageFile == null) {
+      errors.add('Une image est requise');
+    }
+    if (!['public', 'subscriber'].contains(visibility)) {
+      errors.add('Visibilité invalide');
+    }
+    
+    return errors;
+  }
+
+  @override
+  String toString() => 'CreatePostRequest(title: $title, tags: $tags, visibility: $visibility)';
+}
+
 /// Modèle pour un commentaire avec informations utilisateur
 class Comment {
   final int id;

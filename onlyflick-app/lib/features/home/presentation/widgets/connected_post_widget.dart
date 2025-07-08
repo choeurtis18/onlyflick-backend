@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../../../../core/providers/posts_providers.dart';
 import '../../../../../core/services/posts_service.dart';
 import '../../../../core/models/post_models.dart' as models;
+import '../../../../core/models/report_models.dart'; 
+import '../widgets/report_dialog.dart';
 import '../pages/public_profile_page.dart';
 import '../../../auth/auth_provider.dart';
 
@@ -233,8 +235,6 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
                         ),
                       ),
                       
-
-                      
                       // Badge Premium
                       if (widget.post.visibility == 'subscriber') ...[
                         const SizedBox(width: 6),
@@ -284,7 +284,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
                   _sharePost();
                   break;
                 case 'report':
-                  _showReportDialog();
+                  _showReportDialog(); 
                   break;
               }
             },
@@ -324,6 +324,57 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
         ],
       ),
     );
+  }
+
+  /// 🚩 SIGNALEMENT DU POST - MÉTHODE CORRIGÉE
+  void _showReportDialog() {
+    // Construire le titre pour l'aperçu
+    String contentPreview = widget.post.title.isNotEmpty 
+        ? widget.post.title 
+        : widget.post.description.isNotEmpty 
+            ? widget.post.description 
+            : 'Post de ${widget.post.authorDisplayName}';
+    
+    // Limiter la longueur de l'aperçu
+    if (contentPreview.length > 60) {
+      contentPreview = '${contentPreview.substring(0, 60)}...';
+    }
+
+    ReportDialog.show(
+      context,
+      contentType: ContentType.post,
+      contentId: widget.post.id,
+      contentTitle: contentPreview,
+    ).then((result) {
+      // Optionnel : actions après signalement
+      if (result == true) {
+        // Le signalement a été effectué avec succès
+        debugPrint('✅ Post ${widget.post.id} signalé avec succès');
+      }
+    });
+  }
+
+  /// 🚩 SIGNALEMENT DE COMMENTAIRE - MÉTHODE CORRIGÉE
+  void _showReportCommentDialog(models.Comment comment) {
+    // Construire l'aperçu du commentaire
+    String contentPreview = comment.content;
+    if (contentPreview.length > 60) {
+      contentPreview = '${contentPreview.substring(0, 60)}...';
+    }
+
+    // ✅ UTILISATION CORRECTE DE LA MÉTHODE STATIQUE
+    ReportDialog.show(
+      context,
+      contentType: ContentType.comment,
+      contentId: comment.id,
+      contentTitle: contentPreview,
+    ).then((result) {
+      // Optionnel : actions après signalement
+      if (result == true) {
+        // Le signalement a été effectué avec succès
+        debugPrint('✅ Comment ${comment.id} signalé avec succès');
+      }
+    });
   }
 
   /// 🖼️ IMAGE AVEC DOUBLE TAP LIKE
@@ -658,16 +709,16 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
   Widget _buildCleanAddCommentSection() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Consumer<AuthProvider>(  // ← Ajout du Consumer pour accéder à l'utilisateur connecté
+      child: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
           final currentUser = authProvider.user;
           
           return Row(
             children: [
               CircleAvatar(
-                backgroundImage: currentUser != null && currentUser.avatarUrl.isNotEmpty  // ← Utiliser l'avatarUrl de l'utilisateur connecté
+                backgroundImage: currentUser != null && currentUser.avatarUrl.isNotEmpty
                     ? NetworkImage(currentUser.avatarUrl)
-                    : const NetworkImage('https://i.pravatar.cc/150?img=1'), // Avatar par défaut
+                    : const NetworkImage('https://i.pravatar.cc/150?img=1'),
                 radius: 14,
               ),
               const SizedBox(width: 12),
@@ -743,38 +794,6 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
-  /// 🚩 SIGNALEMENT DU POST
-  void _showReportDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Signaler ce post'),
-        content: const Text('Voulez-vous signaler ce contenu comme inapproprié ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Post signalé avec succès'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            child: Text(
-              'Signaler',
-              style: TextStyle(color: Colors.red[600]),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   /// 💬 MODAL COMMENTAIRES COMPLETS - REDESIGN MODERNE
   void _showCommentsModal(BuildContext context, List<models.Comment> comments) {
     showModalBottomSheet(
@@ -800,12 +819,11 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
           ),
           child: Column(
             children: [
-              // ===== HANDLE & HEADER MODERNE =====
+              // Header avec handle
               Container(
                 padding: const EdgeInsets.only(top: 12, bottom: 8),
                 child: Column(
                   children: [
-                    // Handle bar
                     Container(
                       width: 40,
                       height: 5,
@@ -815,13 +833,10 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
                       ),
                     ),
                     const SizedBox(height: 16),
-                    
-                    // Header avec stats
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Row(
                         children: [
-                          // Icône commentaires
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
@@ -835,8 +850,6 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
                             ),
                           ),
                           const SizedBox(width: 12),
-                          
-                          // Titre et compteur
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -860,8 +873,6 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
                               ],
                             ),
                           ),
-                          
-                          // Bouton fermer
                           GestureDetector(
                             onTap: () => Navigator.of(context).pop(),
                             child: Container(
@@ -884,7 +895,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
                 ),
               ),
               
-              // Divider subtil
+              // Divider
               Container(
                 height: 1,
                 margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -899,7 +910,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
                 ),
               ),
               
-              // ===== LISTE DES COMMENTAIRES =====
+              // Liste des commentaires
               Expanded(
                 child: comments.isEmpty
                     ? _buildEmptyCommentsState()
@@ -914,7 +925,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
                       ),
               ),
               
-              // ===== ZONE DE SAISIE MODERNE =====
+              // Zone de saisie
               _buildModernCommentInput(),
             ],
           ),
@@ -1394,128 +1405,6 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
             );
           },
         ),
-      ),
-    );
-  }
-
-  /// 🚩 DIALOG DE SIGNALEMENT DE COMMENTAIRE
-  void _showReportCommentDialog(models.Comment comment) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Text('Signaler ce commentaire'),
-        content: Text('Voulez-vous signaler le commentaire de ${comment.authorUsername.isNotEmpty ? comment.authorUsername : comment.authorDisplayName} ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Commentaire signalé avec succès'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            child: Text(
-              'Signaler',
-              style: TextStyle(color: Colors.red[600]),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 💬 ITEM COMMENTAIRE DANS LA MODAL
-  Widget _buildModalCommentItem(models.Comment comment) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => PublicProfilePage(
-                    userId: comment.userId,
-                    username: comment.authorUsername.isNotEmpty 
-                        ? comment.authorUsername 
-                        : 'user${comment.userId}',
-                  ),
-                ),
-              );
-            },
-            child: CircleAvatar(
-              backgroundImage: NetworkImage(
-                comment.authorAvatarFallback,
-              ),
-              radius: 16,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    children: [
-                      WidgetSpan(
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => PublicProfilePage(
-                                  userId: comment.userId,
-                                  username: comment.authorUsername.isNotEmpty 
-                                      ? comment.authorUsername 
-                                      : 'user${comment.userId}',
-                                ),
-                              ),
-                            );
-                          },
-                          child: Text(
-                            comment.authorUsername.isNotEmpty 
-                                ? comment.authorUsername 
-                                : comment.authorDisplayName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                      TextSpan(
-                        text: comment.content,
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  comment.timeAgo,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -22,7 +22,7 @@ dependencies:
   cached_network_image: ^3.2.3
   web_socket_channel: ^2.4.0
   flutter_stripe: ^10.1.1
-
+  json_annotation: ^4.8.1
 
   flutter_localizations:
     sdk: flutter
@@ -34,6 +34,7 @@ dev_dependencies:
     sdk: flutter
   mockito: ^5.4.4
   build_runner: any
+  json_serializable: ^6.7.1
 
 flutter:
   uses-material-design: true
