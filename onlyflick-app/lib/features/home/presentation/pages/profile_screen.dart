@@ -83,12 +83,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                     if (userIsCreator) const _ProfileTabs(),
                     const SizedBox(height: 8),
                     Expanded(
-                      child: TabBarView(
-                        children: [
-                          _buildGrid(type: 'normal', profileProvider: profileProvider),
-                          if (userIsCreator) _buildGrid(type: 'shop', profileProvider: profileProvider),
-                        ],
-                      ),
+                      child: userIsCreator 
+                        ? TabBarView(
+                            children: [
+                              _buildGrid(type: 'normal', profileProvider: profileProvider, userIsCreator: userIsCreator),
+                              _buildGrid(type: 'shop', profileProvider: profileProvider, userIsCreator: userIsCreator),
+                            ],
+                          )
+                        : _buildGrid(type: 'normal', profileProvider: profileProvider, userIsCreator: userIsCreator),
                     ),
                   ],
                 ),
@@ -364,8 +366,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // 🔥 GRILLE AMÉLIORÉE : Meilleure gestion des états avec le flag isInitialized
-  Widget _buildGrid({required String type, required ProfileProvider profileProvider}) {
+  // 🔥 GRILLE AMÉLIORÉE : Gestion différenciée pour créateurs et abonnés
+  Widget _buildGrid({required String type, required ProfileProvider profileProvider, required bool userIsCreator}) {
     // 🔥 État de chargement
     if (profileProvider.isLoadingPosts) {
       return const Center(
@@ -380,26 +382,32 @@ class _ProfileScreenState extends State<ProfileScreen>
       );
     }
 
-    // 🔥 Gestion d'erreur avec bouton de retry
+    // 🔥 GESTION D'ERREUR DIFFÉRENCIÉE PAR RÔLE
     if (profileProvider.error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error, size: 64, color: Colors.red[400]),
-            const SizedBox(height: 16),
-            Text('Erreur: ${profileProvider.error}'),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                debugPrint('🔄 [ProfileScreen] Retry button pressed');
-                profileProvider.loadUserPosts(refresh: true);
-              },
-              child: const Text('Réessayer'),
-            ),
-          ],
-        ),
-      );
+      // Pour les créateurs : afficher l'erreur avec possibilité de retry
+      if (userIsCreator) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error, size: 64, color: Colors.red[400]),
+              const SizedBox(height: 16),
+              Text('Erreur: ${profileProvider.error}'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  debugPrint('🔄 [ProfileScreen] Retry button pressed');
+                  profileProvider.loadUserPosts(refresh: true);
+                },
+                child: const Text('Réessayer'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        // Pour les abonnés : état vide élégant au lieu d'une erreur
+        return _buildSubscriberEmptyState();
+      }
     }
 
     // Filtrer les posts selon le type d'onglet
@@ -410,9 +418,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           .toList();
     }
 
-    // 🔥 État vide avec vérification d'initialisation
+    // 🔥 ÉTAT VIDE DIFFÉRENCIÉ PAR RÔLE
     if (filteredPosts.isEmpty) {
-      // 🔥 NOUVEAU : Vérifier si on est encore en train d'initialiser
+      // 🔥 Vérifier si on est encore en train d'initialiser
       if (!profileProvider.isInitialized) {
         return const Center(
           child: Column(
@@ -426,6 +434,12 @@ class _ProfileScreenState extends State<ProfileScreen>
         );
       }
       
+      // 🔥 ÉTAT VIDE POUR ABONNÉS (subscribers)
+      if (!userIsCreator) {
+        return _buildSubscriberEmptyState();
+      }
+      
+      // 🔥 ÉTAT VIDE POUR CRÉATEURS
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -457,12 +471,13 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
+            ElevatedButton.icon(
               onPressed: () {
-                debugPrint('🔄 [ProfileScreen] Refresh button pressed');
-                profileProvider.loadUserPosts(refresh: true);
+                // Navigation vers création de post pour les créateurs
+                context.pushNamed('createPost');
               },
-              child: const Text('🔄 Actualiser'),
+              icon: const Icon(Icons.add),
+              label: const Text('Créer un post'),
             ),
           ],
         ),
@@ -489,6 +504,110 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+ // 🔥 NOUVEL ÉTAT VIDE ÉLÉGANT POUR LES ABONNÉS (avec scroll)
+  Widget _buildSubscriberEmptyState() {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Container(
+        constraints: BoxConstraints(
+          minHeight: MediaQuery.of(context).size.height * 0.5,
+        ),
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Icône
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.blue.withOpacity(0.1),
+              ),
+              child: Icon(
+                Icons.explore_outlined,
+                size: 48,
+                color: Colors.blue[400],
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Titre
+            Text(
+              'Découvrez du contenu incroyable !',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Description
+            Text(
+              'En tant qu\'abonné, explorez le contenu des créateurs, likez et commentez leurs posts.',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Boutons Call-to-Action
+            Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      // Navigation vers la page de recherche
+                      context.pushNamed('search');
+                    },
+                    icon: const Icon(Icons.search),
+                    label: const Text('Rechercher du contenu'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 12),
+                
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      // Navigation vers l'accueil/découverte
+                      context.pushNamed('main');
+                    },
+                    icon: const Icon(Icons.home),
+                    label: const Text('Retour à l\'accueil'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            
+            // Espace supplémentaire pour éviter le débordement
+            SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 20),
+          ],
+        ),
+      ),
+    );
+  }
   Widget _buildPostThumbnail(dynamic post) {
     return Stack(
       children: [
@@ -827,7 +946,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
               onTap: () {
                 Navigator.of(context).pop();
-                context.pushNamed('websocketTest');  // ✅ Navigation avec GoRouter
+                context.pushNamed('websocketTest');  
               },
             ),
             
@@ -856,17 +975,215 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Future<void> _handleCreatorUpgrade(ProfileProvider profileProvider) async {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Fonctionnalité en cours de développement'),
-          backgroundColor: Colors.orange,
+    // 🔥 NOUVELLE IMPLÉMENTATION : Dialog de confirmation + API call
+    
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('✨ Devenir créateur'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Vous souhaitez devenir créateur sur OnlyFlick ?',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 12),
+            Text('En tant que créateur, vous pourrez :'),
+            SizedBox(height: 8),
+            Text('• Publier du contenu exclusif'),
+            Text('• Recevoir des abonnements payants'),
+            Text('• Gagner de l\'argent avec votre contenu'),
+            Text('• Accéder aux statistiques avancées'),
+            SizedBox(height: 12),
+            Text(
+              'Votre demande sera examinée par notre équipe.',
+              style: TextStyle(
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey,
+              ),
+            ),
+          ],
         ),
-      );
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Faire la demande'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _submitCreatorUpgradeRequest();
     }
   }
 
-  // ✅ MÉTHODE MODIFIÉE : Navigation vers PostDetailPage
+Future<void> _submitCreatorUpgradeRequest() async {
+    try {
+      // Afficher un indicateur de chargement
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 16),
+                Text('Envoi de votre demande...'),
+              ],
+            ),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+      // Récupérer le token d'authentification
+      final token = await AuthStorage.getToken();
+      if (token == null) {
+        throw Exception('Token d\'authentification manquant');
+      }
+
+      // Appel API
+      final response = await http.post(
+        Uri.parse('${AppConstants.baseUrl}/profile/request-upgrade'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (mounted) {
+        if (response.statusCode == 200) {
+          // Succès
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      'Demande envoyée ! Nous examinerons votre candidature.',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 4),
+            ),
+          );
+
+          // Dialog de confirmation avec next steps
+          _showCreatorRequestSuccessDialog();
+          
+        } else if (response.statusCode == 409) {
+          // Demande déjà en cours
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Vous avez déjà une demande en cours d\'examen.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        } else {
+          // Erreur serveur
+          final errorData = json.decode(response.body);
+          final errorMessage = errorData['message'] ?? 'Erreur inconnue';
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur: $errorMessage'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Erreur de connexion ou autre
+      debugPrint('❌ Erreur demande créateur: $e');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur de connexion: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Réessayer',
+              textColor: Colors.white,
+              onPressed: () => _submitCreatorUpgradeRequest(),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showCreatorRequestSuccessDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 28),
+            SizedBox(width: 12),
+            Text('Demande envoyée !'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Votre demande de passage en créateur a été envoyée avec succès.',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            SizedBox(height: 16),
+            Text('Prochaines étapes :', style: TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            Text('1. Notre équipe va examiner votre profil'),
+            Text('2. Vous recevrez une notification de notre décision'),
+            Text('3. Si approuvé, vous aurez accès aux fonctionnalités créateur'),
+            SizedBox(height: 16),
+            Text(
+              'Délai d\'examen : 24-48h en moyenne',
+              style: TextStyle(
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Compris !'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _onPostTap(dynamic post) {
     debugPrint('🎯 [ProfileScreen] Post tapped - ID: ${post.id}, Title: ${post.title}');
     

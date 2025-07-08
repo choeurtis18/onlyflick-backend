@@ -158,18 +158,25 @@ class _RecommendedPostsSectionState extends State<RecommendedPostsSection> {
   }
 
   /// Convertit un nom de tag d'affichage en clé backend
-  String _convertTagToBackend(String displayTag) {
+   String _convertTagToBackend(String displayTag) {
     const Map<String, String> tagMapping = {
       'Tous': 'tous',
-      'Yoga': 'yoga',
       'Wellness': 'wellness',
       'Beauté': 'beaute',
-      'DIY': 'diy',
       'Art': 'art',
       'Musique': 'musique',
       'Cuisine': 'cuisine',
-      'Musculation': 'musculation',
+      'Football': 'football', 
+      'Basket': 'basket',     
       'Mode': 'mode',
+      'Cinéma': 'cinema',     
+      'Actualités': 'actualites',
+      'Mangas': 'mangas',     
+      'Memes': 'memes',       
+      'Tech': 'tech',          
+      'Yoga': 'yoga',
+      'DIY': 'diy',
+      'Musculation': 'musculation',
       'Fitness': 'fitness',
     };
     
