@@ -50,12 +50,6 @@ class TagsService {
   /// Récupère tous les tags disponibles avec leurs statistiques depuis l'API
   static Future<List<TagData>> getTagsWithStats() async {
     try {
-      // ⚠️ TEMPORAIRE : Forcer l'utilisation des nouveaux tags pendant le développement
-      debugPrint('🔄 Utilisation forcée des nouveaux tags');
-      return await _getFallbackTags();
-      
-      // Code original commenté temporairement
-      /*
       // Vérifier le cache
       if (_cachedTags != null && 
           _lastCacheUpdate != null && 
@@ -64,53 +58,142 @@ class TagsService {
         return _cachedTags!;
       }
 
-      // debugPrint('🏷️ Récupération des tags avec statistiques depuis l\'API...');
+      debugPrint('🏷️ Récupération des tags avec statistiques depuis l\'API...');
       
+      // ✅ Essayer d'abord l'endpoint tags/stats
+      try {
+        final response = await _apiService.get<Map<String, dynamic>>(
+          '/search/tags/stats',
+        );
+
+        if (response.isSuccess && response.data != null) {
+          final data = response.data!;
+          
+          if (data['tags'] != null && data['tags'] is List) {
+            List<TagData> tags = [];
+            
+            for (var tagJson in data['tags']) {
+              if (tagJson is Map<String, dynamic>) {
+                try {
+                  tags.add(TagData.fromJson(tagJson));
+                } catch (e) {
+                  debugPrint('⚠️ Erreur parsing tag: $e');
+                }
+              }
+            }
+            
+            // Mettre en cache seulement si on a récupéré des données valides
+            if (tags.isNotEmpty) {
+              _cachedTags = tags;
+              _lastCacheUpdate = DateTime.now();
+              
+              debugPrint('✅ ${tags.length} tags avec stats récupérés depuis API: ${tags.map((t) => '${t.displayName}(${t.count})').join(', ')}');
+              return tags;
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('⚠️ Endpoint /search/tags/stats non disponible: $e');
+      }
+
+      // ✅ Fallback: analyser les posts existants pour extraire les tags
+      debugPrint('🔄 Fallback: analyse des posts pour extraire les tags...');
+      return await _getTagsFromPosts();
+      
+    } catch (e) {
+      debugPrint('❌ Erreur lors de la récupération des stats tags: $e');
+      
+      // Fallback final : utiliser les tags par défaut
+      return await _getFallbackTags();
+    }
+  }
+
+  /// ✅ Méthode pour extraire les tags depuis les posts existants
+  static Future<List<TagData>> _getTagsFromPosts() async {
+    try {
       final response = await _apiService.get<Map<String, dynamic>>(
-        '/tags/stats',
+        '/posts/recommended',
+        queryParams: {'limit': '100'}, // Récupérer plus de posts pour avoir plus de tags
       );
 
       if (response.isSuccess && response.data != null) {
         final data = response.data!;
         
-        if (data['tags'] != null && data['tags'] is List) {
-          List<TagData> tags = [];
+        // Compter les occurrences de chaque tag
+        Map<String, int> tagCounts = {};
+        
+        if (data['posts'] != null && data['posts'] is List) {
+          List<dynamic> posts = data['posts'];
           
-          for (var tagJson in data['tags']) {
-            if (tagJson is Map<String, dynamic>) {
-              try {
-                tags.add(TagData.fromJson(tagJson));
-              } catch (e) {
-                debugPrint('⚠️ Erreur parsing tag: $e');
+          for (var post in posts) {
+            if (post['tags'] != null && post['tags'] is List) {
+              List<dynamic> postTags = post['tags'];
+              for (var tag in postTags) {
+                if (tag != null && tag.toString().isNotEmpty) {
+                  String backendTag = tag.toString().toLowerCase();
+                  tagCounts[backendTag] = (tagCounts[backendTag] ?? 0) + 1;
+                }
               }
             }
           }
-          
-          // Mettre en cache seulement si on a récupéré des données valides
-          if (tags.isNotEmpty) {
-            _cachedTags = tags;
-            _lastCacheUpdate = DateTime.now();
-            
-            // debugPrint('✅ ${tags.length} tags avec stats récupérés: ${tags.map((t) => '${t.displayName}(${t.count})').join(', ')}');
-            return tags;
-          } else {
-            debugPrint('⚠️ Aucun tag récupéré depuis l\'API');
-            throw Exception('No tags received from API');
-          }
-        } else {
-          debugPrint('⚠️ Format de réponse inattendu pour les stats tags');
-          throw Exception('Invalid response format');
         }
-      } else {
-        debugPrint('❌ Erreur lors de la récupération des stats tags: ${response.error}');
-        throw Exception('Failed to load tag stats: ${response.error}');
+        
+        // Convertir en TagData avec les vrais comptages
+        List<TagData> tags = [
+          TagData(key: 'tous', displayName: 'Tous', emoji: '🏷️', count: data['total'] ?? 0),
+        ];
+        
+        // Ajouter les tags trouvés avec leurs comptages
+        for (String backendTag in tagCounts.keys) {
+          String displayName = getTagDisplayName(backendTag);
+          String emoji = _getTagEmoji(backendTag);
+          int count = tagCounts[backendTag] ?? 0;
+          
+          if (displayName.isNotEmpty && displayName != 'Tous') {
+            tags.add(TagData(
+              key: backendTag,
+              displayName: displayName,
+              emoji: emoji,
+              count: count,
+            ));
+          }
+        }
+        
+        // Ajouter les tags manquants avec count 0
+        List<String> allValidTags = _getValidBackendTags();
+        for (String validTag in allValidTags) {
+          if (!tagCounts.containsKey(validTag)) {
+            tags.add(TagData(
+              key: validTag,
+              displayName: getTagDisplayName(validTag),
+              emoji: _getTagEmoji(validTag),
+              count: 0,
+            ));
+          }
+        }
+        
+        // Trier par count décroissant (sauf "Tous" qui reste en premier)
+        tags.sort((a, b) {
+          if (a.key == 'tous') return -1;
+          if (b.key == 'tous') return 1;
+          return b.count.compareTo(a.count);
+        });
+        
+        // Mettre en cache
+        if (tags.isNotEmpty) {
+          _cachedTags = tags;
+          _lastCacheUpdate = DateTime.now();
+          
+          debugPrint('✅ ${tags.length} tags extraits depuis posts: ${tags.map((t) => '${t.displayName}(${t.count})').join(', ')}');
+          return tags;
+        }
       }
-      */
+      
+      // Si échec, utiliser les tags par défaut
+      return await _getFallbackTags();
       
     } catch (e) {
-      debugPrint('❌ Erreur lors de la récupération des stats tags: $e');
-      
-      // Fallback : utiliser les nouveaux tags par défaut
+      debugPrint('❌ Erreur extraction tags depuis posts: $e');
       return await _getFallbackTags();
     }
   }
@@ -121,16 +204,56 @@ class TagsService {
       final tagsWithStats = await getTagsWithStats();
       final tags = tagsWithStats.map((tag) => tag.displayName).toList();
       
-      // Si on récupère des tags depuis l'API, les utiliser
-      if (tags.isNotEmpty && tags.length > 1) { // Plus que juste "Tous"
+      if (tags.isNotEmpty) {
+        debugPrint('✅ Tags disponibles récupérés: $tags');
         return tags;
       }
       
-      // Sinon, utiliser les nouveaux tags par défaut
+      // Fallback
       return _getFallbackTagNames();
     } catch (e) {
-      debugPrint('❌ Erreur récupération tags, utilisation nouveaux tags: $e');
+      debugPrint('❌ Erreur récupération tags, utilisation fallback: $e');
       return _getFallbackTagNames();
+    }
+  }
+
+  /// ✅ Méthode pour récupérer les posts filtrés par tag
+  static Future<Map<String, dynamic>> getPostsByTag(String tag, {
+    int limit = 10,
+    int offset = 0,
+  }) async {
+    try {
+      Map<String, String> queryParams = {
+        'limit': limit.toString(),
+        'offset': offset.toString(),
+      };
+      
+      // Convertir le tag d'affichage vers le backend
+      if (tag != 'Tous') {
+        String backendTag = getTagKey(tag);
+        if (backendTag.isNotEmpty && backendTag != 'tous') {
+          queryParams['tags'] = backendTag;
+          debugPrint('🔍 Recherche posts avec tag backend: $backendTag (depuis: $tag)');
+        }
+      }
+      
+      final response = await _apiService.get<Map<String, dynamic>>(
+        '/posts/recommended',
+        queryParams: queryParams,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final result = response.data!;
+        debugPrint('✅ Posts récupérés: ${result['posts']?.length ?? 0} posts pour tag: $tag');
+        return result;
+      } else {
+        debugPrint('❌ Erreur API getPostsByTag: ${response.error}');
+        throw Exception('Failed to load posts: ${response.error}');
+      }
+      
+    } catch (e) {
+      debugPrint('❌ Erreur lors de la récupération des posts par tag: $e');
+      rethrow;
     }
   }
 
@@ -158,9 +281,7 @@ class TagsService {
         orElse: () => const TagData(key: '', displayName: '', emoji: '', count: 0),
       );
       
-      // Retourner null si le tag n'est pas trouvé (count = 0 et key vide)
       if (tag.key.isEmpty) return null;
-      
       return tag;
     } catch (e) {
       debugPrint('❌ Erreur récupération data pour $tagDisplayName: $e');
@@ -168,7 +289,7 @@ class TagsService {
     }
   }
 
-  /// Convertit un nom d'affichage en clé backend
+  /// ✅ Convertit un nom d'affichage en clé backend
   static String getTagKey(String displayName) {
     const Map<String, String> tagDisplayToKey = {
       'Tous': 'tous',
@@ -179,6 +300,7 @@ class TagsService {
       'Cuisine': 'cuisine',
       'Football': 'football',
       'Basket': 'basket',
+      'Basketball': 'basket', // Alias
       'Mode': 'mode',
       'Cinéma': 'cinema',
       'Actualités': 'actualites',
@@ -190,7 +312,7 @@ class TagsService {
     return tagDisplayToKey[displayName] ?? displayName.toLowerCase();
   }
 
-  /// Convertit une clé backend en nom d'affichage
+  /// ✅ Convertit une clé backend en nom d'affichage
   static String getTagDisplayName(String key) {
     const Map<String, String> tagKeyToDisplay = {
       'tous': 'Tous',
@@ -200,7 +322,7 @@ class TagsService {
       'musique': 'Musique',
       'cuisine': 'Cuisine',
       'football': 'Football',
-      'basket': 'Basket',
+      'basket': 'Basketball',
       'mode': 'Mode',
       'cinema': 'Cinéma',
       'actualites': 'Actualités',
@@ -212,18 +334,65 @@ class TagsService {
     return tagKeyToDisplay[key.toLowerCase()] ?? key;
   }
 
+  /// ✅ Retourne l'emoji d'un tag backend
+  static String _getTagEmoji(String backendTag) {
+    const Map<String, String> tagEmojis = {
+      'wellness': '🧘',
+      'beaute': '💄',
+      'art': '🎨',
+      'musique': '🎵',
+      'cuisine': '🍳',
+      'football': '⚽',
+      'basket': '🏀',
+      'mode': '👗',
+      'cinema': '🎬',
+      'actualites': '📰',
+      'mangas': '📚',
+      'memes': '😂',
+      'tech': '💻',
+    };
+    
+    return tagEmojis[backendTag.toLowerCase()] ?? '🏷️';
+  }
+
+  /// ✅ Retourne la liste des tags backend valides
+  static List<String> _getValidBackendTags() {
+    return [
+      'wellness',
+      'beaute',
+      'art',
+      'musique',
+      'cuisine',
+      'football',
+      'basket',
+      'mode',
+      'cinema',
+      'actualites',
+      'mangas',
+      'memes',
+      'tech',
+    ];
+  }
+
   /// Invalide le cache pour forcer un rechargement
   static void invalidateCache() {
     _cachedTags = null;
     _lastCacheUpdate = null;
-    // debugPrint('🗑️ Cache des tags invalidé');
+    debugPrint('🗑️ Cache des tags invalidé');
+  }
+
+  /// ✅ Force le rafraîchissement des tags
+  static Future<List<String>> refreshTags() async {
+    debugPrint('🔄 Rafraîchissement forcé des tags...');
+    invalidateCache();
+    return await getAvailableTags();
   }
 
   /// Teste si l'API des tags est accessible
   static Future<bool> isApiAvailable() async {
     try {
       final response = await _apiService.get<Map<String, dynamic>>(
-        '/tags/available',
+        '/search/tags/stats',
       );
       return response.isSuccess;
     } catch (e) {
@@ -232,45 +401,45 @@ class TagsService {
     }
   }
 
-  /// Tags de fallback en cas d'erreur API (avec comptages réalistes basés sur votre DB)
+  /// ✅ Tags de fallback en cas d'erreur API (comptages réalistes)
   static Future<List<TagData>> _getFallbackTags() async {
-    // debugPrint('🔄 Utilisation des tags de fallback avec comptages réalistes');
+    debugPrint('🔄 Utilisation des tags de fallback avec comptages estimés');
     
     return [
       const TagData(key: 'tous', displayName: 'Tous', emoji: '🏷️', count: 0),
-      const TagData(key: 'wellness', displayName: 'Wellness', emoji: '🌿', count: 7),
-      const TagData(key: 'beaute', displayName: 'Beauté', emoji: '💄', count: 7),
       const TagData(key: 'art', displayName: 'Art', emoji: '🎨', count: 10),
       const TagData(key: 'musique', displayName: 'Musique', emoji: '🎵', count: 10),
-      const TagData(key: 'cuisine', displayName: 'Cuisine', emoji: '👨‍🍳', count: 8),
-      const TagData(key: 'football', displayName: 'Football', emoji: '⚽', count: 5),
-      const TagData(key: 'basket', displayName: 'Basket', emoji: '🏀', count: 5),
+      const TagData(key: 'tech', displayName: 'Tech', emoji: '💻', count: 7),
+      const TagData(key: 'cuisine', displayName: 'Cuisine', emoji: '🍳', count: 8),
+      const TagData(key: 'wellness', displayName: 'Wellness', emoji: '🧘', count: 7),
+      const TagData(key: 'beaute', displayName: 'Beauté', emoji: '💄', count: 7),
       const TagData(key: 'mode', displayName: 'Mode', emoji: '👗', count: 5),
+      const TagData(key: 'football', displayName: 'Football', emoji: '⚽', count: 5),
+      const TagData(key: 'basket', displayName: 'Basketball', emoji: '🏀', count: 5),
       const TagData(key: 'cinema', displayName: 'Cinéma', emoji: '🎬', count: 5),
       const TagData(key: 'actualites', displayName: 'Actualités', emoji: '📰', count: 5),
       const TagData(key: 'mangas', displayName: 'Mangas', emoji: '📚', count: 5),
       const TagData(key: 'memes', displayName: 'Memes', emoji: '😂', count: 5),
-      const TagData(key: 'tech', displayName: 'Tech', emoji: '💻', count: 7),
     ];
   }
 
-  /// Noms des tags de fallback
+  /// ✅ Noms des tags de fallback
   static List<String> _getFallbackTagNames() {
     return [
       'Tous',
+      'Art',
+      'Musique', 
+      'Tech',
+      'Cuisine',
       'Wellness',
       'Beauté',
-      'Art',
-      'Musique',
-      'Cuisine',
-      'Football',
-      'Basket',
       'Mode',
+      'Football',
+      'Basketball',
       'Cinéma',
       'Actualités',
       'Mangas',
       'Memes',
-      'Tech',
     ];
   }
 
@@ -308,12 +477,6 @@ class TagsService {
       debugPrint('❌ Erreur recherche tags: $e');
       return [];
     }
-  }
-
-  /// Méthode utilitaire pour rafraîchir les données
-  static Future<void> refreshTags() async {
-    invalidateCache();
-    await getTagsWithStats();
   }
 
   /// Retourne les statistiques générales des tags

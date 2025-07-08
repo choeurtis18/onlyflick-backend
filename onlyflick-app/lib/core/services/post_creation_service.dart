@@ -17,7 +17,7 @@ class PostCreationService {
     required String description,
     required File imageFile,
     required PostVisibility visibility,
-    List<String> tags = const [], // ✅ Nouveau paramètre tags
+    List<String> tags = const [], 
   }) async {
     try {
       debugPrint('📝 Creating post: $title with tags: $tags');
@@ -37,7 +37,7 @@ class PostCreationService {
         'title': title,
         'description': description,
         'visibility': visibility.value,
-        'tags': jsonEncode(tags), // ✅ Ajouter les tags en JSON
+        'tags': jsonEncode(tags), 
       };
       
       final files = {
@@ -74,7 +74,7 @@ class PostCreationService {
     required String title,
     required String description,
     required PostVisibility visibility,
-    List<String> tags = const [], // ✅ Nouveau paramètre tags
+    List<String> tags = const [], 
     File? newImageFile,
   }) async {
     try {
@@ -106,7 +106,7 @@ class PostCreationService {
       request.fields['title'] = title;
       request.fields['description'] = description;
       request.fields['visibility'] = visibility.value;
-      request.fields['tags'] = jsonEncode(tags); // ✅ Ajouter les tags en JSON
+      request.fields['tags'] = jsonEncode(tags); 
       
       // Ajouter le nouveau fichier média si fourni
       if (newImageFile != null) {

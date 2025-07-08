@@ -73,7 +73,7 @@ func GetDiscoveryPostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parser les paramètres de découverte
+	// ✅ Parser les paramètres de découverte avec tags simplifiés
 	discoveryRequest, err := parseDiscoveryParams(r, userID)
 	if err != nil {
 		log.Printf("[GetDiscoveryPostsHandler][ERREUR] Parsing paramètres : %v", err)
@@ -84,27 +84,23 @@ func GetDiscoveryPostsHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[GetDiscoveryPostsHandler] 📊 Requête: tags=%v, sort=%s, limit=%d, offset=%d", 
 		discoveryRequest.Tags, discoveryRequest.SortBy, discoveryRequest.Limit, discoveryRequest.Offset)
 
-	// Effectuer la recherche discovery via repository
-	posts, err := repository.GetDiscoveryPosts(*discoveryRequest)
+	// ✅ Utiliser la méthode recommandée avec tags string
+	posts, total, err := repository.ListPostsRecommendedForUserWithTags(
+		userID,
+		discoveryRequest.Tags, // Maintenant []string
+		discoveryRequest.Limit,
+		discoveryRequest.Offset,
+	)
 	if err != nil {
-		log.Printf("[GetDiscoveryPostsHandler][ERREUR] : %v", err)
+		log.Printf("[GetDiscoveryPostsHandler][ERREUR] Erreur posts recommandés : %v", err)
 		response.RespondWithError(w, http.StatusInternalServerError, "Discovery failed")
 		return
 	}
 
 	// Construire la réponse
-	result := map[string]interface{}{
-		"posts":      posts,
-		"total":      len(posts),
-		"has_more":   len(posts) == discoveryRequest.Limit, // Estimation simple
-		"limit":      discoveryRequest.Limit,
-		"offset":     discoveryRequest.Offset,
-		"tags":       discoveryRequest.Tags,
-		"sort_by":    discoveryRequest.SortBy,
-		"type":       "discovery",
-	}
+	result := buildDiscoveryResponse(posts, total, *discoveryRequest)
 
-	log.Printf("[GetDiscoveryPostsHandler] ✅ %d posts découverte trouvés", len(posts))
+	log.Printf("[GetDiscoveryPostsHandler] ✅ %d posts découverte trouvés (total: %d)", len(posts), total)
 	response.RespondWithJSON(w, http.StatusOK, result)
 }
 
@@ -219,10 +215,10 @@ func GetSearchStatsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Pour l'instant, retourner des stats placeholder
+	// ✅ Retourner des stats avec les vrais tags
 	result := map[string]interface{}{
 		"recent_searches":    []string{},
-		"popular_tags":       []string{"art", "music", "tech", "travel"},
+		"popular_tags":       []string{"art", "musique", "tech", "cuisine", "mode"},
 		"total_searches":     0,
 		"total_interactions": 0,
 		"status":            "placeholder",
@@ -276,17 +272,14 @@ func TrackInteractionHandler(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "tracked"})
 }
 
-// ===== FONCTIONS UTILITAIRES =====
+// ===== FONCTIONS UTILITAIRES CORRIGÉES =====
 
 // parsePostSearchParams parse les paramètres de recherche de posts
 func parsePostSearchParams(r *http.Request, userID int64) (*domain.SearchRequest, error) {
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	
-	// Parser les tags
-	tags, err := parseTagsParamFromSlice(r.URL.Query()["tags"])
-	if err != nil {
-		return nil, err
-	}
+	// ✅ Parser les tags directement en string
+	tags := parseTagsFromSlice(r.URL.Query()["tags"])
 
 	// Parser le type de tri
 	sortBy := parseSortParam(r.URL.Query().Get("sort_by"))
@@ -297,7 +290,7 @@ func parsePostSearchParams(r *http.Request, userID int64) (*domain.SearchRequest
 	return &domain.SearchRequest{
 		Query:      query,
 		UserID:     userID,
-		Tags:       tags,
+		Tags:       tags, // ✅ Maintenant []string
 		SortBy:     sortBy,
 		Limit:      limit,
 		Offset:     offset,
@@ -305,13 +298,10 @@ func parsePostSearchParams(r *http.Request, userID int64) (*domain.SearchRequest
 	}, nil
 }
 
-// parseDiscoveryParams parse les paramètres de découverte
+// ✅ parseDiscoveryParams parse les paramètres de découverte avec tags simplifiés
 func parseDiscoveryParams(r *http.Request, userID int64) (*domain.DiscoveryRequest, error) {
-	// Parser les tags
-	tags, err := parseTagsParamFromSlice(r.URL.Query()["tags"])
-	if err != nil {
-		return nil, err
-	}
+	// Parser les tags directement en string
+	tags := parseTagsFromSlice(r.URL.Query()["tags"])
 
 	// Parser le type de tri (par défaut: pertinence pour la découverte)
 	sortBy := domain.SortRelevance
@@ -325,110 +315,94 @@ func parseDiscoveryParams(r *http.Request, userID int64) (*domain.DiscoveryReque
 
 	return &domain.DiscoveryRequest{
 		UserID: userID,
-		Tags:   tags,
+		Tags:   tags, // ✅ Maintenant []string
 		SortBy: sortBy,
 		Limit:  limit,
 		Offset: offset,
 	}, nil
 }
 
-// parseTagsParam convertit les tags frontend en TagCategory backend
-func parseTagsParam(tagsParam string) ([]domain.TagCategory, error) {
-	var tags []domain.TagCategory
-	
-	if tagsParam == "" {
-		return tags, nil
-	}
-
-	tagStrings := strings.Split(tagsParam, ",")
-	for _, tagStr := range tagStrings {
-		tagStr = strings.TrimSpace(tagStr)
-		if tagStr == "" || strings.ToLower(tagStr) == "tous" {
-			continue
-		}
-
-		// Mapping Frontend -> Backend
-		var tagCategory domain.TagCategory
-		switch strings.ToLower(tagStr) {
-		case "yoga":
-			tagCategory = domain.TagYoga
-		case "wellness":
-			tagCategory = domain.TagWellness
-		case "beaute":
-			tagCategory = domain.TagBeaute
-		case "diy":
-			tagCategory = domain.TagDiy
-		case "art":
-			tagCategory = domain.TagArt
-		case "musique":
-			tagCategory = domain.TagMusique
-		case "cuisine":
-			tagCategory = domain.TagCuisine
-		case "musculation":
-			tagCategory = domain.TagMusculation
-		case "mode":
-			tagCategory = domain.TagMode
-		case "fitness":
-			tagCategory = domain.TagFitness
-		default:
-			log.Printf("[parseTagsParamFromSlice] Tag invalide ignoré: %s", tagStr)
-			continue
-		}
-		
-		
-		tags = append(tags, tagCategory)
-	}
-
-	return tags, nil
-}
-
-func parseTagsParamFromSlice(tagsParam []string) ([]domain.TagCategory, error) {
-	var tags []domain.TagCategory
+// ✅ parseTagsFromSlice convertit les tags frontend en liste de strings backend
+func parseTagsFromSlice(tagsParam []string) []string {
+	var tags []string
 
 	for _, raw := range tagsParam {
 		splitTags := strings.Split(raw, ",")
 		for _, tagStr := range splitTags {
-			tagStr = strings.TrimSpace(tagStr)
-			if tagStr == "" || strings.ToLower(tagStr) == "tous" {
+			tagStr = strings.TrimSpace(strings.ToLower(tagStr))
+			if tagStr == "" || tagStr == "tous" {
 				continue
 			}
 
-			var tagCategory domain.TagCategory
-			switch strings.ToLower(tagStr) {
-			case "yoga":
-				tagCategory = domain.TagYoga
-			case "wellness":
-				tagCategory = domain.TagWellness
-			case "beaute":
-				tagCategory = domain.TagBeaute
-			case "diy":
-				tagCategory = domain.TagDiy
-			case "art":
-				tagCategory = domain.TagArt
-			case "musique":
-				tagCategory = domain.TagMusique
-			case "cuisine":
-				tagCategory = domain.TagCuisine
-			case "musculation":
-				tagCategory = domain.TagMusculation
-			case "mode":
-				tagCategory = domain.TagMode
-			case "fitness":
-				tagCategory = domain.TagFitness
-			default:
-				log.Printf("[parseTagsParamFromSlice] Tag invalide ignoré: %s", tagStr)
-				continue
+			// ✅ Mapper et valider avec les vrais tags backend
+			backendTag := mapToBackendTag(tagStr)
+			if backendTag != "" {
+				tags = append(tags, backendTag)
+			} else {
+				log.Printf("[parseTagsFromSlice] Tag invalide ignoré: %s", tagStr)
 			}
-			
-		
-
-			tags = append(tags, tagCategory)
 		}
 	}
 
-	return tags, nil
+	return tags
 }
 
+// ✅ mapToBackendTag convertit un tag frontend vers le tag backend correspondant
+func mapToBackendTag(frontendTag string) string {
+	// Tags backend valides (ceux qui existent réellement)
+	mapping := map[string]string{
+		// Tags directs
+		"wellness":    "wellness",
+		"beaute":      "beaute",
+		"art":         "art",
+		"musique":     "musique",
+		"cuisine":     "cuisine",
+		"football":    "football",
+		"basket":      "basket",
+		"mode":        "mode",
+		"cinema":      "cinema",
+		"actualites":  "actualites",
+		"mangas":      "mangas",
+		"memes":       "memes",
+		"tech":        "tech",
+		
+		// Aliases pour compatibilité
+		"beauté":      "beaute",
+		"cinéma":      "cinema",
+		"actualités":  "actualites",
+		"mêmes":       "memes",
+		"technology":  "tech",
+		"technologie": "tech",
+		"music":       "musique",
+		"cooking":     "cuisine",
+		"fashion":     "mode",
+		"movies":      "cinema",
+		"news":        "actualites",
+	}
+	
+	return mapping[strings.ToLower(frontendTag)]
+}
+
+// ✅ isValidBackendTag vérifie si un tag est valide côté backend
+func isValidBackendTag(tag string) bool {
+	validTags := map[string]bool{
+		"wellness":    true,
+		"beaute":      true,
+		"art":         true,
+		"musique":     true,
+		"cuisine":     true,
+		"football":    true,
+		"basket":      true,
+		"mode":        true,
+		"cinema":      true,
+		"actualites":  true,
+		"mangas":      true,
+		"memes":       true,
+		"tech":        true,
+	}
+	
+	return validTags[strings.ToLower(tag)]
+}
 
 // parseSortParam convertit le paramètre de tri en SortType
 func parseSortParam(sortParam string) domain.SortType {
@@ -491,6 +465,8 @@ func parseInteractionType(interactionTypeStr string) (domain.InteractionType, er
 	}
 }
 
+// ===== CONSTRUCTION DES RÉPONSES =====
+
 // buildPostSearchResponse construit la réponse de recherche de posts
 func buildPostSearchResponse(posts []interface{}, total int, searchRequest domain.SearchRequest) map[string]interface{} {
 	return map[string]interface{}{
@@ -503,6 +479,20 @@ func buildPostSearchResponse(posts []interface{}, total int, searchRequest domai
 		"tags":        searchRequest.Tags,
 		"sort_by":     searchRequest.SortBy,
 		"search_type": searchRequest.SearchType,
+	}
+}
+
+// ✅ buildDiscoveryResponse construit la réponse de découverte
+func buildDiscoveryResponse(posts []interface{}, total int, discoveryRequest domain.DiscoveryRequest) map[string]interface{} {
+	return map[string]interface{}{
+		"posts":       posts,
+		"total":       total,
+		"has_more":    total > discoveryRequest.Offset+len(posts),
+		"limit":       discoveryRequest.Limit,
+		"offset":      discoveryRequest.Offset,
+		"tags":        discoveryRequest.Tags,
+		"sort_by":     discoveryRequest.SortBy,
+		"search_type": "discovery",
 	}
 }
 
@@ -531,13 +521,14 @@ func buildUserSuggestions(users []domain.UserSearchResult) []map[string]interfac
 	return suggestions
 }
 
+// ===== GESTION DES TAGS =====
 
 // GetAvailableTagsHandler retourne la liste des tags disponibles
 func GetAvailableTagsHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("[GetAvailableTagsHandler] 🏷️ Récupération des tags disponibles")
 
-	// Récupérer tous les tags définis dans le système
-	tags := getAllAvailableTags()
+	// ✅ Récupérer les vrais tags du backend
+	tags := getAllAvailableBackendTags()
 	
 	// Construire la réponse avec les noms d'affichage
 	var tagResponse []map[string]interface{}
@@ -552,9 +543,9 @@ func GetAvailableTagsHandler(w http.ResponseWriter, r *http.Request) {
 	// Ajouter tous les autres tags
 	for _, tag := range tags {
 		tagResponse = append(tagResponse, map[string]interface{}{
-			"key":         string(tag),
-			"displayName": tag.GetTagDisplayName(),
-			"emoji":       tag.GetTagEmoji(),
+			"key":         tag,
+			"displayName": getTagDisplayName(tag),
+			"emoji":       getTagEmoji(tag),
 		})
 	}
 
@@ -568,22 +559,74 @@ func GetAvailableTagsHandler(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, result)
 }
 
-// getAllAvailableTags retourne tous les tags disponibles dans le système
-func getAllAvailableTags() []domain.TagCategory {
-	return []domain.TagCategory{
-		domain.TagYoga,
-		domain.TagWellness,
-		domain.TagBeaute,
-		domain.TagDiy,
-		domain.TagArt,
-		domain.TagMusique,
-		domain.TagCuisine,
-		domain.TagMusculation,
-		domain.TagMode,
-		domain.TagFitness,
+// ✅ getAllAvailableBackendTags retourne tous les tags disponibles dans le backend
+func getAllAvailableBackendTags() []string {
+	return []string{
+		"wellness",
+		"beaute",
+		"art",
+		"musique",
+		"cuisine",
+		"football",
+		"basket",
+		"mode",
+		"cinema",
+		"actualites",
+		"mangas",
+		"memes",
+		"tech",
 	}
 }
 
+// ✅ getTagDisplayName retourne le nom d'affichage d'un tag
+func getTagDisplayName(tag string) string {
+	displayNames := map[string]string{
+		"wellness":    "Wellness",
+		"beaute":      "Beauté",
+		"art":         "Art",
+		"musique":     "Musique",
+		"cuisine":     "Cuisine",
+		"football":    "Football",
+		"basket":      "Basketball",
+		"mode":        "Mode",
+		"cinema":      "Cinéma",
+		"actualites":  "Actualités",
+		"mangas":      "Mangas",
+		"memes":       "Memes",
+		"tech":        "Tech",
+	}
+	
+	if displayName, exists := displayNames[tag]; exists {
+		return displayName
+	}
+	return strings.Title(tag)
+}
+
+// ✅ getTagEmoji retourne l'emoji d'un tag
+func getTagEmoji(tag string) string {
+	emojis := map[string]string{
+		"wellness":    "🧘",
+		"beaute":      "💄",
+		"art":         "🎨",
+		"musique":     "🎵",
+		"cuisine":     "🍳",
+		"football":    "⚽",
+		"basket":      "🏀",
+		"mode":        "👗",
+		"cinema":      "🎬",
+		"actualites":  "📰",
+		"mangas":      "📚",
+		"memes":       "😂",
+		"tech":        "💻",
+	}
+	
+	if emoji, exists := emojis[tag]; exists {
+		return emoji
+	}
+	return "🏷️"
+}
+
+// GetTagsStatsHandler retourne les statistiques des tags
 func GetTagsStatsHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("[GetTagsStatsHandler] 📊 Récupération des statistiques de tags")
 
@@ -595,8 +638,8 @@ func GetTagsStatsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Récupérer tous les tags disponibles pour s'assurer qu'on a une entrée pour chaque tag
-	allTags := getAllAvailableTags()
+	// ✅ Utiliser les vrais tags backend
+	allTags := getAllAvailableBackendTags()
 	
 	// Construire la réponse avec les statistiques
 	var statsResponse []map[string]interface{}
@@ -617,12 +660,12 @@ func GetTagsStatsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ajouter les stats pour chaque tag existant
 	for _, tag := range allTags {
-		count := tagStats[string(tag)] // 0 si le tag n'existe pas dans la map
+		count := tagStats[tag] // 0 si le tag n'existe pas dans la map
 		
 		statsResponse = append(statsResponse, map[string]interface{}{
-			"key":         string(tag),
-			"displayName": tag.GetTagDisplayName(),
-			"emoji":       tag.GetTagEmoji(),
+			"key":         tag,
+			"displayName": getTagDisplayName(tag),
+			"emoji":       getTagEmoji(tag),
 			"count":       count,
 		})
 	}
@@ -637,9 +680,8 @@ func GetTagsStatsHandler(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, result)
 }
 
-
-// trackSearchInteractions enregistre les interactions de recherche en arrière-plan
-func trackSearchInteractions(userID int64, query string, tags []domain.TagCategory) {
+// ✅ trackSearchInteractions enregistre les interactions de recherche en arrière-plan
+func trackSearchInteractions(userID int64, query string, tags []string) {
 	// Enregistrer l'interaction de recherche
 	if query != "" {
 		if err := repository.TrackInteraction(userID, domain.InteractionSearch, "search", 0, query); err != nil {
@@ -649,7 +691,7 @@ func trackSearchInteractions(userID int64, query string, tags []domain.TagCatego
 
 	// Enregistrer les clics sur tags
 	for _, tag := range tags {
-		if err := repository.TrackInteraction(userID, domain.InteractionTagClick, "tag", 0, string(tag)); err != nil {
+		if err := repository.TrackInteraction(userID, domain.InteractionTagClick, "tag", 0, tag); err != nil {
 			log.Printf("[trackSearchInteractions] Erreur tracking tag click: %v", err)
 		}
 	}

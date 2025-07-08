@@ -2,32 +2,13 @@
 
 package domain
 
-import "time"
-
-// TagCategory représente les catégories de tags disponibles
-type TagCategory string
-
-const (
-	TagYoga         TagCategory = "yoga"
-	TagWellness     TagCategory = "wellness"
-	TagBeaute       TagCategory = "beaute"
-	TagDiy          TagCategory = "diy"
-	TagArt          TagCategory = "art"
-	TagMusique      TagCategory = "musique"
-	TagCuisine      TagCategory = "cuisine"
-	TagMusculation  TagCategory = "musculation"
-	TagMode         TagCategory = "mode"
-	TagFitness      TagCategory = "fitness"
-	
-	// ✅ NOUVEAUX TAGS de votre base de données
-	TagFootball     TagCategory = "football"    
-	TagBasket       TagCategory = "basket"      
-	TagCinema       TagCategory = "cinema"      
-	TagActualites   TagCategory = "actualites"   
-	TagMangas       TagCategory = "mangas"      
-	TagMemes        TagCategory = "memes"      
-	TagTech         TagCategory = "tech"
+import (
+	"fmt"
+	"time"
 )
+
+// ✅ SUPPRESSION DE TagCategory - Utilisation directe de strings
+// Les tags sont maintenant gérés directement en string pour simplifier
 
 // SortType représente les différents types de tri pour les posts
 type SortType string
@@ -90,7 +71,7 @@ type PostWithDetails struct {
 	CreatedAt       time.Time        `json:"created_at"`
 	UpdatedAt       time.Time        `json:"updated_at"`
 	Author          UserSearchResult `json:"author"`           // Auteur du post
-	Tags            []TagCategory    `json:"tags"`             // Tags associés
+	Tags            []string         `json:"tags"`             // ✅ Tags en string maintenant
 	LikesCount      int64            `json:"likes_count"`      // Nombre de likes
 	CommentsCount   int64            `json:"comments_count"`   // Nombre de commentaires
 	ViewsCount      int64            `json:"views_count"`      // Nombre de vues
@@ -99,32 +80,32 @@ type PostWithDetails struct {
 	RelevanceScore  float64          `json:"relevance_score"`  // Score de pertinence pour l'utilisateur
 }
 
-// SearchRequest représente une requête de recherche
+// ✅ SearchRequest corrigé avec tags en string
 type SearchRequest struct {
-	Query        string        `json:"query"`         // Terme de recherche
-	UserID       int64         `json:"user_id"`       // ID de l'utilisateur qui recherche
-	Tags         []TagCategory `json:"tags"`          // Filtres par tags
-	SortBy       SortType      `json:"sort_by"`       // Type de tri
-	Limit        int           `json:"limit"`         // Nombre de résultats max
-	Offset       int           `json:"offset"`        // Pagination
-	SearchType   string        `json:"search_type"`   // "posts", "users", "discovery"
+	Query        string   `json:"query"`         // Terme de recherche
+	UserID       int64    `json:"user_id"`       // ID de l'utilisateur qui recherche
+	Tags         []string `json:"tags"`          // ✅ Filtres par tags (string maintenant)
+	SortBy       SortType `json:"sort_by"`       // Type de tri
+	Limit        int      `json:"limit"`         // Nombre de résultats max
+	Offset       int      `json:"offset"`        // Pagination
+	SearchType   string   `json:"search_type"`   // "posts", "users", "discovery"
 }
 
-// DiscoveryRequest représente une requête pour le feed de découverte
+// ✅ DiscoveryRequest corrigé avec tags en string
 type DiscoveryRequest struct {
-	UserID int64         `json:"user_id"`
-	Tags   []TagCategory `json:"tags"`     // Filtres optionnels par tags
-	SortBy SortType      `json:"sort_by"`  // Type de tri
-	Limit  int           `json:"limit"`
-	Offset int           `json:"offset"`
+	UserID int64    `json:"user_id"`
+	Tags   []string `json:"tags"`     // ✅ Filtres optionnels par tags (string maintenant)
+	SortBy SortType `json:"sort_by"`  // Type de tri
+	Limit  int      `json:"limit"`
+	Offset int      `json:"offset"`
 }
 
-// PostTag représente un tag associé à un post
+// ✅ PostTag simplifié avec string
 type PostTag struct {
-	ID        int64       `json:"id"`
-	PostID    int64       `json:"post_id"`
-	Category  TagCategory `json:"category"`
-	CreatedAt time.Time   `json:"created_at"`
+	ID        int64     `json:"id"`
+	PostID    int64     `json:"post_id"`
+	Category  string    `json:"category"`  // ✅ String au lieu de TagCategory
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // UserInteraction représente une interaction utilisateur pour l'algorithme de recommandation
@@ -151,28 +132,28 @@ type PostMetrics struct {
 	LastUpdated     time.Time `json:"last_updated"`
 }
 
-// UserPreferences représente les préférences calculées d'un utilisateur
+// ✅ UserPreferences simplifié avec map[string]float64
 type UserPreferences struct {
-	UserID             int64                    `json:"user_id"`
-	PreferredTags      map[TagCategory]float64  `json:"preferred_tags"`        // Score par catégorie de tag
-	PreferredCreators  []int64                  `json:"preferred_creators"`    // IDs des créateurs préférés
-	InteractionHistory []UserInteraction        `json:"interaction_history"`   // Historique des interactions récentes
-	LastUpdated        time.Time                `json:"last_updated"`
+	UserID             int64                 `json:"user_id"`
+	PreferredTags      map[string]float64    `json:"preferred_tags"`        // ✅ Score par tag (string)
+	PreferredCreators  []int64               `json:"preferred_creators"`    // IDs des créateurs préférés
+	InteractionHistory []UserInteraction     `json:"interaction_history"`   // Historique des interactions récentes
+	LastUpdated        time.Time             `json:"last_updated"`
 }
 
-// TrendingTag représente un tag en tendance
+// ✅ TrendingTag simplifié avec string
 type TrendingTag struct {
-	Category      TagCategory `json:"category"`
-	PostsCount    int64       `json:"posts_count"`      // Nombre de posts avec ce tag récemment
-	GrowthRate    float64     `json:"growth_rate"`      // Taux de croissance sur la période
-	TrendingScore float64     `json:"trending_score"`   // Score de tendance calculé
-	Period        string      `json:"period"`           // "24h", "week", "month"
+	Category      string  `json:"category"`         // ✅ String au lieu de TagCategory
+	PostsCount    int64   `json:"posts_count"`      // Nombre de posts avec ce tag récemment
+	GrowthRate    float64 `json:"growth_rate"`      // Taux de croissance sur la période
+	TrendingScore float64 `json:"trending_score"`   // Score de tendance calculé
+	Period        string  `json:"period"`           // "24h", "week", "month"
 }
 
 // ===== CONSTRUCTEURS =====
 
-// NewPostTag crée un nouveau tag pour un post
-func NewPostTag(postID int64, category TagCategory) *PostTag {
+// ✅ NewPostTag corrigé avec string
+func NewPostTag(postID int64, category string) *PostTag {
 	return &PostTag{
 		PostID:    postID,
 		Category:  category,
@@ -201,93 +182,95 @@ func NewPostMetrics(postID int64) *PostMetrics {
 	}
 }
 
-// ===== MÉTHODES UTILITAIRES POUR LES TAGS =====
+// ===== FONCTIONS UTILITAIRES POUR LES TAGS =====
 
-
-// GetTagDisplayName retourne le nom d'affichage d'un tag
-func (tc TagCategory) GetTagDisplayName() string {
-	switch tc {
-	case TagYoga:
-		return "Yoga"
-	case TagWellness:
-		return "Wellness"
-	case TagBeaute:
-		return "Beauté"
-	case TagDiy:
-		return "DIY"
-	case TagArt:
-		return "Art"
-	case TagMusique:
-		return "Musique"
-	case TagCuisine:
-		return "Cuisine"
-	case TagMusculation:
-		return "Musculation"
-	case TagMode:
-		return "Mode"
-	case TagFitness:
-		return "Fitness"
-	case TagFootball:
-		return "Football"
-	case TagBasket:
-		return "Basket"
-	case TagCinema:
-		return "Cinéma"
-	case TagActualites:
-		return "Actualités"
-	case TagMangas:
-		return "Mangas"
-	case TagMemes:
-		return "Memes"
-	case TagTech:
-		return "Tech"
-	default:
-		return string(tc)
+// ✅ GetValidBackendTags retourne la liste des tags valides
+func GetValidBackendTags() []string {
+	return []string{
+		"wellness",
+		"beaute",
+		"art",
+		"musique",
+		"cuisine",
+		"football",
+		"basket",
+		"mode",
+		"cinema",
+		"actualites",
+		"mangas",
+		"memes",
+		"tech",
 	}
 }
 
-// GetTagEmoji retourne l'emoji associé à un tag
-func (tc TagCategory) GetTagEmoji() string {
-	switch tc {
-	case TagYoga:
-		return "🧘"
-	case TagWellness:
-		return "🌿"
-	case TagBeaute:
-		return "💄"
-	case TagDiy:
-		return "🛠️"
-	case TagArt:
-		return "🎨"
-	case TagMusique:
-		return "🎵"
-	case TagCuisine:
-		return "🍽️"
-	case TagMusculation:
-		return "🏋️"
-	case TagMode:
-		return "👗"
-	case TagFitness:
-		return "💪"
-	case TagFootball:
-		return "⚽"
-	case TagBasket:
-		return "🏀"
-	case TagCinema:
-		return "🎬"
-	case TagActualites:
-		return "📰"
-	case TagMangas:
-		return "📚"
-	case TagMemes:
-		return "😂"
-	case TagTech:
-		return "💻"
-	default:
-		return "🏷️"
+// ✅ IsValidTag vérifie si un tag est valide
+func IsValidTag(tag string) bool {
+	validTags := map[string]bool{
+		"wellness":    true,
+		"beaute":      true,
+		"art":         true,
+		"musique":     true,
+		"cuisine":     true,
+		"football":    true,
+		"basket":      true,
+		"mode":        true,
+		"cinema":      true,
+		"actualites":  true,
+		"mangas":      true,
+		"memes":       true,
+		"tech":        true,
 	}
+	
+	return validTags[tag]
 }
 
+// ✅ GetTagDisplayName retourne le nom d'affichage d'un tag
+func GetTagDisplayName(tag string) string {
+	displayNames := map[string]string{
+		"wellness":    "Wellness",
+		"beaute":      "Beauté",
+		"art":         "Art",
+		"musique":     "Musique",
+		"cuisine":     "Cuisine",
+		"football":    "Football",
+		"basket":      "Basketball",
+		"mode":        "Mode",
+		"cinema":      "Cinéma",
+		"actualites":  "Actualités",
+		"mangas":      "Mangas",
+		"memes":       "Memes",
+		"tech":        "Tech",
+	}
+	
+	if displayName, exists := displayNames[tag]; exists {
+		return displayName
+	}
+	return tag
+}
+
+// ✅ GetTagEmoji retourne l'emoji associé à un tag
+func GetTagEmoji(tag string) string {
+	emojis := map[string]string{
+		"wellness":    "🧘",
+		"beaute":      "💄",
+		"art":         "🎨",
+		"musique":     "🎵",
+		"cuisine":     "🍳",
+		"football":    "⚽",
+		"basket":      "🏀",
+		"mode":        "👗",
+		"cinema":      "🎬",
+		"actualites":  "📰",
+		"mangas":      "📚",
+		"memes":       "😂",
+		"tech":        "💻",
+	}
+	
+	if emoji, exists := emojis[tag]; exists {
+		return emoji
+	}
+	return "🏷️"
+}
 
 // ===== MÉTHODES UTILITAIRES POUR LES MÉTRIQUES =====
 
@@ -326,4 +309,58 @@ func (usr *UserSearchResult) GetDisplayName() string {
 		return usr.FirstName
 	}
 	return usr.Username
+}
+
+// ===== FONCTIONS DE VALIDATION =====
+
+// ValidateSearchRequest valide une requête de recherche
+func (sr *SearchRequest) Validate() error {
+	if sr.UserID <= 0 {
+		return fmt.Errorf("user ID is required")
+	}
+	
+	if sr.Limit <= 0 || sr.Limit > 100 {
+		sr.Limit = 20 // Valeur par défaut
+	}
+	
+	if sr.Offset < 0 {
+		sr.Offset = 0
+	}
+	
+	// Valider les tags
+	validTags := []string{}
+	for _, tag := range sr.Tags {
+		if IsValidTag(tag) {
+			validTags = append(validTags, tag)
+		}
+	}
+	sr.Tags = validTags
+	
+	return nil
+}
+
+// ValidateDiscoveryRequest valide une requête de découverte
+func (dr *DiscoveryRequest) Validate() error {
+	if dr.UserID <= 0 {
+		return fmt.Errorf("user ID is required")
+	}
+	
+	if dr.Limit <= 0 || dr.Limit > 100 {
+		dr.Limit = 20 // Valeur par défaut
+	}
+	
+	if dr.Offset < 0 {
+		dr.Offset = 0
+	}
+	
+	// Valider les tags
+	validTags := []string{}
+	for _, tag := range dr.Tags {
+		if IsValidTag(tag) {
+			validTags = append(validTags, tag)
+		}
+	}
+	dr.Tags = validTags
+	
+	return nil
 }
