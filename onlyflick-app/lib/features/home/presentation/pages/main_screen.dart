@@ -76,26 +76,27 @@ class _MainScreenState extends State<MainScreen> {
                 children: screens,
               ),
 
-              // ✅ Bouton admin flottant en haut à droite
-              Positioned(
-                top: 40,
-                right: 16,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    context.go('/admin');
-                  },
-                  icon: const Icon(Icons.admin_panel_settings),
-                  label: const Text('Admin'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              // ✅ Bouton admin flottant en haut à droite - visible seulement pour les administrateurs
+              if (authProvider.isAdmin) // ← Condition ajoutée ici
+                Positioned(
+                  top: 40,
+                  right: 16,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      context.go('/admin');
+                    },
+                    icon: const Icon(Icons.admin_panel_settings),
+                    label: const Text('Admin'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
           bottomNavigationBar: _buildCompactBottomNavigationBar(),
@@ -196,10 +197,10 @@ class _MainScreenState extends State<MainScreen> {
                     child: CircleAvatar(
                       radius: 10,
                       backgroundColor: Colors.grey[300],
-                      backgroundImage: user != null 
-                          ? NetworkImage('https://i.pravatar.cc/150?img=${user.id % 20}')
+                      backgroundImage: user != null && user.avatarUrl.isNotEmpty
+                          ? NetworkImage(user.avatarUrl)
                           : null,
-                      child: user == null 
+                      child: user == null || user.avatarUrl.isEmpty
                           ? Icon(Icons.person, color: Colors.grey[600], size: 12)
                           : null,
                     ),

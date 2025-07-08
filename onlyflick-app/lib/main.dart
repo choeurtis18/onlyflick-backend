@@ -10,11 +10,24 @@ import 'package:matchmaker/core/services/api_service.dart';
 import 'package:matchmaker/core/providers/app_providers_wrapper.dart';
 import './core/providers/profile_provider.dart';
 import 'package:matchmaker/core/providers/messaging_provider.dart';
-
-// ===== AJOUT DE L'IMPORT DU SEARCH PROVIDER =====
 import 'package:matchmaker/core/providers/search_provider.dart';
 
-void main() {
+import 'package:matchmaker/core/config/stripe_config.dart';
+
+void main() async {
+  // 🔧 INITIALISATION FLUTTER OBLIGATOIRE
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // 💳 INITIALISATION STRIPE
+  try {
+    print('🔧 [Main] Initialisation de Stripe...');
+    await StripeConfig.initialize();
+    print('✅ [Main] Stripe initialisé avec succès (${StripeConfig.getCurrentEnvironment()})');
+  } catch (e) {
+    print('❌ [Main] Erreur d\'initialisation Stripe: $e');
+    // Continue quand même l'app, Stripe sera désactivé
+  }
+  
   runApp(const OnlyFlickBootstrap());
 }
 
@@ -54,13 +67,11 @@ class OnlyFlickBootstrap extends StatelessWidget {
               create: (_) => PostsProvider(),
             ),
             
-            // ===== AJOUT DU SEARCH PROVIDER =====
             // 🔍 Provider de recherche et découverte
             ChangeNotifierProvider(
               create: (_) => SearchProvider(),
             ),
             
-            // ✅ NOUVEAU: Provider de messagerie
             // 💬 Provider de messagerie (pour le chat temps réel)
             ChangeNotifierProvider(
               create: (_) => MessagingProvider(),
@@ -76,15 +87,22 @@ class OnlyFlickBootstrap extends StatelessWidget {
 
   /// Initialise l'application avec les services API
   Future<void> _initializeApp() async {
-    // debugPrint('🚀 Initializing OnlyFlick...');
+    print('🚀 [Bootstrap] Initializing OnlyFlick...');
     
     // Initialiser le service API
     await ApiService().initialize();
     
+    // 💳 Vérification finale de Stripe
+    if (StripeConfig.isConfigured()) {
+      print('✅ [Bootstrap] Stripe configuré et prêt');
+    } else {
+      print('⚠️ [Bootstrap] Stripe non configuré - paiements désactivés');
+    }
+    
     // Simulation d'initialisation pour l'écran de chargement
     await Future.delayed(const Duration(milliseconds: 1500));
     
-    // debugPrint('✅ OnlyFlick initialized successfully');
+    print('✅ [Bootstrap] OnlyFlick initialized successfully');
   }
 }
 
@@ -167,13 +185,25 @@ class _LoadingScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               
-              // Texte de chargement
-              const Text(
-                'Connexion au serveur...',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+              // 🎯 TEXTE DE CHARGEMENT AMÉLIORÉ
+              const Column(
+                children: [
+                  Text(
+                    'Connexion au serveur...',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    '💳 Initialisation des paiements',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -280,15 +310,37 @@ class _ErrorScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 
-                // Instructions de debug
-                const Text(
-                  'Assurez-vous que votre serveur Go est démarré:\ngo run cmd/server/main.go',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                    fontFamily: 'monospace',
-                  ),
+                // 🎯 INSTRUCTIONS DE DEBUG AMÉLIORÉES
+                const Column(
+                  children: [
+                    Text(
+                      'Assurez-vous que votre serveur Go est démarré:',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'go run cmd/server/main.go',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      '💳 Vérifiez aussi vos clés Stripe dans .env',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

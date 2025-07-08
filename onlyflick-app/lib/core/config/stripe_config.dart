@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 
 class StripeConfig {
-  // Clés Stripe (remplacez par vos vraies clés)
-  static const _publishableKeyTest = 'pk_test_51...';
+  // Clés Stripe 
+  static const _publishableKeyTest = 'pk_test_51RZrcGFP5XewaRLGQGBWAbwzQA0lmiMChZnpIIes8XmjWaViRJvYtXAqCbQdm9UTAxFWyUnMLgEEx1CszjNr9HPq001jiS1UoG';
   static const _publishableKeyLive = 'pk_live_51...';
 
   static const _merchantIdentifier = 'merchant.com.votreapp.onlyflick';

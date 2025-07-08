@@ -8,18 +8,26 @@ import "time"
 type TagCategory string
 
 const (
-	TagYoga         TagCategory = "yoga"         // 🧘 Pratique du yoga
-	TagWellness     TagCategory = "wellness"     // 🌿 Bien-être, équilibre
-	TagBeaute       TagCategory = "beaute"       // 💄 Beauté, soins, maquillage
-	TagDiy          TagCategory = "diy"          // 🛠️ Bricolage, fait-main
-	TagArt          TagCategory = "art"          // 🎨 Peinture, sculpture, création artistique
-	TagMusique      TagCategory = "musique"      // 🎵 Musique, instruments, chant
-	TagCuisine      TagCategory = "cuisine"      // 🍽️ Cuisine, recettes, plats
-	TagMusculation  TagCategory = "musculation"  // 🏋️ Musculation, entraînement
-	TagMode         TagCategory = "mode"         // 👗 Mode, vêtements, style
-	TagFitness      TagCategory = "fitness"      // 💪 Fitness, entraînement physique
+	TagYoga         TagCategory = "yoga"
+	TagWellness     TagCategory = "wellness"
+	TagBeaute       TagCategory = "beaute"
+	TagDiy          TagCategory = "diy"
+	TagArt          TagCategory = "art"
+	TagMusique      TagCategory = "musique"
+	TagCuisine      TagCategory = "cuisine"
+	TagMusculation  TagCategory = "musculation"
+	TagMode         TagCategory = "mode"
+	TagFitness      TagCategory = "fitness"
+	
+	// ✅ NOUVEAUX TAGS de votre base de données
+	TagFootball     TagCategory = "football"    
+	TagBasket       TagCategory = "basket"      
+	TagCinema       TagCategory = "cinema"      
+	TagActualites   TagCategory = "actualites"   
+	TagMangas       TagCategory = "mangas"      
+	TagMemes        TagCategory = "memes"      
+	TagTech         TagCategory = "tech"
 )
-
 
 // SortType représente les différents types de tri pour les posts
 type SortType string
@@ -195,7 +203,7 @@ func NewPostMetrics(postID int64) *PostMetrics {
 
 // ===== MÉTHODES UTILITAIRES POUR LES TAGS =====
 
-// GetTagDisplayName retourne le nom d'affichage d'un tag
+
 // GetTagDisplayName retourne le nom d'affichage d'un tag
 func (tc TagCategory) GetTagDisplayName() string {
 	switch tc {
@@ -219,6 +227,20 @@ func (tc TagCategory) GetTagDisplayName() string {
 		return "Mode"
 	case TagFitness:
 		return "Fitness"
+	case TagFootball:
+		return "Football"
+	case TagBasket:
+		return "Basket"
+	case TagCinema:
+		return "Cinéma"
+	case TagActualites:
+		return "Actualités"
+	case TagMangas:
+		return "Mangas"
+	case TagMemes:
+		return "Memes"
+	case TagTech:
+		return "Tech"
 	default:
 		return string(tc)
 	}
@@ -247,6 +269,20 @@ func (tc TagCategory) GetTagEmoji() string {
 		return "👗"
 	case TagFitness:
 		return "💪"
+	case TagFootball:
+		return "⚽"
+	case TagBasket:
+		return "🏀"
+	case TagCinema:
+		return "🎬"
+	case TagActualites:
+		return "📰"
+	case TagMangas:
+		return "📚"
+	case TagMemes:
+		return "😂"
+	case TagTech:
+		return "💻"
 	default:
 		return "🏷️"
 	}

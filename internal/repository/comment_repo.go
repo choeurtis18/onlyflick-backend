@@ -28,15 +28,27 @@ func CreateComment(c *domain.Comment) error {
 	return nil
 }
 
-// GetCommentsByPostID récupère tous les commentaires associés à un post donné.
+// GetCommentsByPostID récupère tous les commentaires associés à un post donné avec les informations utilisateur.
 func GetCommentsByPostID(postID int64) ([]*domain.Comment, error) {
 	log.Printf("[CommentRepo] Récupération des commentaires pour le post ID %d", postID)
 
 	query := `
-		SELECT id, user_id, post_id, content, created_at, updated_at
-		FROM comments
-		WHERE post_id = $1
-		ORDER BY created_at ASC;
+		SELECT 
+			c.id, 
+			c.user_id, 
+			c.post_id, 
+			c.content, 
+			c.created_at, 
+			c.updated_at,
+			-- Informations utilisateur
+			COALESCE(u.username, '') as username,
+			COALESCE(u.first_name, '') as first_name,
+			COALESCE(u.last_name, '') as last_name,
+			COALESCE(u.avatar_url, '') as avatar_url
+		FROM comments c
+		LEFT JOIN users u ON c.user_id = u.id
+		WHERE c.post_id = $1
+		ORDER BY c.created_at ASC;
 	`
 	rows, err := database.DB.Query(query, postID)
 	if err != nil {
@@ -48,10 +60,30 @@ func GetCommentsByPostID(postID int64) ([]*domain.Comment, error) {
 	var comments []*domain.Comment
 	for rows.Next() {
 		var c domain.Comment
-		if err := rows.Scan(&c.ID, &c.UserID, &c.PostID, &c.Content, &c.CreatedAt, &c.UpdatedAt); err != nil {
+		var username, firstName, lastName, avatarUrl string
+		
+		if err := rows.Scan(
+			&c.ID, 
+			&c.UserID, 
+			&c.PostID, 
+			&c.Content, 
+			&c.CreatedAt, 
+			&c.UpdatedAt,
+			&username,
+			&firstName,
+			&lastName,
+			&avatarUrl,
+		); err != nil {
 			log.Printf("[CommentRepo][ERREUR] Problème lors du scan d'un commentaire : %v", err)
 			return nil, err
 		}
+		
+		// Ajouter les informations utilisateur au commentaire
+		c.Username = username
+		c.FirstName = firstName
+		c.LastName = lastName
+		c.AvatarUrl = avatarUrl
+		
 		comments = append(comments, &c)
 	}
 
@@ -73,16 +105,30 @@ func DeleteComment(commentID int64) error {
 	return nil
 }
 
-// GetCommentByID récupère un commentaire par son ID.
+// GetCommentByID récupère un commentaire par son ID avec les informations utilisateur.
 func GetCommentByID(commentID int64) (*domain.Comment, error) {
 	log.Printf("[CommentRepo] Récupération du commentaire ID %d", commentID)
 	query := `
-		SELECT id, post_id, user_id, content, created_at, updated_at
-		FROM comments
-		WHERE id = $1
+		SELECT 
+			c.id, 
+			c.post_id, 
+			c.user_id, 
+			c.content, 
+			c.created_at, 
+			c.updated_at,
+			-- Informations utilisateur
+			COALESCE(u.username, '') as username,
+			COALESCE(u.first_name, '') as first_name,
+			COALESCE(u.last_name, '') as last_name,
+			COALESCE(u.avatar_url, '') as avatar_url
+		FROM comments c
+		LEFT JOIN users u ON c.user_id = u.id
+		WHERE c.id = $1
 	`
 
 	var comment domain.Comment
+	var username, firstName, lastName, avatarUrl string
+	
 	err := database.DB.QueryRow(query, commentID).Scan(
 		&comment.ID,
 		&comment.PostID,
@@ -90,6 +136,10 @@ func GetCommentByID(commentID int64) (*domain.Comment, error) {
 		&comment.Content,
 		&comment.CreatedAt,
 		&comment.UpdatedAt,
+		&username,
+		&firstName,
+		&lastName,
+		&avatarUrl,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -99,6 +149,13 @@ func GetCommentByID(commentID int64) (*domain.Comment, error) {
 		log.Printf("[CommentRepo][ERREUR] Impossible de récupérer le commentaire ID %d : %v", commentID, err)
 		return nil, err
 	}
+	
+	// Ajouter les informations utilisateur au commentaire
+	comment.Username = username
+	comment.FirstName = firstName
+	comment.LastName = lastName
+	comment.AvatarUrl = avatarUrl
+	
 	log.Printf("[CommentRepo] Commentaire récupéré : %+v", comment)
 	return &comment, nil
 }
