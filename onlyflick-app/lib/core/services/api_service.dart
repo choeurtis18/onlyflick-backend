@@ -3,27 +3,16 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+// 🔥 NOUVEAU: Import de la configuration centralisée
+import '../config/app_config.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();
 
-  // Configuration selon votre backend Go et la plateforme
-  static String get _baseUrl {
-    if (kDebugMode) {
-      // En développement, adapter selon la plateforme
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        return 'http://10.0.2.2:8080';  // Android emulator
-      } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-        return 'http://localhost:8080';  // iOS simulator
-      } else {
-        return 'http://localhost:8080';  // Desktop/Web
-      }
-    } else {
-      return 'https://api.onlyflick.io';  // Production
-    }
-  }
+  // 🔥 NOUVEAU: Utilisation d'AppConfig au lieu de la configuration en dur
+  static String get _baseUrl => AppConfig.baseUrl;
 
   final http.Client _client = http.Client();
   String? _token;
@@ -52,19 +41,24 @@ class ApiService {
   /// ✅ NOUVEAU: Vérifie si un utilisateur est connecté
   bool get hasCurrentUser => _currentUserId != null;
 
-  /// Initialise le service avec le token et l'ID utilisateur stockés
+  /// 🔥 NOUVEAU: Initialise le service avec debug info et test de connexion
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
     
     // Charger le token
-    _token = prefs.getString('auth_token');
+    _token = prefs.getString(AppConfig.tokenKey);
     
     // ✅ NOUVEAU: Charger l'ID utilisateur
     _currentUserId = prefs.getInt('current_user_id');
     
-    // debugPrint('🔐 ApiService initialized with token: ${_token != null}');
-    // debugPrint('🔐 Current user ID: $_currentUserId');
-    // debugPrint('🌍 Base URL: $_baseUrl');
+    // 🔥 NOUVEAU: Affichage des informations de debug
+    if (AppConfig.enableDetailedLogs) {
+      debugPrint('🔐 ApiService initialized with token: ${_token != null}');
+      debugPrint('🔐 Current user ID: $_currentUserId');
+      debugPrint('🌍 Base URL: $_baseUrl');
+      debugPrint('🌍 Environment: ${AppConfig.currentEnvironment.displayName}');
+      debugPrint('📱 Platform: ${defaultTargetPlatform.name}');
+    }
   }
 
   /// Met à jour le token d'authentification
@@ -72,11 +66,15 @@ class ApiService {
     _token = token;
     final prefs = await SharedPreferences.getInstance();
     if (token != null) {
-      await prefs.setString('auth_token', token);
-      // debugPrint('🔐 Token saved: ${token.substring(0, 10)}...');
+      await prefs.setString(AppConfig.tokenKey, token);
+      if (AppConfig.enableDetailedLogs) {
+        debugPrint('🔐 Token saved: ${token.substring(0, 10)}...');
+      }
     } else {
-      await prefs.remove('auth_token');
-      // debugPrint('🔐 Token cleared');
+      await prefs.remove(AppConfig.tokenKey);
+      if (AppConfig.enableDetailedLogs) {
+        debugPrint('🔐 Token cleared');
+      }
     }
   }
 
@@ -85,7 +83,9 @@ class ApiService {
     _currentUserId = userId;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('current_user_id', userId);
-    // debugPrint('🔐 Current user ID saved: $userId');
+    if (AppConfig.enableDetailedLogs) {
+      debugPrint('🔐 Current user ID saved: $userId');
+    }
   }
 
   /// ✅ NOUVEAU: Efface l'ID de l'utilisateur (appelé lors du logout)
@@ -93,7 +93,9 @@ class ApiService {
     _currentUserId = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('current_user_id');
-    // debugPrint('🔐 Current user ID cleared');
+    if (AppConfig.enableDetailedLogs) {
+      debugPrint('🔐 Current user ID cleared');
+    }
   }
 
   /// ✅ NOUVEAU: Déconnexion complète (token + user)
@@ -156,9 +158,11 @@ class ApiService {
   }) async {
     try {
       final uri = _buildUri(endpoint, null);
-      // debugPrint('🌐 POST MULTIPART ${uri.toString()}');
-      // debugPrint('📤 Fields: $fields');
-      if (files != null) debugPrint('📎 Files: ${files.keys.toList()}');
+      if (AppConfig.enableHttpLogs) {
+        debugPrint('🌐 POST MULTIPART ${uri.toString()}');
+        debugPrint('📤 Fields: $fields');
+        if (files != null) debugPrint('📎 Files: ${files.keys.toList()}');
+      }
 
       final request = http.MultipartRequest('POST', uri);
       
@@ -181,13 +185,15 @@ class ApiService {
         }
       }
       
-      // Envoyer la requête
+      // Envoyer la requête avec timeout configuré
       final streamedResponse = await request.send().timeout(
-        const Duration(seconds: 30),
+        AppConfig.apiTimeout,
       );
       final response = await http.Response.fromStream(streamedResponse);
       
-      debugPrint('📥 Response ${response.statusCode}: ${response.body}');
+      if (AppConfig.enableHttpLogs) {
+        debugPrint('📥 Response ${response.statusCode}: ${response.body}');
+      }
       return _handleResponse<T>(response, fromJson);
       
     } on SocketException {
@@ -214,9 +220,11 @@ class ApiService {
   }) async {
     try {
       final uri = _buildUri(endpoint, null);
-      // debugPrint('🌐 PATCH MULTIPART ${uri.toString()}');
-      // debugPrint('📤 Fields: $fields');
-      if (files != null) debugPrint('📎 Files: ${files.keys.toList()}');
+      if (AppConfig.enableHttpLogs) {
+        debugPrint('🌐 PATCH MULTIPART ${uri.toString()}');
+        debugPrint('📤 Fields: $fields');
+        if (files != null) debugPrint('📎 Files: ${files.keys.toList()}');
+      }
 
       final request = http.MultipartRequest('PATCH', uri);
       
@@ -239,13 +247,15 @@ class ApiService {
         }
       }
       
-      // Envoyer la requête
+      // Envoyer la requête avec timeout configuré
       final streamedResponse = await request.send().timeout(
-        const Duration(seconds: 30),
+        AppConfig.apiTimeout,
       );
       final response = await http.Response.fromStream(streamedResponse);
       
-      debugPrint('📥 Response ${response.statusCode}: ${response.body}');
+      if (AppConfig.enableHttpLogs) {
+        debugPrint('📥 Response ${response.statusCode}: ${response.body}');
+      }
       return _handleResponse<T>(response, fromJson);
       
     } on SocketException {
@@ -263,7 +273,7 @@ class ApiService {
     }
   }
 
-  /// Méthode privée pour effectuer les requêtes HTTP standard
+  /// 🔥 AMÉLIORÉ: Méthode privée pour effectuer les requêtes HTTP standard avec timeouts configurés
   Future<ApiResponse<T>> _makeRequest<T>(
     String method,
     String endpoint, {
@@ -274,8 +284,10 @@ class ApiService {
     try {
       final uri = _buildUri(endpoint, queryParams);
       
-      // debugPrint('🌐 $method ${uri.toString()}');
-      if (body != null) debugPrint('📤 Body: ${jsonEncode(body)}');
+      if (AppConfig.enableHttpLogs) {
+        debugPrint('🌐 $method ${uri.toString()}');
+        if (body != null) debugPrint('📤 Body: ${jsonEncode(body)}');
+      }
 
       final headers = _defaultHeaders;
       late http.Response response;
@@ -283,7 +295,7 @@ class ApiService {
       switch (method.toUpperCase()) {
         case 'GET':
           response = await _client.get(uri, headers: headers).timeout(
-            const Duration(seconds: 15),
+            AppConfig.connectTimeout,
           );
           break;
         case 'POST':
@@ -292,7 +304,7 @@ class ApiService {
             headers: headers,
             body: body != null ? jsonEncode(body) : null,
           ).timeout(
-            const Duration(seconds: 15),
+            AppConfig.apiTimeout,
           );
           break;
         case 'PATCH':
@@ -301,19 +313,21 @@ class ApiService {
             headers: headers,
             body: body != null ? jsonEncode(body) : null,
           ).timeout(
-            const Duration(seconds: 15),
+            AppConfig.apiTimeout,
           );
           break;
         case 'DELETE':
           response = await _client.delete(uri, headers: headers).timeout(
-            const Duration(seconds: 15),
+            AppConfig.connectTimeout,
           );
           break;
         default:
           throw Exception('Unsupported HTTP method: $method');
       }
 
-      // debugPrint('📥 Response ${response.statusCode}: ${response.body}');
+      if (AppConfig.enableHttpLogs) {
+        debugPrint('📥 Response ${response.statusCode}: ${response.body}');
+      }
       return _handleResponse<T>(response, fromJson);
 
     } on SocketException {
@@ -327,7 +341,12 @@ class ApiService {
       return ApiResponse.error('Format de réponse invalide');
     } catch (e) {
       debugPrint('❌ Unexpected error: $e');
-      return ApiResponse.error('Serveur inaccessible. Vérifiez que votre backend Go est démarré.');
+      // 🔥 NOUVEAU: Message d'erreur spécifique selon l'environnement
+      if (AppConfig.isProduction) {
+        return ApiResponse.error('Serveur temporairement indisponible. Veuillez réessayer.');
+      } else {
+        return ApiResponse.error('Serveur inaccessible. Vérifiez que votre backend Go est démarré.');
+      }
     }
   }
 
@@ -349,8 +368,10 @@ class ApiService {
   ) {
     final statusCode = response.statusCode;
     
-    debugPrint('📡 Response status: $statusCode');
-    debugPrint('📡 Response body: ${response.body}');
+    if (AppConfig.enableHttpLogs) {
+      debugPrint('📡 Response status: $statusCode');
+      debugPrint('📡 Response body: ${response.body}');
+    }
 
     try {
       // Gestion des réponses vides (comme pour DELETE)
@@ -377,7 +398,9 @@ class ApiService {
           } else if (jsonData is List) {
             // ✅ NOUVEAU: Cas spécifique pour les listes JSON
             // Dans ce cas, on retourne directement la liste sans parser
-            debugPrint('📡 Response is a List, returning as-is');
+            if (AppConfig.enableHttpLogs) {
+              debugPrint('📡 Response is a List, returning as-is');
+            }
             return ApiResponse.success(jsonData as T, statusCode);
           } else {
             // Autres types de données
@@ -399,7 +422,9 @@ class ApiService {
           message = jsonData;
         }
         
-        debugPrint('❌ Server error message: $message');
+        if (AppConfig.enableHttpLogs) {
+          debugPrint('❌ Server error message: $message');
+        }
         
         // ✅ CORRECTION: Gestion spécifique des erreurs 401
         if (statusCode == 401) {
@@ -421,8 +446,10 @@ class ApiService {
       }
 
     } catch (e) {
-      debugPrint('❌ Error parsing JSON response: $e');
-      debugPrint('❌ [PostsService] Failed to fetch posts: ${response.body}');
+      if (AppConfig.enableHttpLogs) {
+        debugPrint('❌ Error parsing JSON response: $e');
+        debugPrint('❌ [ApiService] Failed to parse response: ${response.body}');
+      }
       
       // Si on ne peut pas parser le JSON, utiliser le body brut
       final errorMessage = response.body.isNotEmpty ? response.body : 'Erreur de format de réponse';
@@ -446,7 +473,9 @@ class ApiService {
 
   /// Gère les erreurs d'authentification (401) - uniquement pour session expirée
   void _handleUnauthorized() {
-    debugPrint('⚠️ Session expired - clearing local session');
+    if (AppConfig.enableHttpLogs) {
+      debugPrint('⚠️ Session expired - clearing local session');
+    }
     // ✅ IMPORTANT: Ne nettoyer la session que pour les vraies expirations
     logout();
   }
@@ -473,10 +502,10 @@ class ApiService {
     );
   }
 
-  /// Test de connectivité avec le serveur
+  /// 🔥 AMÉLIORÉ: Test de connectivité avec endpoint spécifique
   Future<bool> testConnection() async {
     try {
-      final response = await get('/health');
+      final response = await get(AppConfig.healthCheckUrl.replaceFirst(_baseUrl, ''));
       return response.isSuccess;
     } catch (e) {
       debugPrint('❌ Connection test failed: $e');
@@ -493,6 +522,8 @@ class ApiService {
         'hasUser': hasCurrentUser,
         'userId': currentUserId,
         'isAuthenticated': isAuthenticated,
+        'environment': AppConfig.currentEnvironment.displayName,
+        'baseUrl': _baseUrl,
       };
 
   /// Nettoyage des ressources

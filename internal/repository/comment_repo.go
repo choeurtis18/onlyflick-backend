@@ -12,35 +12,27 @@ import (
 func CreateComment(c *domain.Comment) error {
 	log.Printf("[CommentRepo] Création d'un commentaire pour le post ID %d par l'utilisateur ID %d", c.PostID, c.UserID)
 
-	// Nettoyer les prepared statements existants
-	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
-		log.Printf("[CreateComment][WARN] Impossible de nettoyer les prepared statements: %v", err)
-	}
-
 	query := `
 		INSERT INTO comments (user_id, post_id, content)
 		VALUES ($1, $2, $3)
 		RETURNING id, created_at, updated_at;
 	`
+
 	err := database.DB.QueryRow(query, c.UserID, c.PostID, c.Content).
 		Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt)
 	if err != nil {
 		log.Printf("[CommentRepo][ERREUR] Impossible de créer le commentaire : %v", err)
-		return err
+		return fmt.Errorf("erreur création commentaire : %w", err)
 	}
 
 	log.Printf("[CommentRepo] Commentaire créé avec succès : %+v", c)
 	return nil
 }
 
+
 // GetCommentsByPostID récupère tous les commentaires associés à un post donné avec les informations utilisateur.
 func GetCommentsByPostID(postID int64) ([]*domain.Comment, error) {
 	log.Printf("[CommentRepo] Récupération des commentaires pour le post ID %d", postID)
-
-	// Nettoyer les prepared statements existants
-	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
-		log.Printf("[GetCommentsByPostID][WARN] Impossible de nettoyer les prepared statements: %v", err)
-	}
 
 	query := `
 		SELECT 
@@ -50,16 +42,16 @@ func GetCommentsByPostID(postID int64) ([]*domain.Comment, error) {
 			c.content, 
 			c.created_at, 
 			c.updated_at,
-			-- Informations utilisateur
-			COALESCE(u.username, '') as username,
-			COALESCE(u.first_name, '') as first_name,
-			COALESCE(u.last_name, '') as last_name,
-			COALESCE(u.avatar_url, '') as avatar_url
+			COALESCE(u.username, '') AS username,
+			COALESCE(u.first_name, '') AS first_name,
+			COALESCE(u.last_name, '') AS last_name,
+			COALESCE(u.avatar_url, '') AS avatar_url
 		FROM comments c
 		LEFT JOIN users u ON c.user_id = u.id
 		WHERE c.post_id = $1
-		ORDER BY c.created_at ASC;
+		ORDER BY c.created_at ASC
 	`
+
 	rows, err := database.DB.Query(query, postID)
 	if err != nil {
 		log.Printf("[CommentRepo][ERREUR] Échec de la récupération des commentaires pour le post ID %d : %v", postID, err)
@@ -70,30 +62,21 @@ func GetCommentsByPostID(postID int64) ([]*domain.Comment, error) {
 	var comments []*domain.Comment
 	for rows.Next() {
 		var c domain.Comment
-		var username, firstName, lastName, avatarUrl string
-		
 		if err := rows.Scan(
-			&c.ID, 
-			&c.UserID, 
-			&c.PostID, 
-			&c.Content, 
-			&c.CreatedAt, 
+			&c.ID,
+			&c.UserID,
+			&c.PostID,
+			&c.Content,
+			&c.CreatedAt,
 			&c.UpdatedAt,
-			&username,
-			&firstName,
-			&lastName,
-			&avatarUrl,
+			&c.Username,
+			&c.FirstName,
+			&c.LastName,
+			&c.AvatarUrl,
 		); err != nil {
 			log.Printf("[CommentRepo][ERREUR] Problème lors du scan d'un commentaire : %v", err)
-			return nil, err
+			return nil, fmt.Errorf("échec scan commentaire : %w", err)
 		}
-		
-		// Ajouter les informations utilisateur au commentaire
-		c.Username = username
-		c.FirstName = firstName
-		c.LastName = lastName
-		c.AvatarUrl = avatarUrl
-		
 		comments = append(comments, &c)
 	}
 
@@ -101,34 +84,33 @@ func GetCommentsByPostID(postID int64) ([]*domain.Comment, error) {
 	return comments, nil
 }
 
+
 // DeleteComment supprime un commentaire selon son ID.
 func DeleteComment(commentID int64) error {
 	log.Printf("[CommentRepo] Suppression du commentaire ID %d", commentID)
 
-	// Nettoyer les prepared statements existants
-	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
-		log.Printf("[DeleteComment][WARN] Impossible de nettoyer les prepared statements: %v", err)
-	}
-
 	query := `DELETE FROM comments WHERE id = $1`
+
 	result, err := database.DB.Exec(query, commentID)
 	if err != nil {
 		log.Printf("[CommentRepo][ERREUR] Impossible de supprimer le commentaire ID %d : %v", commentID, err)
-		return err
+		return fmt.Errorf("échec suppression commentaire : %w", err)
 	}
-	rowsAffected, _ := result.RowsAffected()
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("[CommentRepo][ERREUR] Impossible de récupérer le nombre de lignes supprimées : %v", err)
+		return fmt.Errorf("échec récupération lignes supprimées : %w", err)
+	}
+
 	log.Printf("[CommentRepo] Suppression effectuée, %d ligne(s) affectée(s)", rowsAffected)
 	return nil
 }
 
+
 // GetCommentByID récupère un commentaire par son ID avec les informations utilisateur.
 func GetCommentByID(commentID int64) (*domain.Comment, error) {
 	log.Printf("[CommentRepo] Récupération du commentaire ID %d", commentID)
-
-	// Nettoyer les prepared statements existants
-	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
-		log.Printf("[GetCommentByID][WARN] Impossible de nettoyer les prepared statements: %v", err)
-	}
 
 	query := `
 		SELECT 
@@ -138,19 +120,16 @@ func GetCommentByID(commentID int64) (*domain.Comment, error) {
 			c.content, 
 			c.created_at, 
 			c.updated_at,
-			-- Informations utilisateur
-			COALESCE(u.username, '') as username,
-			COALESCE(u.first_name, '') as first_name,
-			COALESCE(u.last_name, '') as last_name,
-			COALESCE(u.avatar_url, '') as avatar_url
+			COALESCE(u.username, '') AS username,
+			COALESCE(u.first_name, '') AS first_name,
+			COALESCE(u.last_name, '') AS last_name,
+			COALESCE(u.avatar_url, '') AS avatar_url
 		FROM comments c
 		LEFT JOIN users u ON c.user_id = u.id
 		WHERE c.id = $1
 	`
 
 	var comment domain.Comment
-	var username, firstName, lastName, avatarUrl string
-	
 	err := database.DB.QueryRow(query, commentID).Scan(
 		&comment.ID,
 		&comment.PostID,
@@ -158,10 +137,10 @@ func GetCommentByID(commentID int64) (*domain.Comment, error) {
 		&comment.Content,
 		&comment.CreatedAt,
 		&comment.UpdatedAt,
-		&username,
-		&firstName,
-		&lastName,
-		&avatarUrl,
+		&comment.Username,
+		&comment.FirstName,
+		&comment.LastName,
+		&comment.AvatarUrl,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -169,15 +148,9 @@ func GetCommentByID(commentID int64) (*domain.Comment, error) {
 			return nil, fmt.Errorf("commentaire non trouvé")
 		}
 		log.Printf("[CommentRepo][ERREUR] Impossible de récupérer le commentaire ID %d : %v", commentID, err)
-		return nil, err
+		return nil, fmt.Errorf("échec récupération commentaire : %w", err)
 	}
-	
-	// Ajouter les informations utilisateur au commentaire
-	comment.Username = username
-	comment.FirstName = firstName
-	comment.LastName = lastName
-	comment.AvatarUrl = avatarUrl
-	
+
 	log.Printf("[CommentRepo] Commentaire récupéré : %+v", comment)
 	return &comment, nil
 }
@@ -186,11 +159,6 @@ func GetCommentByID(commentID int64) (*domain.Comment, error) {
 func GetCommentsByUserID(userID int64, limit, offset int) ([]*domain.Comment, error) {
 	log.Printf("[CommentRepo] Récupération des commentaires pour l'utilisateur ID %d", userID)
 
-	// Nettoyer les prepared statements existants
-	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
-		log.Printf("[GetCommentsByUserID][WARN] Impossible de nettoyer les prepared statements: %v", err)
-	}
-
 	query := `
 		SELECT 
 			c.id, 
@@ -199,17 +167,17 @@ func GetCommentsByUserID(userID int64, limit, offset int) ([]*domain.Comment, er
 			c.content, 
 			c.created_at, 
 			c.updated_at,
-			-- Informations utilisateur
-			COALESCE(u.username, '') as username,
-			COALESCE(u.first_name, '') as first_name,
-			COALESCE(u.last_name, '') as last_name,
-			COALESCE(u.avatar_url, '') as avatar_url
+			COALESCE(u.username, '') AS username,
+			COALESCE(u.first_name, '') AS first_name,
+			COALESCE(u.last_name, '') AS last_name,
+			COALESCE(u.avatar_url, '') AS avatar_url
 		FROM comments c
 		LEFT JOIN users u ON c.user_id = u.id
 		WHERE c.user_id = $1
 		ORDER BY c.created_at DESC
-		LIMIT $2 OFFSET $3;
+		LIMIT $2 OFFSET $3
 	`
+
 	rows, err := database.DB.Query(query, userID, limit, offset)
 	if err != nil {
 		log.Printf("[CommentRepo][ERREUR] Échec de la récupération des commentaires pour l'utilisateur ID %d : %v", userID, err)
@@ -220,30 +188,21 @@ func GetCommentsByUserID(userID int64, limit, offset int) ([]*domain.Comment, er
 	var comments []*domain.Comment
 	for rows.Next() {
 		var c domain.Comment
-		var username, firstName, lastName, avatarUrl string
-		
 		if err := rows.Scan(
-			&c.ID, 
-			&c.UserID, 
-			&c.PostID, 
-			&c.Content, 
-			&c.CreatedAt, 
+			&c.ID,
+			&c.UserID,
+			&c.PostID,
+			&c.Content,
+			&c.CreatedAt,
 			&c.UpdatedAt,
-			&username,
-			&firstName,
-			&lastName,
-			&avatarUrl,
+			&c.Username,
+			&c.FirstName,
+			&c.LastName,
+			&c.AvatarUrl,
 		); err != nil {
 			log.Printf("[CommentRepo][ERREUR] Problème lors du scan d'un commentaire : %v", err)
-			return nil, err
+			return nil, fmt.Errorf("échec scan commentaire : %w", err)
 		}
-		
-		// Ajouter les informations utilisateur au commentaire
-		c.Username = username
-		c.FirstName = firstName
-		c.LastName = lastName
-		c.AvatarUrl = avatarUrl
-		
 		comments = append(comments, &c)
 	}
 

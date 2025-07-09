@@ -12,7 +12,7 @@ dependencies:
   provider: ^6.1.1
   shared_preferences: ^2.2.2
   go_router: ^13.0.0
-  google_fonts: ^6.1.0
+  google_fonts: ^6.1.0  # Utilisez Google Fonts au lieu de polices locales
   http: ^1.2.1
   intl: any
   cupertino_icons: ^1.0.6
@@ -38,37 +38,20 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
+  # Assets existants uniquement - supprimé les dossiers qui n'existent pas
   assets:
     - assets/images/
-    - assets/fonts/
-    - fonts/
-
-# Ajout de la section fonts pour intégrer les polices localement
-fonts:
-  - family: Roboto
-    fonts:
-      - asset: fonts/Roboto-Regular.ttf
-      - asset: fonts/Roboto-Bold.ttf
-        weight: 700
-      - asset: fonts/Roboto-Italic.ttf
-        style: italic
-      - asset: fonts/Roboto-Light.ttf
-        weight: 300
-      - asset: fonts/Roboto-Medium.ttf
-        weight: 500
   
-  - family: Pacifico
-    fonts:
-      - asset: fonts/Pacifico-Regular.ttf
-
-  - family: Inter
-    fonts:
-      - asset: fonts/Inter-Regular.ttf
-      - asset: fonts/Inter-Bold.ttf
-        weight: 700
-      - asset: fonts/Inter-Medium.ttf
-        weight: 500
-      - asset: fonts/Inter-Light.ttf
-        weight: 300
-      - asset: fonts/Inter-SemiBold.ttf
-        weight: 600
+  # Supprimé la section fonts car les fichiers n'existent pas
+  # Utilisez google_fonts package à la place
+  
+  # Si vous voulez ajouter des polices locales plus tard :
+  # 1. Créez le dossier assets/fonts/
+  # 2. Ajoutez vos fichiers .ttf
+  # 3. Décommentez et configurez la section fonts ci-dessous
+  
+  # fonts:
+  #   - family: CustomFont
+  #     fonts:
+  #       - asset: assets/fonts/CustomFont-Regular.ttf

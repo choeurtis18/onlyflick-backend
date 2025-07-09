@@ -515,13 +515,6 @@ func ListPostsRecommendedForUserWithTags(userID int64, tags []string, limit, off
 func getRecommendedPostsWithoutTags(userID int64, limit, offset int) ([]interface{}, int, error) {
 	log.Printf("[PostRepo] Recommandations sans filtrage tags pour user %d", userID)
 
-	// Nettoyer les prepared statements existants au début
-	_, err := database.DB.Exec("DEALLOCATE ALL")
-	if err != nil {
-		log.Printf("[PostRepo][WARN] Impossible de nettoyer les prepared statements: %v", err)
-	}
-
-	// 🔥 CORRECTION : Ajouter author_avatar dans le SELECT
 	query := `
 		SELECT 
 			p.id,
@@ -549,17 +542,7 @@ func getRecommendedPostsWithoutTags(userID int64, limit, offset int) ([]interfac
 		LIMIT $1 OFFSET $2
 	`
 
-	args := []interface{}{limit, offset}
-
-	// Préparer explicitement la requête
-	stmt, err := database.DB.Prepare(query)
-	if err != nil {
-		log.Printf("[PostRepo][ERREUR] Erreur préparation requête : %v", err)
-		return nil, 0, err
-	}
-	defer stmt.Close()
-
-	rows, err := stmt.Query(args...)
+	rows, err := database.DB.Query(query, limit, offset)
 	if err != nil {
 		log.Printf("[PostRepo][ERREUR] Erreur query posts recommandés : %v", err)
 		return nil, 0, err
@@ -572,7 +555,6 @@ func getRecommendedPostsWithoutTags(userID int64, limit, offset int) ([]interfac
 		return nil, 0, err
 	}
 
-	// Compter le total (sans exclure utilisateur)
 	total, err := countRecommendedPostsWithoutTags(0) // 0 = ne pas exclure
 	if err != nil {
 		log.Printf("[PostRepo][WARN] Erreur count total : %v", err)
@@ -582,6 +564,7 @@ func getRecommendedPostsWithoutTags(userID int64, limit, offset int) ([]interfac
 	log.Printf("[PostRepo] ✅ %d posts recommandés trouvés (total: %d)", len(posts), total)
 	return posts, total, nil
 }
+
 // getRecommendedPostsWithTags - AVEC AVATAR
 func getRecommendedPostsWithTags(userID int64, tags []string, limit, offset int) ([]interface{}, int, error) {
 	log.Printf("[PostRepo] Recommandations avec filtrage tags: %v pour user %d", tags, userID)
@@ -591,13 +574,7 @@ func getRecommendedPostsWithTags(userID int64, tags []string, limit, offset int)
 		return getRecommendedPostsWithoutTags(userID, limit, offset)
 	}
 
-	// Nettoyer les prepared statements existants
-	_, err := database.DB.Exec("DEALLOCATE ALL")
-	if err != nil {
-		log.Printf("[PostRepo][WARN] Impossible de nettoyer les prepared statements: %v", err)
-	}
-
-	// Construction cohérente des arguments
+	// Construction dynamique des placeholders
 	var args []interface{}
 	var tagPlaceholders []string
 
@@ -637,15 +614,7 @@ func getRecommendedPostsWithTags(userID int64, tags []string, limit, offset int)
 		LIMIT $%d OFFSET $%d
 	`, strings.Join(tagPlaceholders, ","), limitPos, offsetPos)
 
-	// Préparer explicitement la requête
-	stmt, err := database.DB.Prepare(query)
-	if err != nil {
-		log.Printf("[PostRepo][ERREUR] Erreur préparation requête avec tags : %v", err)
-		return nil, 0, err
-	}
-	defer stmt.Close()
-
-	rows, err := stmt.Query(args...)
+	rows, err := database.DB.Query(query, args...)
 	if err != nil {
 		log.Printf("[PostRepo][ERREUR] Erreur query posts recommandés avec tags : %v", err)
 		return nil, 0, err
@@ -658,7 +627,6 @@ func getRecommendedPostsWithTags(userID int64, tags []string, limit, offset int)
 		return nil, 0, err
 	}
 
-	// Compter le total avec la même logique
 	total, err := countRecommendedPostsWithTags(0, tags) // 0 = ne pas exclure
 	if err != nil {
 		log.Printf("[PostRepo][WARN] Erreur count total avec tags : %v", err)

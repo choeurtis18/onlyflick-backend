@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; 
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../auth_provider.dart';
 import '../../models/auth_models.dart';
+import '../../../../debug/ios_network_debug.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -143,6 +145,27 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      // 🔥 AJOUTÉ: AppBar avec bouton de debug
+      appBar: kDebugMode ? AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          'Mode Debug',
+          style: TextStyle(color: Colors.red, fontSize: 12),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.network_check, color: Colors.red),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => IOSNetworkDebugPage()),
+              );
+            },
+            tooltip: 'Debug Réseau iOS',
+          ),
+        ],
+      ) : null,
       body: SafeArea(
         child: Consumer<AuthProvider>(
           builder: (context, authProvider, _) {
@@ -159,6 +182,27 @@ class _LoginPageState extends State<LoginPage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             const SizedBox(height: 24),
+                            
+                            // 🔥 AJOUTÉ: Indicateur d'environnement en mode debug
+                            if (kDebugMode) ...[
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: Colors.red, width: 1),
+                                ),
+                                child: Text(
+                                  '🐛 MODE DEBUG - iOS Network',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                             
                             // Logo et titre
                             Center(
@@ -327,6 +371,19 @@ class _LoginPageState extends State<LoginPage> {
           },
         ),
       ),
+      // 🔥 AJOUTÉ: Bouton flottant de debug (alternative)
+      floatingActionButton: kDebugMode ? FloatingActionButton.small(
+        backgroundColor: Colors.red,
+        heroTag: 'debug_network',
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => IOSNetworkDebugPage()),
+          );
+        },
+        child: Icon(Icons.bug_report, color: Colors.white),
+        tooltip: 'Debug Réseau iOS',
+      ) : null,
     );
   }
 
