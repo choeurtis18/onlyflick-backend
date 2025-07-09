@@ -342,13 +342,16 @@ class ApiService {
     return Uri.parse(url);
   }
 
-  /// Traite la réponse HTTP et la convertit en ApiResponse
+  /// ✅ CORRECTION MAJEURE: Traite la réponse HTTP avec gestion des listes JSON
   ApiResponse<T> _handleResponse<T>(
     http.Response response,
     T Function(Map<String, dynamic>)? fromJson,
   ) {
     final statusCode = response.statusCode;
     
+    debugPrint('📡 Response status: $statusCode');
+    debugPrint('📡 Response body: ${response.body}');
+
     try {
       // Gestion des réponses vides (comme pour DELETE)
       if (response.body.isEmpty) {
@@ -359,43 +362,92 @@ class ApiService {
         }
       }
 
+      // Décoder le JSON
       final jsonData = jsonDecode(response.body);
 
       // Gestion des réponses de succès (2xx)
       if (statusCode >= 200 && statusCode < 300) {
-        if (fromJson != null && jsonData is Map<String, dynamic>) {
-          final data = fromJson(jsonData);
-          return ApiResponse.success(data, statusCode);
-        } else {
-          return ApiResponse.success(jsonData, statusCode);
-        }
-      }
-
-      // Gestion des erreurs avec format du backend Go
-      if (jsonData is Map<String, dynamic>) {
-        final message = jsonData['message'] ?? jsonData['error'] ?? 'Erreur inconnue';
         
-        // Gestion spécifique des erreurs d'authentification
+        // ✅ CORRECTION MAJEURE: Gestion spécifique pour les réponses de type liste
+        if (fromJson != null) {
+          if (jsonData is Map<String, dynamic>) {
+            // Cas normal : JSON object -> utiliser fromJson
+            final data = fromJson(jsonData);
+            return ApiResponse.success(data, statusCode);
+          } else if (jsonData is List) {
+            // ✅ NOUVEAU: Cas spécifique pour les listes JSON
+            // Dans ce cas, on retourne directement la liste sans parser
+            debugPrint('📡 Response is a List, returning as-is');
+            return ApiResponse.success(jsonData as T, statusCode);
+          } else {
+            // Autres types de données
+            return ApiResponse.success(jsonData as T, statusCode);
+          }
+        } else {
+          // Pas de fromJson fourni, retour direct
+          return ApiResponse.success(jsonData as T, statusCode);
+        }
+      } else {
+        // Gestion des erreurs
+        String message = 'Erreur inconnue';
+        
+        if (jsonData is Map<String, dynamic>) {
+          message = jsonData['error'] ?? 
+                   jsonData['message'] ?? 
+                   'Erreur inconnue';
+        } else if (jsonData is String) {
+          message = jsonData;
+        }
+        
+        debugPrint('❌ Server error message: $message');
+        
+        // ✅ CORRECTION: Gestion spécifique des erreurs 401
         if (statusCode == 401) {
-          _handleUnauthorized();
-          return ApiResponse.error('Session expirée, veuillez vous reconnecter', statusCode);
+          // Analyser le message pour déterminer le type d'erreur
+          if (message.toLowerCase().contains('session') || 
+              message.toLowerCase().contains('expir') ||
+              message.toLowerCase().contains('token')) {
+            // Session expirée - nettoyer la session locale
+            _handleUnauthorized();
+            return ApiResponse.error('Session expirée, veuillez vous reconnecter', statusCode);
+          } else {
+            // Erreur de credentials - NE PAS nettoyer la session
+            // Utiliser le message exact du serveur
+            return ApiResponse.error(message, statusCode);
+          }
         }
         
         return ApiResponse.error(message, statusCode);
       }
 
-      return ApiResponse.error('Erreur de format de réponse', statusCode);
-
     } catch (e) {
-      debugPrint('❌ Error parsing response: $e');
-      return ApiResponse.error('Erreur de traitement de la réponse', statusCode);
+      debugPrint('❌ Error parsing JSON response: $e');
+      debugPrint('❌ [PostsService] Failed to fetch posts: ${response.body}');
+      
+      // Si on ne peut pas parser le JSON, utiliser le body brut
+      final errorMessage = response.body.isNotEmpty ? response.body : 'Erreur de format de réponse';
+      
+      // ✅ MÊME LOGIQUE: Gestion spécifique des erreurs 401 sans JSON
+      if (statusCode == 401) {
+        if (errorMessage.toLowerCase().contains('session') || 
+            errorMessage.toLowerCase().contains('expir') ||
+            errorMessage.toLowerCase().contains('token')) {
+          _handleUnauthorized();
+          return ApiResponse.error('Session expirée, veuillez vous reconnecter', statusCode);
+        } else {
+          // Utiliser le message brut du serveur pour les erreurs de credentials
+          return ApiResponse.error(errorMessage, statusCode);
+        }
+      }
+      
+      return ApiResponse.error(errorMessage, statusCode);
     }
   }
 
-  /// Gère les erreurs d'authentification (401)
+  /// Gère les erreurs d'authentification (401) - uniquement pour session expirée
   void _handleUnauthorized() {
-    debugPrint('⚠️ Unauthorized access - clearing session');
-    // ✅ MODIFIÉ: Nettoyer complètement la session
+    debugPrint('⚠️ Session expired - clearing local session');
+    // ✅ IMPORTANT: Ne nettoyer la session que pour les vraies expirations
     logout();
   }
 

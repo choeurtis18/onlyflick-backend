@@ -1,7 +1,7 @@
 // lib/core/services/posts_service.dart
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import '../../../core/services/api_service.dart';
+import '../services/api_service.dart';
 import '../models/post_models.dart';
 
 /// Service pour la gestion complète des posts
@@ -53,9 +53,25 @@ class PostsService {
       );
 
       if (response.isSuccess && response.data != null) {
-        final posts = (response.data as List)
-            .map((json) => Post.fromJson(json))
-            .toList();
+        List<Post> posts = [];
+        
+        // ✅ CORRECTION: Vérifier le type de données reçues
+        if (response.data is List) {
+          // Si c'est directement une liste de posts
+          final postsData = response.data as List;
+          posts = postsData
+              .map((json) => Post.fromJson(json as Map<String, dynamic>))
+              .toList();
+        } else if (response.data is Map<String, dynamic>) {
+          // Si c'est wrappé dans un objet avec pagination
+          final responseMap = response.data as Map<String, dynamic>;
+          if (responseMap.containsKey('posts')) {
+            final postsData = responseMap['posts'] as List;
+            posts = postsData
+                .map((json) => Post.fromJson(json as Map<String, dynamic>))
+                .toList();
+          }
+        }
         
         debugPrint('✅ [PostsService] ${posts.length} posts fetched successfully');
         return PostsResult.success(posts);
@@ -93,9 +109,25 @@ class PostsService {
       );
 
       if (response.isSuccess && response.data != null) {
-        final posts = (response.data as List)
-            .map((json) => Post.fromJson(json))
-            .toList();
+        List<Post> posts = [];
+        
+        // ✅ CORRECTION: Vérifier le type de données reçues
+        if (response.data is List) {
+          // Si c'est directement une liste de posts
+          final postsData = response.data as List;
+          posts = postsData
+              .map((json) => Post.fromJson(json as Map<String, dynamic>))
+              .toList();
+        } else if (response.data is Map<String, dynamic>) {
+          // Si c'est wrappé dans un objet avec pagination
+          final responseMap = response.data as Map<String, dynamic>;
+          if (responseMap.containsKey('posts')) {
+            final postsData = responseMap['posts'] as List;
+            posts = postsData
+                .map((json) => Post.fromJson(json as Map<String, dynamic>))
+                .toList();
+          }
+        }
 
         debugPrint('✅ [PostsService] ${posts.length} recommended posts fetched successfully');
         return PostsResult.success(posts);
@@ -137,9 +169,23 @@ class PostsService {
       );
 
       if (response.isSuccess && response.data != null) {
-        final posts = (response.data as List)
-            .map((json) => Post.fromJson(json))
-            .toList();
+        List<Post> posts = [];
+        
+        // ✅ CORRECTION: Vérifier le type de données reçues
+        if (response.data is List) {
+          final postsData = response.data as List;
+          posts = postsData
+              .map((json) => Post.fromJson(json as Map<String, dynamic>))
+              .toList();
+        } else if (response.data is Map<String, dynamic>) {
+          final responseMap = response.data as Map<String, dynamic>;
+          if (responseMap.containsKey('posts')) {
+            final postsData = responseMap['posts'] as List;
+            posts = postsData
+                .map((json) => Post.fromJson(json as Map<String, dynamic>))
+                .toList();
+          }
+        }
         
         debugPrint('✅ [PostsService] ${posts.length} posts from creator $creatorId fetched successfully');
         return PostsResult.success(posts);
@@ -177,9 +223,23 @@ class PostsService {
       );
 
       if (response.isSuccess && response.data != null) {
-        final posts = (response.data as List)
-            .map((json) => Post.fromJson(json))
-            .toList();
+        List<Post> posts = [];
+        
+        // ✅ CORRECTION: Vérifier le type de données reçues
+        if (response.data is List) {
+          final postsData = response.data as List;
+          posts = postsData
+              .map((json) => Post.fromJson(json as Map<String, dynamic>))
+              .toList();
+        } else if (response.data is Map<String, dynamic>) {
+          final responseMap = response.data as Map<String, dynamic>;
+          if (responseMap.containsKey('posts')) {
+            final postsData = responseMap['posts'] as List;
+            posts = postsData
+                .map((json) => Post.fromJson(json as Map<String, dynamic>))
+                .toList();
+          }
+        }
         
         debugPrint('✅ [PostsService] ${posts.length} of my posts fetched successfully');
         return PostsResult.success(posts);
@@ -271,9 +331,25 @@ class PostsService {
       );
 
       if (response.isSuccess && response.data != null) {
-        final comments = (response.data as List)
-            .map((json) => Comment.fromJson(json))
-            .toList();
+        List<Comment> comments = [];
+        
+        // ✅ CORRECTION: Vérifier le type de données reçues
+        if (response.data is List) {
+          // Si c'est directement une liste de commentaires
+          final commentsData = response.data as List;
+          comments = commentsData
+              .map((json) => Comment.fromJson(json as Map<String, dynamic>))
+              .toList();
+        } else if (response.data is Map<String, dynamic>) {
+          // Si c'est wrappé dans un objet avec pagination
+          final responseMap = response.data as Map<String, dynamic>;
+          if (responseMap.containsKey('comments')) {
+            final commentsData = responseMap['comments'] as List;
+            comments = commentsData
+                .map((json) => Comment.fromJson(json as Map<String, dynamic>))
+                .toList();
+          }
+        }
         
         debugPrint('✅ [PostsService] ${comments.length} comments fetched for post $postId');
         return CommentsResult.success(comments);
@@ -524,9 +600,23 @@ class PostsService {
       );
 
       if (response.isSuccess && response.data != null) {
-        final posts = (response.data as List)
-            .map((json) => Post.fromJson(json))
-            .toList();
+        List<Post> posts = [];
+        
+        // ✅ CORRECTION: Vérifier le type de données reçues
+        if (response.data is List) {
+          final postsData = response.data as List;
+          posts = postsData
+              .map((json) => Post.fromJson(json as Map<String, dynamic>))
+              .toList();
+        } else if (response.data is Map<String, dynamic>) {
+          final responseMap = response.data as Map<String, dynamic>;
+          if (responseMap.containsKey('posts')) {
+            final postsData = responseMap['posts'] as List;
+            posts = postsData
+                .map((json) => Post.fromJson(json as Map<String, dynamic>))
+                .toList();
+          }
+        }
         
         debugPrint('✅ [PostsService] ${posts.length} posts found for query: "$query"');
         return PostsResult.success(posts);
