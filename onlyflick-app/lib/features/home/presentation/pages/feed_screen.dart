@@ -34,12 +34,24 @@ class _FeedScreenState extends State<FeedScreen> {
       _postsProvider = context.read<PostsProvider>();
       _postsProvider.initializeFeed();
     });
+    
+    // ✅ AJOUT: Listener pour le scroll infini
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // ✅ NOUVEAU: Méthode pour détecter le scroll infini
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.8) {
+      // Charger plus de posts quand on arrive à 80% du scroll
+      _postsProvider.loadMorePosts();
+    }
   }
 
   Future<void> _handleRefresh() async {
@@ -212,7 +224,7 @@ class _FeedScreenState extends State<FeedScreen> {
 
                   // Bouton Messages - Navigation ajoutée
                   GestureDetector(
-                    onTap: _navigateToMessages, // Utilisation de la nouvelle méthode
+                    onTap: _navigateToMessages,
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
@@ -231,7 +243,7 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  /// Contenu du feed avec vraies données API
+  /// ✅ MODIFICATION: Contenu du feed avec scroll infini
   Widget _buildFeedContent(PostsProvider postsProvider) {
     if (postsProvider.isLoading && !postsProvider.hasData) {
       return const Center(
@@ -318,13 +330,16 @@ class _FeedScreenState extends State<FeedScreen> {
       );
     }
 
-    // Affichage des posts avec les vraies données
+    // ✅ MODIFICATION: Affichage des posts avec scroll infini
     return ListView.builder(
       controller: _scrollController,
       physics: const BouncingScrollPhysics(),
-      itemCount: postsProvider.posts.length + (postsProvider.isRefreshing ? 1 : 0),
+      // ✅ MODIFICATION: Compter les posts + indicateur de refresh + indicateur de chargement
+      itemCount: postsProvider.posts.length + 
+                 (postsProvider.isRefreshing ? 1 : 0) + 
+                 (postsProvider.hasMorePosts ? 1 : 0),
       itemBuilder: (context, index) {
-        // Indicateur de chargement en haut pendant le refresh
+        // ✅ MODIFICATION: Indicateur de chargement en haut pendant le refresh
         if (postsProvider.isRefreshing && index == 0) {
           return Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -341,8 +356,73 @@ class _FeedScreenState extends State<FeedScreen> {
           );
         }
 
-        // Ajuster l'index si on a l'indicateur de refresh
+        // ✅ MODIFICATION: Ajuster l'index si on a l'indicateur de refresh
         final postIndex = postsProvider.isRefreshing ? index - 1 : index;
+        
+        // ✅ NOUVEAU: Indicateur de chargement en bas pour le scroll infini
+        if (postIndex >= postsProvider.posts.length) {
+          if (postsProvider.hasMorePosts) {
+            return Container(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: const Center(
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Chargement...',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          } else {
+            // ✅ NOUVEAU: Message de fin de contenu
+            return Container(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 24,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Vous avez tout vu !',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Revenez plus tard pour de nouveaux posts',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+        }
         
         if (postIndex < 0 || postIndex >= postsProvider.posts.length) {
           return const SizedBox.shrink();
@@ -362,5 +442,4 @@ class _FeedScreenState extends State<FeedScreen> {
       },
     );
   }
-
 }
