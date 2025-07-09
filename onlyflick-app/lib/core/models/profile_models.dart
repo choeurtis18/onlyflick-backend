@@ -1,4 +1,4 @@
-// lib/features/profile/models/profile_models.dart
+// lib/core/models/profile_models.dart
 import '../../features/auth/models/auth_models.dart';
 
 // ===== MODÈLES DE DONNÉES PROFIL =====

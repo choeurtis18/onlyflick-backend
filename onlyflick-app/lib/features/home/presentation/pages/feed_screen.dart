@@ -1,3 +1,4 @@
+//lib/features/home/presentation/pages/feed_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -64,17 +65,6 @@ class _FeedScreenState extends State<FeedScreen> {
       ),
     );
   }
-
-  String _formatError(String? rawError) {
-  if (rawError == null) return 'Une erreur est survenue';
-  
-  if (rawError.trim().startsWith('[') && rawError.contains('"title":')) {
-    return 'Erreur de chargement du feed.\nDonnées invalides ou mal formées.';
-  }
-
-  return rawError.length > 100 ? rawError.substring(0, 100) + '...' : rawError;
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -241,7 +231,7 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  /// ✅ CORRECTION: Contenu du feed avec structure fixe pour éviter l'overflow
+  /// Contenu du feed avec vraies données API
   Widget _buildFeedContent(PostsProvider postsProvider) {
     if (postsProvider.isLoading && !postsProvider.hasData) {
       return const Center(
@@ -253,147 +243,124 @@ class _FeedScreenState extends State<FeedScreen> {
 
     if (postsProvider.hasError && !postsProvider.hasData) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.grey[400],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Erreur de chargement',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[600],
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Erreur de chargement',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[600],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              postsProvider.error ?? 'Une erreur est survenue',
+              style: TextStyle(
+                color: Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => postsProvider.retry(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                  _formatError(postsProvider.error),
-                style: TextStyle(
-                  color: Colors.grey[500],
-                ),
-                textAlign: TextAlign.center,
+              child: const Text(
+                'Réessayer',
+                style: TextStyle(color: Colors.white),
               ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => postsProvider.retry(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  'Réessayer',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
 
-    if (!postsProvider.hasData || postsProvider.posts.isEmpty) {
+    if (!postsProvider.hasData) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.photo_library_outlined,
-                size: 64,
-                color: Colors.grey[400],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.photo_library_outlined,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Aucun post à afficher',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[600],
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Aucun post à afficher',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[600],
-                ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Les posts apparaîtront ici',
+              style: TextStyle(
+                color: Colors.grey[500],
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Les posts apparaîtront ici',
-                style: TextStyle(
-                  color: Colors.grey[500],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
 
-    // ✅ CORRECTION: Utiliser CustomScrollView pour éviter l'overflow
-    return CustomScrollView(
+    // Affichage des posts avec les vraies données
+    return ListView.builder(
       controller: _scrollController,
-      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
-        // Indicateur de refresh
-        if (postsProvider.isRefreshing)
-          SliverToBoxAdapter(
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: const Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-        // Liste des posts
-        SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              if (index >= postsProvider.posts.length) {
-                return null;
-              }
-
-              final post = postsProvider.posts[index];
-              
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: ConnectedPostWidget(
-                  post: post,
-                  onLike: () => postsProvider.toggleLike(post.id),
-                  onComment: (content) => postsProvider.addComment(post.id, content),
-                  onError: (message) => _showSnackBar(message, isError: true),
-                ),
-              );
-            },
-            childCount: postsProvider.posts.length,
-          ),
-        ),
-
-        // Indicateur de chargement en bas
-        if (postsProvider.isLoading && postsProvider.hasData)
-          SliverToBoxAdapter(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              child: const Center(
+      physics: const BouncingScrollPhysics(),
+      itemCount: postsProvider.posts.length + (postsProvider.isRefreshing ? 1 : 0),
+      itemBuilder: (context, index) {
+        // Indicateur de chargement en haut pendant le refresh
+        if (postsProvider.isRefreshing && index == 0) {
+          return Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: const Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
                 child: CircularProgressIndicator(
-                  color: Colors.black,
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
                 ),
               ),
             ),
+          );
+        }
+
+        // Ajuster l'index si on a l'indicateur de refresh
+        final postIndex = postsProvider.isRefreshing ? index - 1 : index;
+        
+        if (postIndex < 0 || postIndex >= postsProvider.posts.length) {
+          return const SizedBox.shrink();
+        }
+
+        final post = postsProvider.posts[postIndex];
+        
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: ConnectedPostWidget(
+            post: post,
+            onLike: () => postsProvider.toggleLike(post.id),
+            onComment: (content) => postsProvider.addComment(post.id, content),
+            onError: (message) => _showSnackBar(message, isError: true),
           ),
-      ],
+        );
+      },
     );
   }
+
 }

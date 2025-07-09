@@ -12,6 +12,11 @@ import (
 func CreateComment(c *domain.Comment) error {
 	log.Printf("[CommentRepo] Création d'un commentaire pour le post ID %d par l'utilisateur ID %d", c.PostID, c.UserID)
 
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[CreateComment][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `
 		INSERT INTO comments (user_id, post_id, content)
 		VALUES ($1, $2, $3)
@@ -31,6 +36,11 @@ func CreateComment(c *domain.Comment) error {
 // GetCommentsByPostID récupère tous les commentaires associés à un post donné avec les informations utilisateur.
 func GetCommentsByPostID(postID int64) ([]*domain.Comment, error) {
 	log.Printf("[CommentRepo] Récupération des commentaires pour le post ID %d", postID)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetCommentsByPostID][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
 
 	query := `
 		SELECT 
@@ -94,6 +104,12 @@ func GetCommentsByPostID(postID int64) ([]*domain.Comment, error) {
 // DeleteComment supprime un commentaire selon son ID.
 func DeleteComment(commentID int64) error {
 	log.Printf("[CommentRepo] Suppression du commentaire ID %d", commentID)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[DeleteComment][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `DELETE FROM comments WHERE id = $1`
 	result, err := database.DB.Exec(query, commentID)
 	if err != nil {
@@ -108,6 +124,12 @@ func DeleteComment(commentID int64) error {
 // GetCommentByID récupère un commentaire par son ID avec les informations utilisateur.
 func GetCommentByID(commentID int64) (*domain.Comment, error) {
 	log.Printf("[CommentRepo] Récupération du commentaire ID %d", commentID)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetCommentByID][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `
 		SELECT 
 			c.id, 
@@ -158,4 +180,73 @@ func GetCommentByID(commentID int64) (*domain.Comment, error) {
 	
 	log.Printf("[CommentRepo] Commentaire récupéré : %+v", comment)
 	return &comment, nil
+}
+
+// GetCommentsByUserID récupère tous les commentaires d'un utilisateur donné
+func GetCommentsByUserID(userID int64, limit, offset int) ([]*domain.Comment, error) {
+	log.Printf("[CommentRepo] Récupération des commentaires pour l'utilisateur ID %d", userID)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetCommentsByUserID][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
+	query := `
+		SELECT 
+			c.id, 
+			c.user_id, 
+			c.post_id, 
+			c.content, 
+			c.created_at, 
+			c.updated_at,
+			-- Informations utilisateur
+			COALESCE(u.username, '') as username,
+			COALESCE(u.first_name, '') as first_name,
+			COALESCE(u.last_name, '') as last_name,
+			COALESCE(u.avatar_url, '') as avatar_url
+		FROM comments c
+		LEFT JOIN users u ON c.user_id = u.id
+		WHERE c.user_id = $1
+		ORDER BY c.created_at DESC
+		LIMIT $2 OFFSET $3;
+	`
+	rows, err := database.DB.Query(query, userID, limit, offset)
+	if err != nil {
+		log.Printf("[CommentRepo][ERREUR] Échec de la récupération des commentaires pour l'utilisateur ID %d : %v", userID, err)
+		return nil, fmt.Errorf("échec de la récupération des commentaires utilisateur : %w", err)
+	}
+	defer rows.Close()
+
+	var comments []*domain.Comment
+	for rows.Next() {
+		var c domain.Comment
+		var username, firstName, lastName, avatarUrl string
+		
+		if err := rows.Scan(
+			&c.ID, 
+			&c.UserID, 
+			&c.PostID, 
+			&c.Content, 
+			&c.CreatedAt, 
+			&c.UpdatedAt,
+			&username,
+			&firstName,
+			&lastName,
+			&avatarUrl,
+		); err != nil {
+			log.Printf("[CommentRepo][ERREUR] Problème lors du scan d'un commentaire : %v", err)
+			return nil, err
+		}
+		
+		// Ajouter les informations utilisateur au commentaire
+		c.Username = username
+		c.FirstName = firstName
+		c.LastName = lastName
+		c.AvatarUrl = avatarUrl
+		
+		comments = append(comments, &c)
+	}
+
+	log.Printf("[CommentRepo] %d commentaire(s) récupéré(s) pour l'utilisateur ID %d", len(comments), userID)
+	return comments, nil
 }

@@ -1,5 +1,4 @@
-// lib/pages/subscription_management_page.dart
-
+//lib/features/home/presentation/pages/subscription_management_page.dart
 import 'package:flutter/material.dart';
 
 import '../../../../core/models/subscription_model.dart';
