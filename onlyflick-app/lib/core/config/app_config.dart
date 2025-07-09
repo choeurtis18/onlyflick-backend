@@ -35,7 +35,8 @@ class AppConfig {
   static String get baseUrl {
     switch (_currentEnvironment) {
       case AppEnvironment.production:
-        return 'https://api.onlyflick.io';
+        // 🔥 NOUVELLE URL DE PRODUCTION
+        return 'https://massive-period-412821.lm.r.appspot.com';
       case AppEnvironment.staging:
         return 'https://staging-api.onlyflick.io';
       case AppEnvironment.development:
@@ -51,7 +52,8 @@ class AppConfig {
   static String get wsBaseUrl {
     switch (_currentEnvironment) {
       case AppEnvironment.production:
-        return 'wss://api.onlyflick.io/ws';
+        // 🔥 NOUVELLE URL WEBSOCKET DE PRODUCTION
+        return 'wss://massive-period-412821.lm.r.appspot.com/ws';
       case AppEnvironment.staging:
         return 'wss://staging-api.onlyflick.io/ws';
       case AppEnvironment.development:
@@ -163,7 +165,8 @@ class AppConfig {
     if (endpoint.startsWith('ws')) {
       return endpoint;
     }
-    return endpoint.startsWith('/') ? '$wsBaseUrl$endpoint' : '$wsBaseUrl/$endpoint';
+    return endpoint.startsWith('/') ? 
+        '$wsBaseUrl$endpoint' : '$wsBaseUrl/$endpoint';
   }
 
   /// Configuration pour le debug
