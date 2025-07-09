@@ -263,7 +263,7 @@ class PostsService {
       debugPrint('❤️ [PostsService] Toggling like for post: $postId');
       
       final response = await _apiService.post<Map<String, dynamic>>(
-        '/posts/$postId/likes/',
+        '/posts/$postId/likes',
         fromJson: (json) => json,
       );
 

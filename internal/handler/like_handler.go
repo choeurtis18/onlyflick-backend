@@ -29,6 +29,7 @@ func LikePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Toggle le like
 	liked, err := repository.ToggleLike(userID, postID)
 	if err != nil {
 		log.Printf("[LikePost] Erreur toggle like (userID=%d, postID=%d) : %v", userID, postID, err)
@@ -36,13 +37,25 @@ func LikePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// ✅ CORRECTION: Récupérer le nombre total de likes après le toggle
+	likesCount, err := repository.GetLikesCount(postID)
+	if err != nil {
+		log.Printf("[LikePost] Erreur récupération likes count (postID=%d) : %v", postID, err)
+		response.RespondWithError(w, http.StatusInternalServerError, "Erreur lors de la récupération du nombre de likes")
+		return
+	}
+
 	status := "liké"
 	if !liked {
 		status = "retiré son like de"
 	}
-	log.Printf("[LikePost] Utilisateur %d a %s le post %d", userID, status, postID)
+	log.Printf("[LikePost] Utilisateur %d a %s le post %d (total likes: %d)", userID, status, postID, likesCount)
 
-	response.RespondWithJSON(w, http.StatusOK, map[string]bool{"liked": liked})
+	// ✅ CORRECTION: Retourner liked ET likes_count
+	response.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"liked":       liked,
+		"likes_count": likesCount,
+	})
 }
 
 // GetPostLikes retourne le nombre total de likes pour un post.

@@ -14,7 +14,7 @@ enum SearchState {
   loadingMore,
 }
 
-/// Provider simplifié pour la recherche d'utilisateurs uniquement
+/// Provider pour la recherche d'utilisateurs et de posts
 class SearchProvider with ChangeNotifier {
   final SearchService _searchService = SearchService();
 
@@ -24,11 +24,16 @@ class SearchProvider with ChangeNotifier {
   String? _searchError;
   String _currentQuery = '';
   
+  // ===== ÉTAT DE LA RECHERCHE POSTS =====
+  bool _isSearchingPosts = false;
+  List<PostWithDetails> _searchedPosts = [];
+  String? _postsError;
+  
   // ===== PAGINATION =====
   static const int _pageSize = 20;
   int _searchOffset = 0;
 
-  // ===== GETTERS =====
+  // ===== GETTERS UTILISATEURS =====
   SearchState get searchState => _searchState;
   SearchResult get searchResult => _searchResult;
   String? get searchError => _searchError;
@@ -36,15 +41,52 @@ class SearchProvider with ChangeNotifier {
   bool get isLoading => _searchState == SearchState.loading;
   bool get isLoadingMoreSearch => _searchState == SearchState.loadingMore;
   bool get hasSearchResults => _searchResult.users.isNotEmpty;
-  bool _isSearchingPosts = false;
-  List<PostWithDetails> _searchedPosts = [];
+  List<UserSearchResult> get searchedUsers => _searchResult.users;
+  int get totalUsersFound => _searchResult.total;
+  bool get canLoadMore => _searchResult.hasMore && 
+                         _searchState != SearchState.loadingMore && 
+                         _currentQuery.isNotEmpty;
+
+  // ===== GETTERS POSTS =====
   bool get isSearchingPosts => _isSearchingPosts;
   List<PostWithDetails> get searchedPosts => _searchedPosts;
+  String? get postsError => _postsError;
+  bool get hasPostsResults => _searchedPosts.isNotEmpty;
 
+  // ===== GETTERS UTILITAIRES =====
+  bool get isSearching => _searchState == SearchState.loading;
+  bool get hasResults => _searchResult.users.isNotEmpty;
+
+  // ===== INITIALISATION =====
+
+  /// Initialise le provider avec gestion d'erreurs
+  Future<void> initialize() async {
+    try {
+      debugPrint('🚀 [SearchProvider] Initializing...');
+      
+      // Réinitialiser l'état
+      _searchState = SearchState.initial;
+      _searchError = null;
+      _postsError = null;
+      _searchResult = const SearchResult(posts: [], users: [], total: 0, hasMore: false);
+      _searchedPosts = [];
+      _isSearchingPosts = false;
+      _currentQuery = '';
+      _searchOffset = 0;
+      
+      notifyListeners();
+      debugPrint('✅ [SearchProvider] Initialized successfully');
+    } catch (e) {
+      debugPrint('❌ [SearchProvider] Initialization error: $e');
+      _searchError = 'Erreur d\'initialisation';
+      _searchState = SearchState.error;
+      notifyListeners();
+    }
+  }
 
   // ===== RECHERCHE D'UTILISATEURS =====
 
-  /// Recherche des utilisateurs par username uniquement
+  /// Recherche des utilisateurs par username
   Future<void> searchUsers(String query) async {
     if (query.trim().isEmpty || query.trim().length < 2) {
       clearUserSearch();
@@ -69,7 +111,7 @@ class SearchProvider with ChangeNotifier {
         return;
       }
 
-      // debugPrint('🔍 Searching users: query="$_currentQuery"');
+      debugPrint('🔍 [SearchProvider] Searching users: query="$_currentQuery"');
 
       final result = await _searchService.searchUsers(
         query: _currentQuery,
@@ -94,16 +136,16 @@ class SearchProvider with ChangeNotifier {
         _searchState = SearchState.loaded;
         _searchError = null;
 
-        // debugPrint('✅ Search completed: ${_searchResult.users.length} users found');
+        debugPrint('✅ [SearchProvider] Search completed: ${_searchResult.users.length} users found');
       } else {
         _searchState = SearchState.error;
         _searchError = result.error ?? 'Erreur de recherche';
-        debugPrint('❌ Search failed: ${result.error}');
+        debugPrint('❌ [SearchProvider] Search failed: ${result.error}');
       }
     } catch (e, stackTrace) {
       _searchState = SearchState.error;
       _searchError = 'Erreur inattendue lors de la recherche';
-      debugPrint('❌ Search error: $e');
+      debugPrint('❌ [SearchProvider] Search error: $e');
       debugPrint('Stack trace: $stackTrace');
     }
 
@@ -122,7 +164,7 @@ class SearchProvider with ChangeNotifier {
       _searchState = SearchState.loadingMore;
       notifyListeners();
 
-      // debugPrint('📄 Loading more users: offset=$_searchOffset');
+      debugPrint('📄 [SearchProvider] Loading more users: offset=$_searchOffset');
 
       final result = await _searchService.searchUsers(
         query: _currentQuery,
@@ -142,16 +184,16 @@ class SearchProvider with ChangeNotifier {
         _searchState = SearchState.loaded;
         _searchError = null;
 
-        // debugPrint('✅ More users loaded: ${_searchResult.users.length} total users');
+        debugPrint('✅ [SearchProvider] More users loaded: ${_searchResult.users.length} total users');
       } else {
         _searchState = SearchState.error;
         _searchError = result.error ?? 'Erreur lors du chargement';
-        debugPrint('❌ Load more failed: ${result.error}');
+        debugPrint('❌ [SearchProvider] Load more failed: ${result.error}');
       }
     } catch (e, stackTrace) {
       _searchState = SearchState.error;
       _searchError = 'Erreur inattendue lors du chargement';
-      debugPrint('❌ Load more error: $e');
+      debugPrint('❌ [SearchProvider] Load more error: $e');
       debugPrint('Stack trace: $stackTrace');
     }
 
@@ -166,7 +208,7 @@ class SearchProvider with ChangeNotifier {
     _currentQuery = '';
     _searchOffset = 0;
     
-    // debugPrint('🧹 User search cleared');
+    debugPrint('🧹 [SearchProvider] User search cleared');
     notifyListeners();
   }
 
@@ -178,43 +220,107 @@ class SearchProvider with ChangeNotifier {
     }
   }
 
+  // ===== RECHERCHE DE POSTS =====
+
+  /// Recherche des posts par tags avec gestion d'erreurs robuste
   Future<void> searchPosts({List<String>? tags}) async {
-  _isSearchingPosts = true;
-  _searchedPosts = [];
-  notifyListeners();
-
-  try {
-    final result = await _searchService.searchPosts(
-      tags: tags ?? [],
-      query: '',
-      limit: 20,
-      offset: 0,
-    );
-
-    if (result.isSuccess && result.data != null) {
-      final data = result.data!;
-      final posts = (data['posts'] as List)
-          .map((e) => PostWithDetails.fromJson(e))
-          .toList();
-      _searchedPosts = posts;
-    } else {
-      debugPrint('❌ Échec recherche posts: ${result.error}');
+    // Permettre la recherche même sans tags spécifiques
+    if (tags == null) {
+      tags = [];
     }
-  } catch (e, stackTrace) {
-    debugPrint('❌ Exception recherche posts: $e');
-    debugPrint('Stack: $stackTrace');
-  } finally {
+
+    // Vérification de l'état avant de commencer
+    if (_isSearchingPosts) {
+      debugPrint('⚠️ [SearchProvider] searchPosts already in progress');
+      return;
+    }
+
+    _isSearchingPosts = true;
+    _searchedPosts = [];
+    _postsError = null;
+    notifyListeners();
+
+    try {
+      debugPrint('🔍 [SearchProvider] Searching posts with tags: $tags');
+      
+      final result = await _searchService.searchPosts(
+        tags: tags,
+        query: '',
+        limit: 20,
+        offset: 0,
+      );
+
+      if (result.isSuccess && result.data != null) {
+        final data = result.data!;
+        
+        // Gestion robuste des différents formats de données
+        if (data is Map<String, dynamic>) {
+          // Si c'est un objet avec une clé 'posts'
+          if (data.containsKey('posts') && data['posts'] is List) {
+            try {
+              final postsList = data['posts'] as List;
+              final posts = postsList
+                  .map((e) => PostWithDetails.fromJson(e as Map<String, dynamic>))
+                  .toList();
+              _searchedPosts = posts;
+              debugPrint('✅ [SearchProvider] Found ${_searchedPosts.length} posts from Map');
+            } catch (e) {
+              debugPrint('❌ [SearchProvider] Error parsing posts from Map: $e');
+              _postsError = 'Erreur lors du parsing des posts';
+            }
+          } else {
+            debugPrint('⚠️ [SearchProvider] Unexpected data format: ${data.keys}');
+            _postsError = 'Format de données inattendu';
+          }
+        } else if (data is SearchResult) {
+          // Si c'est déjà un SearchResult
+_searchedPosts = (data['posts'] as List)
+    .map((e) => PostWithDetails.fromJson(e as Map<String, dynamic>))
+    .toList();
+          debugPrint('✅ [SearchProvider] Found ${_searchedPosts.length} posts from SearchResult');
+        } else if (data is List) {
+          // Si c'est directement une liste
+          try {
+            final postsList = data as List;
+            final posts = postsList
+                .map((e) => PostWithDetails.fromJson(e as Map<String, dynamic>))
+                .toList();
+            _searchedPosts = posts;
+            debugPrint('✅ [SearchProvider] Found ${_searchedPosts.length} posts from List');
+          } catch (e) {
+            debugPrint('❌ [SearchProvider] Error parsing posts from List: $e');
+            _postsError = 'Erreur lors du parsing des posts';
+          }
+        } else {
+          debugPrint('⚠️ [SearchProvider] Unknown data type: ${data.runtimeType}');
+          _postsError = 'Type de données inconnu';
+        }
+        
+        if (_searchedPosts.isEmpty && _postsError == null) {
+          debugPrint('ℹ️ [SearchProvider] No posts found for tags: $tags');
+        }
+      } else {
+        _postsError = result.error ?? 'Erreur de recherche de posts';
+        debugPrint('❌ [SearchProvider] Search posts failed: ${result.error}');
+      }
+    } catch (e, stackTrace) {
+      _postsError = 'Erreur inattendue lors de la recherche de posts';
+      debugPrint('❌ [SearchProvider] Search posts error: $e');
+      debugPrint('Stack trace: $stackTrace');
+    } finally {
+      _isSearchingPosts = false;
+      notifyListeners();
+    }
+  }
+
+  /// Efface la recherche de posts
+  void clearPostSearch() {
+    _searchedPosts = [];
     _isSearchingPosts = false;
+    _postsError = null;
+    debugPrint('🧹 [SearchProvider] Post search cleared');
     notifyListeners();
   }
-}
-
-void clearPostSearch() {
-  _searchedPosts = [];
-  _isSearchingPosts = false;
-  notifyListeners();
-}
-
 
   // ===== TRACKING DES INTERACTIONS =====
 
@@ -222,10 +328,9 @@ void clearPostSearch() {
   Future<void> trackProfileView(UserSearchResult user) async {
     try {
       await _searchService.trackProfileView(user.id);
-      
-      // debugPrint('📊 Profile view tracked: ${user.username}');
+      debugPrint('📊 [SearchProvider] Profile view tracked: ${user.username}');
     } catch (e) {
-      debugPrint('❌ Failed to track profile view: $e');
+      debugPrint('❌ [SearchProvider] Failed to track profile view: $e');
     }
   }
 
@@ -233,33 +338,15 @@ void clearPostSearch() {
   Future<void> _trackUserSearch(String query) async {
     try {
       await _searchService.trackSearch(query);
-      
-      // debugPrint('📊 User search tracked: "$query"');
+      debugPrint('📊 [SearchProvider] User search tracked: "$query"');
     } catch (e) {
-      debugPrint('❌ Failed to track user search: $e');
+      debugPrint('❌ [SearchProvider] Failed to track user search: $e');
     }
   }
 
-  // ===== MÉTHODES UTILITAIRES =====
+  // ===== GESTION DES ERREURS =====
 
-  /// Vérifie si on peut charger plus de résultats
-  bool get canLoadMore => _searchResult.hasMore && 
-                         _searchState != SearchState.loadingMore && 
-                         _currentQuery.isNotEmpty;
-
-  /// Nombre total d'utilisateurs trouvés
-  int get totalUsersFound => _searchResult.total;
-
-  /// Liste des utilisateurs trouvés
-  List<UserSearchResult> get searchedUsers => _searchResult.users;
-
-  /// Indique si une recherche est en cours
-  bool get isSearching => _searchState == SearchState.loading;
-
-  /// Indique si des résultats sont disponibles
-  bool get hasResults => _searchResult.users.isNotEmpty;
-
-  /// Message d'erreur formaté pour l'utilisateur
+  /// Message d'erreur formaté pour l'utilisateur (utilisateurs)
   String? get userFriendlyError {
     if (_searchError == null) return null;
     
@@ -270,9 +357,29 @@ void clearPostSearch() {
       return 'La recherche prend trop de temps. Réessayez.';
     } else if (_searchError!.contains('server')) {
       return 'Problème serveur temporaire. Réessayez dans quelques instants.';
+    } else if (_searchError!.contains('unauthorized') || _searchError!.contains('User ID required')) {
+      return 'Problème d\'authentification. Veuillez vous reconnecter.';
     }
     
     return _searchError;
+  }
+
+  /// Message d'erreur formaté pour l'utilisateur (posts)
+  String? get userFriendlyPostsError {
+    if (_postsError == null) return null;
+    
+    // Transformer les erreurs techniques en messages utilisateur
+    if (_postsError!.contains('network') || _postsError!.contains('connection')) {
+      return 'Problème de connexion. Vérifiez votre réseau.';
+    } else if (_postsError!.contains('timeout')) {
+      return 'La recherche prend trop de temps. Réessayez.';
+    } else if (_postsError!.contains('server')) {
+      return 'Problème serveur temporaire. Réessayez dans quelques instants.';
+    } else if (_postsError!.contains('unauthorized') || _postsError!.contains('User ID required')) {
+      return 'Problème d\'authentification. Veuillez vous reconnecter.';
+    }
+    
+    return _postsError;
   }
 
   // ===== MÉTHODES DE DEBUG =====
@@ -283,10 +390,13 @@ void clearPostSearch() {
     debugPrint('State: $_searchState');
     debugPrint('Query: "$_currentQuery"');
     debugPrint('Users found: ${_searchResult.users.length}');
-    debugPrint('Total: ${_searchResult.total}');
-    debugPrint('Has more: ${_searchResult.hasMore}');
+    debugPrint('Posts found: ${_searchedPosts.length}');
+    debugPrint('Total users: ${_searchResult.total}');
+    debugPrint('Has more users: ${_searchResult.hasMore}');
     debugPrint('Offset: $_searchOffset');
-    debugPrint('Error: $_searchError');
+    debugPrint('Users Error: $_searchError');
+    debugPrint('Posts Error: $_postsError');
+    debugPrint('Is searching posts: $_isSearchingPosts');
     debugPrint('==================');
   }
 
@@ -295,17 +405,26 @@ void clearPostSearch() {
   /// Reset complet du provider
   void reset() {
     clearUserSearch();
-    // debugPrint('🔄 SearchProvider reset');
+    clearPostSearch();
+    debugPrint('🔄 [SearchProvider] Complete reset');
   }
 
-  /// Initialise le provider (optionnel pour cette version simplifiée)
-  Future<void> initialize() async {
-    // debugPrint('🚀 SearchProvider initialized (simplified version)');
+  /// Retry pour les erreurs
+  Future<void> retryUserSearch() async {
+    if (_currentQuery.isNotEmpty) {
+      await searchUsers(_currentQuery);
+    }
+  }
+
+  /// Retry pour les posts
+  Future<void> retryPostSearch({List<String>? tags}) async {
+    await searchPosts(tags: tags);
   }
 
   @override
   void dispose() {
     _searchService.clearCache();
     super.dispose();
+    debugPrint('🗑️ [SearchProvider] Disposed');
   }
 }

@@ -3,7 +3,6 @@ import '../services/posts_service.dart';
 import '../services/user_likes_cache_service.dart';
 import '../models/post_models.dart';
 
-
 /// États possibles pour le feed
 enum FeedState {
   initial,
@@ -11,9 +10,10 @@ enum FeedState {
   loaded,
   error,
   refreshing,
+  loadingMore,
 }
 
-/// Provider pour la gestion des posts et du feed
+/// Provider pour la gestion des posts avec scroll infini
 class PostsProvider extends ChangeNotifier {
   final PostsService _postsService = PostsService();
   final UserLikesCacheService _likesCache = UserLikesCacheService();
@@ -24,6 +24,12 @@ class PostsProvider extends ChangeNotifier {
   String? _error;
   int? _currentUserId;
 
+  // ✅ AJOUT: Variables pour le scroll infini
+  bool _hasMorePosts = true;
+  bool _isLoadingMore = false;
+  static const int _pageSize = 10; // Taille des pages
+  int _currentOffset = 0;
+
   // Cache des likes et commentaires
   final Map<int, int> _likesCountCache = {};
   final Map<int, List<Comment>> _commentsCache = {};
@@ -33,6 +39,8 @@ class PostsProvider extends ChangeNotifier {
   FeedState get state => _state;
   List<Post> get posts => _posts;
   String? get error => _error;
+  bool get hasMorePosts => _hasMorePosts;
+  bool get isLoadingMore => _isLoadingMore;
   
   bool get isLoading => _state == FeedState.loading;
   bool get isRefreshing => _state == FeedState.refreshing;
@@ -70,23 +78,30 @@ class PostsProvider extends ChangeNotifier {
     }
   }
 
-  /// Charge tous les posts
+  /// ✅ MODIFICATION: Charge la première page de posts
   Future<void> loadPosts() async {
-    // debugPrint('📱 Loading posts...');
+    debugPrint('📱 Loading first page of posts...');
     
     _setState(FeedState.loading);
     _clearError();
+    _resetPagination();
 
     try {
-      final result = await _postsService.getAllPosts();
+      final result = await _postsService.getAllPosts(
+        limit: _pageSize,
+        offset: 0,
+      );
 
       if (result.isSuccess && result.data != null) {
         _posts = result.data!;
-        _setState(FeedState.loaded);
-        // debugPrint('📱 ${_posts.length} posts loaded successfully');
+        _currentOffset = _posts.length;
+        _hasMorePosts = _posts.length >= _pageSize;
         
-        // Précharger les likes pour chaque post
-        _preloadLikes();
+        // Charger les likes pour cette première page
+        await _loadLikesForCurrentPosts();
+        
+        _setState(FeedState.loaded);
+        debugPrint('✅ ${_posts.length} posts loaded successfully');
       } else {
         _setError(result.error ?? 'Erreur lors du chargement des posts');
       }
@@ -96,25 +111,78 @@ class PostsProvider extends ChangeNotifier {
     }
   }
 
-  /// Actualise le feed
+  /// ✅ NOUVEAU: Charge plus de posts pour le scroll infini
+  Future<void> loadMorePosts() async {
+    if (_isLoadingMore || !_hasMorePosts || _state == FeedState.error) {
+      return;
+    }
+
+    debugPrint('📱 Loading more posts... (offset: $_currentOffset)');
+    
+    _isLoadingMore = true;
+    _setState(FeedState.loadingMore);
+
+    try {
+      final result = await _postsService.getAllPosts(
+        limit: _pageSize,
+        offset: _currentOffset,
+      );
+
+      if (result.isSuccess && result.data != null) {
+        final newPosts = result.data!;
+        
+        if (newPosts.isNotEmpty) {
+          _posts.addAll(newPosts);
+          _currentOffset += newPosts.length;
+          _hasMorePosts = newPosts.length >= _pageSize;
+          
+          // Charger les likes pour les nouveaux posts
+          await _loadLikesForPosts(newPosts);
+          
+          debugPrint('✅ ${newPosts.length} more posts loaded (total: ${_posts.length})');
+        } else {
+          _hasMorePosts = false;
+          debugPrint('🔚 No more posts to load');
+        }
+        
+        _setState(FeedState.loaded);
+      } else {
+        debugPrint('❌ Failed to load more posts: ${result.error}');
+        _setError(result.error ?? 'Erreur lors du chargement de plus de posts');
+      }
+    } catch (e) {
+      debugPrint('❌ Load more posts error: $e');
+      _setError('Erreur réseau lors du chargement de plus de posts');
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
+
+  /// ✅ MODIFICATION: Actualise le feed
   Future<void> refreshPosts() async {
-    // debugPrint('🔄 Refreshing posts...');
+    debugPrint('🔄 Refreshing posts...');
     
     _setState(FeedState.refreshing);
     _clearError();
+    _resetPagination();
 
     try {
-      final result = await _postsService.getAllPosts();
+      final result = await _postsService.getAllPosts(
+        limit: _pageSize,
+        offset: 0,
+      );
 
       if (result.isSuccess && result.data != null) {
         _posts = result.data!;
-        _setState(FeedState.loaded);
-        // debugPrint('🔄 ${_posts.length} posts refreshed successfully');
+        _currentOffset = _posts.length;
+        _hasMorePosts = _posts.length >= _pageSize;
         
-        // Ne pas vider le cache des likes utilisateur lors du refresh
-        // Seulement vider le cache des commentaires et recharger les compteurs
+        // Vider le cache des commentaires et recharger les likes
         _commentsCache.clear();
-        _preloadLikes();
+        await _loadLikesForCurrentPosts();
+        
+        _setState(FeedState.loaded);
+        debugPrint('🔄 ${_posts.length} posts refreshed successfully');
       } else {
         _setError(result.error ?? 'Erreur lors de l\'actualisation des posts');
       }
@@ -122,6 +190,50 @@ class PostsProvider extends ChangeNotifier {
       debugPrint('❌ Refresh posts error: $e');
       _setError('Erreur réseau lors de l\'actualisation');
     }
+  }
+
+  /// ✅ NOUVEAU: Charge les likes pour tous les posts actuels
+  Future<void> _loadLikesForCurrentPosts() async {
+    await _loadLikesForPosts(_posts);
+  }
+
+  /// ✅ NOUVEAU: Charge les likes pour une liste de posts spécifique
+  Future<void> _loadLikesForPosts(List<Post> posts) async {
+    final List<Future<void>> likesLoaders = [];
+    
+    for (final post in posts) {
+      likesLoaders.add(_loadLikesForPost(post.id));
+    }
+    
+    await Future.wait(likesLoaders);
+    notifyListeners();
+  }
+
+  /// Charge les likes pour un post spécifique
+  Future<void> _loadLikesForPost(int postId) async {
+    try {
+      final result = await _postsService.getPostLikeStatus(postId);
+      
+      if (result.isSuccess && result.likesCount != null && result.isLiked != null) {
+        _likesCountCache[postId] = result.likesCount!;
+        
+        // Mettre à jour l'état du like utilisateur
+        if (_currentUserId != null) {
+          _userLikesCache[postId] = result.isLiked!;
+          // Sauvegarder dans le cache persistant
+          await _likesCache.saveLikeState(_currentUserId!, postId, result.isLiked!);
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading likes for post $postId: $e');
+    }
+  }
+
+  /// ✅ NOUVEAU: Remet à zéro la pagination
+  void _resetPagination() {
+    _currentOffset = 0;
+    _hasMorePosts = true;
+    _isLoadingMore = false;
   }
 
   /// Toggle like sur un post
@@ -224,33 +336,6 @@ class PostsProvider extends ChangeNotifier {
   /// Récupère le nombre de commentaires d'un post
   int getCommentsCount(int postId) {
     return _commentsCache[postId]?.length ?? 0;
-  }
-
-  /// Précharge les likes pour tous les posts
-  Future<void> _preloadLikes() async {
-    for (final post in _posts) {
-      _loadLikesForPost(post.id);
-    }
-  }
-
-  /// Charge les likes pour un post spécifique
-  Future<void> _loadLikesForPost(int postId) async {
-    try {
-      final result = await _postsService.getPostLikeStatus(postId);
-      
-      if (result.isSuccess && result.likesCount != null && result.isLiked != null) {
-        _likesCountCache[postId] = result.likesCount!;
-        
-        // Mettre à jour l'état du like utilisateur
-        if (_currentUserId != null) {
-          _userLikesCache[postId] = result.isLiked!;
-          // Sauvegarder dans le cache persistant
-          await _likesCache.saveLikeState(_currentUserId!, postId, result.isLiked!);
-        }
-      }
-    } catch (e) {
-      debugPrint('❌ Error loading likes for post $postId: $e');
-    }
   }
 
   /// Change l'état et notifie les listeners
