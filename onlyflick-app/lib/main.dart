@@ -1,3 +1,5 @@
+// lib/main.dart - Application principale avec router corrigé
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -106,17 +108,31 @@ class OnlyFlickBootstrap extends StatelessWidget {
   }
 }
 
-/// Application principale OnlyFlick
+/// Application principale OnlyFlick avec ROUTER CORRIGÉ
 class OnlyFlickApp extends StatelessWidget {
   const OnlyFlickApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'OnlyFlick',
-      theme: ThemeData.dark(useMaterial3: true),
-      routerConfig: router,
-      debugShowCheckedModeBanner: false,
+    // 🔧 ROUTER RÉACTIF AUX CHANGEMENTS D'AUTHPROVIDER
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        // 🚨 CRÉER LE ROUTER EN ÉCOUTANT LES CHANGEMENTS D'AUTHPROVIDER
+        final routerInstance = createRouter(authProvider);
+        
+        // 🔄 METTRE À JOUR LA VARIABLE GLOBALE POUR COMPATIBILITÉ
+        router = routerInstance;
+        
+        return MaterialApp.router(
+          title: 'OnlyFlick',
+          theme: ThemeData.dark(useMaterial3: true),
+          
+          // 🔧 ROUTER CONFIGURÉ POUR ÉCOUTER LES CHANGEMENTS D'AUTH
+          routerConfig: routerInstance,
+          
+          debugShowCheckedModeBanner: false,
+        );
+      },
     );
   }
 }
@@ -188,21 +204,9 @@ class _LoadingScreen extends StatelessWidget {
               // 🎯 TEXTE DE CHARGEMENT AMÉLIORÉ
               const Column(
                 children: [
-                  Text(
-                    'Connexion au serveur...',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    '💳 Initialisation des paiements',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
-                  ),
+                  
+                 
+                 
                 ],
               ),
             ],
@@ -337,6 +341,15 @@ class _ErrorScreen extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.grey,
+                        fontSize: 10,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      '🔐 Redirection automatique après déconnexion activée',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.green,
                         fontSize: 10,
                       ),
                     ),

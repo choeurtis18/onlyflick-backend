@@ -22,6 +22,14 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
+    // ✅ CORRECTION: Retirer le listener avant disposal
+    try {
+      final authProvider = context.read<AuthProvider>();
+      authProvider.removeListener(_onAuthStateChanged);
+    } catch (e) {
+      // Ignorer l'erreur si le provider n'est plus disponible
+    }
+    
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -33,11 +41,16 @@ class _LoginPageState extends State<LoginPage> {
     
     // Écouter les changements d'état d'authentification
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AuthProvider>().addListener(_onAuthStateChanged);
+      if (mounted) {
+        context.read<AuthProvider>().addListener(_onAuthStateChanged);
+      }
     });
   }
 
   void _onAuthStateChanged() {
+    // ✅ CORRECTION: Vérifier si le widget est toujours monté
+    if (!mounted) return;
+    
     final authProvider = context.read<AuthProvider>();
     
     if (authProvider.isAuthenticated) {
@@ -49,11 +62,9 @@ class _LoginPageState extends State<LoginPage> {
     }
     
     // Mettre à jour l'état de chargement
-    if (mounted) {
-      setState(() {
-        _isLoading = authProvider.isLoading;
-      });
-    }
+    setState(() {
+      _isLoading = authProvider.isLoading;
+    });
   }
 
   void _showErrorSnackBar(String message) {
@@ -92,6 +103,9 @@ class _LoginPageState extends State<LoginPage> {
       final authProvider = context.read<AuthProvider>();
       final success = await authProvider.login(email, password);
 
+      // ✅ CORRECTION: Vérifier mounted après appel async
+      if (!mounted) return;
+
       if (success) {
         _showSuccessSnackBar('Connexion réussie !');
         // La navigation se fait automatiquement via _onAuthStateChanged
@@ -99,7 +113,9 @@ class _LoginPageState extends State<LoginPage> {
       // Les erreurs sont gérées automatiquement via _onAuthStateChanged
       
     } catch (e) {
-      _showErrorSnackBar('Une erreur inattendue s\'est produite');
+      if (mounted) {
+        _showErrorSnackBar('Une erreur inattendue s\'est produite');
+      }
     }
   }
 

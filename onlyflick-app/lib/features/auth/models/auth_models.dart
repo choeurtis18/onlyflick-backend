@@ -281,44 +281,117 @@ enum AuthState {
   error,
 }
 
-/// Erreurs d'authentification
+/// Types d'erreurs d'authentification
+enum AuthErrorType {
+  invalidCredentials,  // Email ou mot de passe incorrect
+  validation,          // Erreur de validation des données
+  network,            // Problème de réseau
+  serverError,        // Erreur serveur
+  sessionExpired,     // Session expirée (401 spécifique)
+  unknown,            // Erreur inconnue
+}
+
+/// Erreurs d'authentification avec gestion spécifique des codes HTTP
 class AuthError {
   final String message;
   final int? statusCode;
   final String? field;
+  final AuthErrorType type;
 
   const AuthError({
     required this.message,
     this.statusCode,
     this.field,
+    required this.type,
   });
 
   factory AuthError.network() {
     return const AuthError(
-      message: 'Erreur de connexion réseau',
+      message: 'Problème de connexion. Vérifiez votre réseau.',
       statusCode: 0,
+      type: AuthErrorType.network,
     );
   }
 
   factory AuthError.server() {
     return const AuthError(
-      message: 'Erreur serveur',
+      message: 'Erreur serveur. Veuillez réessayer plus tard.',
       statusCode: 500,
+      type: AuthErrorType.serverError,
     );
   }
 
   factory AuthError.unauthorized() {
     return const AuthError(
-      message: 'Non autorisé',
+      message: 'Email ou mot de passe incorrect',
       statusCode: 401,
+      type: AuthErrorType.invalidCredentials,
     );
   }
 
-  factory AuthError.fromApiResponse(String message, int? statusCode) {
-    return AuthError(
-      message: message,
-      statusCode: statusCode,
+  factory AuthError.sessionExpired() {
+    return const AuthError(
+      message: 'Session expirée, veuillez vous reconnecter',
+      statusCode: 401,
+      type: AuthErrorType.sessionExpired,
     );
+  }
+
+  /// ✅ CORRECTION: Gestion correcte des erreurs selon le code HTTP et le contexte
+  factory AuthError.fromApiResponse(String apiMessage, int? statusCode) {
+    switch (statusCode) {
+      case 400:
+        // Erreur de validation (données manquantes/invalides)
+        return AuthError(
+          message: apiMessage.isNotEmpty ? apiMessage : 'Données invalides',
+          statusCode: statusCode,
+          type: AuthErrorType.validation,
+        );
+        
+      case 401:
+        // ✅ DISTINCTION IMPORTANTE: 401 peut être credentials OU session expirée
+        if (apiMessage.toLowerCase().contains('session') || 
+            apiMessage.toLowerCase().contains('expir') ||
+            apiMessage.toLowerCase().contains('token')) {
+          // Session expirée (utilisateur était connecté)
+          return AuthError(
+            message: 'Session expirée, veuillez vous reconnecter',
+            statusCode: statusCode,
+            type: AuthErrorType.sessionExpired,
+          );
+        } else {
+          // Identifiants incorrects (tentative de connexion)
+          return AuthError(
+            message: 'Email ou mot de passe incorrect',
+            statusCode: statusCode,
+            type: AuthErrorType.invalidCredentials,
+          );
+        }
+        
+      case 403:
+        return AuthError(
+          message: 'Accès refusé',
+          statusCode: statusCode,
+          type: AuthErrorType.validation,
+        );
+        
+      case 500:
+      case 502:
+      case 503:
+        return AuthError(
+          message: 'Erreur serveur. Veuillez réessayer plus tard.',
+          statusCode: statusCode,
+          type: AuthErrorType.serverError,
+        );
+        
+      default:
+        // Pour tous les autres cas, on utilise le message du serveur
+        return AuthError(
+          message: apiMessage.isNotEmpty ? apiMessage : 'Erreur inconnue',
+          statusCode: statusCode,
+          type: AuthErrorType.unknown,
+        );
+    }
   }
 
   factory AuthError.validation(String field, String message) {
@@ -326,16 +399,41 @@ class AuthError {
       message: message,
       field: field,
       statusCode: 400,
+      type: AuthErrorType.validation,
     );
   }
 
-  bool get isNetworkError => statusCode == 0;
-  bool get isServerError => statusCode != null && statusCode! >= 500;
+  /// ✅ NOUVEAU: Méthodes utilitaires
+  bool get isCredentialsError => type == AuthErrorType.invalidCredentials;
+  bool get isSessionExpired => type == AuthErrorType.sessionExpired;
+  bool get isNetworkError => type == AuthErrorType.network;
+  bool get isValidationError => type == AuthErrorType.validation;
+  bool get isServerError => type == AuthErrorType.serverError;
+  
+  bool get isNetworkErrorLegacy => statusCode == 0;
+  bool get isServerErrorLegacy => statusCode != null && statusCode! >= 500;
   bool get isClientError => statusCode != null && statusCode! >= 400 && statusCode! < 500;
-  bool get isValidationError => statusCode == 400 && field != null;
+  
+  /// Message d'erreur approprié pour l'UI
+  String get userFriendlyMessage {
+    switch (type) {
+      case AuthErrorType.invalidCredentials:
+        return 'Email ou mot de passe incorrect';
+      case AuthErrorType.sessionExpired:
+        return 'Session expirée, veuillez vous reconnecter';
+      case AuthErrorType.network:
+        return 'Problème de connexion. Vérifiez votre réseau.';
+      case AuthErrorType.validation:
+        return message;
+      case AuthErrorType.serverError:
+        return 'Erreur serveur. Veuillez réessayer plus tard.';
+      case AuthErrorType.unknown:
+        return message.isNotEmpty ? message : 'Une erreur est survenue';
+    }
+  }
 
   @override
-  String toString() => 'AuthError(message: $message, statusCode: $statusCode, field: $field)';
+  String toString() => 'AuthError(message: $message, statusCode: $statusCode, field: $field, type: $type)';
 }
 
 /// Classe pour les résultats d'authentification
@@ -359,6 +457,10 @@ class AuthResult {
   }
 
   bool get isFailure => !isSuccess;
+  
+  /// ✅ NOUVEAU: Méthodes utilitaires
+  String get errorMessage => error?.userFriendlyMessage ?? '';
+  AuthErrorType? get errorType => error?.type;
 
   @override
   String toString() => isSuccess 
@@ -387,6 +489,7 @@ class UserResult {
   }
 
   bool get isFailure => !isSuccess;
+  String get errorMessage => error?.userFriendlyMessage ?? '';
 
   @override
   String toString() => isSuccess 
@@ -416,6 +519,7 @@ class UsernameCheckResult {
 
   bool get isFailure => !isSuccess;
   bool get isAvailable => data?.available ?? false;
+  String get errorMessage => error?.userFriendlyMessage ?? '';
 
   @override
   String toString() => isSuccess 

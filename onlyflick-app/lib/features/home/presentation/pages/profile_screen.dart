@@ -14,6 +14,7 @@ import '../pages/post_detail_page.dart';
 import '../widgets/subscription_stats_widget.dart';
 import '../../../../core/utils/constants.dart';
 import '../../../../core/utils/auth_storage.dart';
+import '../../../../core/services/api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool isCreator;
@@ -28,6 +29,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final ImagePicker _imagePicker = ImagePicker();
+  final ApiService _apiService = ApiService();
+  
+  // État de la demande de créateur
+  bool _isRequestingCreator = false;
+  bool _hasExistingRequest = false;
 
   @override
   void initState() {
@@ -74,11 +80,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                     _buildBioSection(user, userIsCreator, profileProvider),
                     _buildButtons(userIsCreator, context, profileProvider),
                     
-                    // Widget BecomeCreator pour les non-créateurs
+                    // Widget BecomeCreator pour les non-créateurs - AMÉLIORÉ
                     if (!userIsCreator) 
-                      BecomeCreatorWidget(
-                        onRequestUpgrade: () => _handleCreatorUpgrade(profileProvider),
-                      ),
+                      _buildBecomeCreatorWidget(),
                     
                     if (userIsCreator) const _ProfileTabs(),
                     const SizedBox(height: 8),
@@ -366,6 +370,111 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  /// 🚀 WIDGET DEVENIR CRÉATEUR AMÉLIORÉ
+  Widget _buildBecomeCreatorWidget() {
+    if (_hasExistingRequest) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.orange[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.orange[200]!),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.hourglass_top, color: Colors.orange[600], size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Demande en cours de traitement',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange[800],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Votre demande de passage en créateur a été envoyée et est en cours d\'examen.',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Colors.orange[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Colors.purple, Colors.pink, Colors.orange],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '✨ Devenez créateur',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Partagez du contenu exclusif et gagnez de l\'argent avec vos abonnés !',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.purple,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: _isRequestingCreator ? null : () => _handleCreatorUpgrade(),
+              child: _isRequestingCreator
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
+                      ),
+                    )
+                  : const Text(
+                      'Faire une demande',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // 🔥 GRILLE AMÉLIORÉE : Gestion différenciée pour créateurs et abonnés
   Widget _buildGrid({required String type, required ProfileProvider profileProvider, required bool userIsCreator}) {
     // 🔥 État de chargement
@@ -608,6 +717,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
     );
   }
+
   Widget _buildPostThumbnail(dynamic post) {
     return Stack(
       children: [
@@ -961,11 +1071,14 @@ class _ProfileScreenState extends State<ProfileScreen>
               },
             ),
             ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Déconnexion'),
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text(
+                'Déconnexion',
+                style: TextStyle(color: Colors.red),
+              ),
               onTap: () {
                 Navigator.of(context).pop();
-                _logout();
+                _showLogoutConfirmation();
               },
             ),
           ],
@@ -974,112 +1087,37 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Future<void> _handleCreatorUpgrade(ProfileProvider profileProvider) async {
-    // 🔥 NOUVELLE IMPLÉMENTATION : Dialog de confirmation + API call
-    
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('✨ Devenir créateur'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Vous souhaitez devenir créateur sur OnlyFlick ?',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            SizedBox(height: 12),
-            Text('En tant que créateur, vous pourrez :'),
-            SizedBox(height: 8),
-            Text('• Publier du contenu exclusif'),
-            Text('• Recevoir des abonnements payants'),
-            Text('• Gagner de l\'argent avec votre contenu'),
-            Text('• Accéder aux statistiques avancées'),
-            SizedBox(height: 12),
-            Text(
-              'Votre demande sera examinée par notre équipe.',
-              style: TextStyle(
-                fontSize: 13,
-                fontStyle: FontStyle.italic,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.purple,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Faire la demande'),
-          ),
-        ],
-      ),
-    );
+  /// 🚀 MÉTHODE AMÉLIORÉE : Demande de passage en créateur avec API
+  Future<void> _handleCreatorUpgrade() async {
+    // Confirmer l'action avec l'utilisateur
+    final confirmed = await _showCreatorUpgradeDialog();
+    if (!confirmed) return;
 
-    if (confirmed == true) {
-      await _submitCreatorUpgradeRequest();
-    }
-  }
+    setState(() {
+      _isRequestingCreator = true;
+    });
 
-Future<void> _submitCreatorUpgradeRequest() async {
     try {
-      // Afficher un indicateur de chargement
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                SizedBox(width: 16),
-                Text('Envoi de votre demande...'),
-              ],
-            ),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-
-      // Récupérer le token d'authentification
-      final token = await AuthStorage.getToken();
-      if (token == null) {
-        throw Exception('Token d\'authentification manquant');
-      }
-
-      // Appel API
-      final response = await http.post(
-        Uri.parse('${AppConstants.baseUrl}/profile/request-upgrade'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (mounted) {
-        if (response.statusCode == 200) {
-          // Succès
+      debugPrint('🚀 [ProfileScreen] Requesting creator upgrade...');
+      
+      final response = await _apiService.post('/profile/request-upgrade');
+      
+      if (response.isSuccess) {
+        setState(() {
+          _hasExistingRequest = true;
+          _isRequestingCreator = false;
+        });
+        
+        // Afficher un message de succès
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Row(
                 children: [
                   Icon(Icons.check_circle, color: Colors.white),
-                  SizedBox(width: 16),
+                  SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      'Demande envoyée ! Nous examinerons votre candidature.',
-                      style: TextStyle(fontWeight: FontWeight.w500),
-                    ),
+                    child: Text('Demande de passage en créateur envoyée avec succès !'),
                   ),
                 ],
               ),
@@ -1087,103 +1125,176 @@ Future<void> _submitCreatorUpgradeRequest() async {
               duration: Duration(seconds: 4),
             ),
           );
-
-          // Dialog de confirmation avec next steps
-          _showCreatorRequestSuccessDialog();
-          
-        } else if (response.statusCode == 409) {
-          // Demande déjà en cours
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Vous avez déjà une demande en cours d\'examen.'),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 3),
-            ),
-          );
-        } else {
-          // Erreur serveur
-          final errorData = json.decode(response.body);
-          final errorMessage = errorData['message'] ?? 'Erreur inconnue';
-          
+        }
+        
+        debugPrint('✅ [ProfileScreen] Creator upgrade request sent successfully');
+      } else {
+        setState(() {
+          _isRequestingCreator = false;
+        });
+        
+        // Afficher le message d'erreur
+        final errorMessage = response.error ?? 'Erreur lors de la demande de passage en créateur';
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Erreur: $errorMessage'),
+              content: Row(
+                children: [
+                  const Icon(Icons.error, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(errorMessage)),
+                ],
+              ),
               backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
+              duration: const Duration(seconds: 4),
             ),
           );
         }
+        
+        debugPrint('❌ [ProfileScreen] Creator upgrade request failed: $errorMessage');
       }
     } catch (e) {
-      // Erreur de connexion ou autre
-      debugPrint('❌ Erreur demande créateur: $e');
+      setState(() {
+        _isRequestingCreator = false;
+      });
       
+      final errorMessage = 'Erreur de connexion: ${e.toString()}';
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur de connexion: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            action: SnackBarAction(
-              label: 'Réessayer',
-              textColor: Colors.white,
-              onPressed: () => _submitCreatorUpgradeRequest(),
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text(errorMessage)),
+              ],
             ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
+      
+      debugPrint('❌ [ProfileScreen] Creator upgrade request error: $e');
     }
   }
 
-  void _showCreatorRequestSuccessDialog() {
-    showDialog(
+  /// 🤔 DIALOGUE DE CONFIRMATION POUR DEVENIR CRÉATEUR
+  Future<bool> _showCreatorUpgradeDialog() async {
+    return await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green, size: 28),
-            SizedBox(width: 12),
-            Text('Demande envoyée !'),
-          ],
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Votre demande de passage en créateur a été envoyée avec succès.',
-              style: TextStyle(fontWeight: FontWeight.w500),
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.star, color: Colors.amber, size: 28),
+              const SizedBox(width: 8),
+              Text(
+                'Devenir Créateur',
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Êtes-vous sûr de vouloir demander le passage en compte créateur ?',
+                style: GoogleFonts.inter(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'En tant que créateur, vous pourrez :',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildBenefitItem('✅ Publier du contenu premium'),
+                    _buildBenefitItem('💰 Recevoir des abonnements payants'),
+                    _buildBenefitItem('👥 Gérer votre communauté d\'abonnés'),
+                    _buildBenefitItem('📊 Accéder aux statistiques avancées'),
+                    _buildBenefitItem('🎯 Définir vos propres tarifs'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'ℹ️ Votre demande sera examinée par notre équipe dans les 24-48h.',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.blue[700],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                'Annuler',
+                style: GoogleFonts.inter(color: Colors.grey[600]),
+              ),
             ),
-            SizedBox(height: 16),
-            Text('Prochaines étapes :', style: TextStyle(fontWeight: FontWeight.w600)),
-            SizedBox(height: 8),
-            Text('1. Notre équipe va examiner votre profil'),
-            Text('2. Vous recevrez une notification de notre décision'),
-            Text('3. Si approuvé, vous aurez accès aux fonctionnalités créateur'),
-            SizedBox(height: 16),
-            Text(
-              'Délai d\'examen : 24-48h en moyenne',
-              style: TextStyle(
-                fontSize: 13,
-                fontStyle: FontStyle.italic,
-                color: Colors.grey,
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: Text(
+                'Envoyer la demande',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
               ),
             ),
           ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.purple,
-              foregroundColor: Colors.white,
+        );
+      },
+    ) ?? false;
+  }
+
+  /// 📝 ÉLÉMENT DE BÉNÉFICE
+  Widget _buildBenefitItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.inter(fontSize: 13),
             ),
-            child: const Text('Compris !'),
           ),
         ],
       ),
     );
   }
 
+  // ✅ MÉTHODE MODIFIÉE : Navigation vers PostDetailPage
   void _onPostTap(dynamic post) {
     debugPrint('🎯 [ProfileScreen] Post tapped - ID: ${post.id}, Title: ${post.title}');
     
@@ -1200,6 +1311,229 @@ Future<void> _submitCreatorUpgradeRequest() async {
 
   Future<void> _logout() async {
     await context.read<AuthProvider>().logout();
+  }
+
+  /// 🚪 DIALOGUE DE CONFIRMATION POUR LA DÉCONNEXION
+  Future<void> _showLogoutConfirmation() async {
+    final user = context.read<AuthProvider>().user;
+    
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.logout, color: Colors.red[600], size: 24),
+              const SizedBox(width: 8),
+              Text(
+                'Déconnexion',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Êtes-vous sûr de vouloir vous déconnecter ?',
+                style: GoogleFonts.inter(fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              if (user != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.blue[100],
+                        backgroundImage: user.avatarUrl?.isNotEmpty == true
+                            ? NetworkImage(user.avatarUrl!)
+                            : null,
+                        child: user.avatarUrl?.isEmpty != false
+                            ? Text(
+                                user.username.isNotEmpty 
+                                    ? user.username[0].toUpperCase()
+                                    : '?',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue[800],
+                                ),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user.displayName,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              user.email,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.amber[50],
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'ℹ️ Vous devrez vous reconnecter pour accéder à votre compte.',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.amber[700],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                'Annuler',
+                style: GoogleFonts.inter(color: Colors.grey[600]),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: Text(
+                'Se déconnecter',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        );
+      },
+    ) ?? false;
+
+    if (confirmed) {
+      await _performLogout();
+    }
+  }
+
+  /// 🚪 DÉCONNEXION AVEC FEEDBACK UTILISATEUR
+  Future<void> _performLogout() async {
+    try {
+      // Afficher un indicateur de chargement
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return Dialog(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(width: 16),
+                  Text(
+                    'Déconnexion en cours...',
+                    style: GoogleFonts.inter(fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+
+      // Effectuer la déconnexion
+      debugPrint('🚪 [ProfileScreen] Starting logout process...');
+      await context.read<AuthProvider>().logout();
+      debugPrint('✅ [ProfileScreen] Logout completed successfully');
+
+      // Fermer le dialogue de chargement
+      if (mounted) {
+        Navigator.of(context).pop();
+        
+        // Afficher un message de confirmation
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Déconnexion réussie. À bientôt !',
+                    style: GoogleFonts.inter(),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
+        // Navigation vers l'écran de login
+        // Le AuthProvider redirigera automatiquement vers login
+        // grâce au state management dans votre app principale
+      }
+
+    } catch (e) {
+      debugPrint('❌ [ProfileScreen] Logout error: $e');
+      
+      // Fermer le dialogue de chargement en cas d'erreur
+      if (mounted) {
+        Navigator.of(context).pop();
+        
+        // Afficher un message d'erreur
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Erreur lors de la déconnexion. Veuillez réessayer.',
+                    style: GoogleFonts.inter(),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   String _formatCount(int count) {
@@ -1278,71 +1612,6 @@ class _ProfileTabs extends StatelessWidget {
         Tab(icon: Icon(Icons.grid_on_rounded, color: Colors.black)),
         Tab(icon: Icon(Icons.shopping_bag_outlined, color: Colors.black)),
       ],
-    );
-  }
-}
-
-// Widget BecomeCreator intégré avec callback
-class BecomeCreatorWidget extends StatelessWidget {
-  final VoidCallback onRequestUpgrade;
-
-  const BecomeCreatorWidget({
-    super.key,
-    required this.onRequestUpgrade,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Colors.purple, Colors.pink, Colors.orange],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '✨ Devenez créateur',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Partagez du contenu exclusif et gagnez de l\'argent avec vos abonnés !',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.purple,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              onPressed: onRequestUpgrade,
-              child: const Text(
-                'Faire une demande',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

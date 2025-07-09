@@ -17,7 +17,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
-  final _usernameController = TextEditingController();  // ===== AJOUT USERNAME =====
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -34,12 +34,20 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   void dispose() {
+    // ✅ CORRECTION: Retirer le listener avant disposal
+    try {
+      final authProvider = context.read<AuthProvider>();
+      authProvider.removeListener(_onAuthStateChanged);
+    } catch (e) {
+      // Ignorer l'erreur si le provider n'est plus disponible
+    }
+    
     // ===== ANNULER TIMER AVANT DISPOSE =====
     _usernameDebounceTimer?.cancel();
     
     _firstNameController.dispose();
     _lastNameController.dispose();
-    _usernameController.dispose();  // ===== DISPOSE USERNAME =====
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -62,7 +70,8 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _onAuthStateChanged() {
-    if (!mounted) return;  // ===== PROTECTION MOUNTED =====
+    // ✅ CORRECTION: Vérifier si le widget est toujours monté
+    if (!mounted) return;
     
     final authProvider = context.read<AuthProvider>();
     
@@ -187,16 +196,15 @@ class _RegisterPageState extends State<RegisterPage> {
     
     final firstName = _firstNameController.text.trim();
     final lastName = _lastNameController.text.trim();
-    final username = _usernameController.text.trim();  // ===== RÉCUPÉRER USERNAME =====
+    final username = _usernameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
     try {
       final authProvider = context.read<AuthProvider>();
-      // ===== PASSER USERNAME À LA MÉTHODE REGISTER =====
       final success = await authProvider.register(firstName, lastName, username, email, password);
 
-      // ===== VÉRIFICATION MOUNTED APRÈS ASYNC =====
+      // ✅ CORRECTION: Vérifier mounted après appel async
       if (!mounted) return;
 
       if (success) {
