@@ -1,4 +1,4 @@
-// onlyflick-app/lib/features/messaging/pages/chat_page.dart
+//lib/features/messaging/pages/chat_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

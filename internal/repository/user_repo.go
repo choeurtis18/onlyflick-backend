@@ -49,6 +49,11 @@ type UpdateUserPayload struct {
 
 // Crée un nouvel utilisateur dans la base de données AVEC USERNAME
 func CreateUser(user *domain.User) error {
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[CreateUser][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `
 		INSERT INTO users (first_name, last_name, username, email, password, role, avatar_url, bio)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -80,6 +85,12 @@ func CreateUser(user *domain.User) error {
 // Recherche un utilisateur par email (décrypté) - AVEC TOUS LES CHAMPS
 func GetUserByEmail(email string) (*domain.User, error) {
 	log.Printf("[GetUserByEmail] Recherche de l'utilisateur avec l'email: %s", email)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetUserByEmail][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	rows, err := database.DB.Query(`
 		SELECT id, first_name, last_name, username, email, password, role, avatar_url, bio, created_at, updated_at 
 		FROM users
@@ -157,6 +168,12 @@ func GetUserByEmail(email string) (*domain.User, error) {
 // Recherche un utilisateur par son ID.
 func GetUserByID(userID int64) (*domain.User, error) {
 	log.Printf("[GetUserByID] Recherche de l'utilisateur avec l'ID: %d", userID)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetUserByID][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `
 		SELECT id, first_name, last_name, username, email, password, role, avatar_url, bio, created_at, updated_at
 		FROM users 
@@ -216,6 +233,11 @@ func GetUserByID(userID int64) (*domain.User, error) {
 // GetUserByUsername récupère un utilisateur par son username
 func GetUserByUsername(username string) (*domain.User, error) {
 	log.Printf("[GetUserByUsername] Récupération utilisateur par username: %s", username)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetUserByUsername][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
 
 	var user domain.User
 	query := `SELECT id, first_name, last_name, email, role, created_at, avatar_url, bio, username, updated_at
@@ -296,6 +318,11 @@ func GetUserByUsername(username string) (*domain.User, error) {
 func UpdateUser(userID int64, payload UpdateUserPayload) error {
 	log.Printf("[UpdateUser] Mise à jour de l'utilisateur (ID: %d)", userID)
 
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[UpdateUser][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := "UPDATE users SET"
 	params := []interface{}{}
 	paramIndex := 1
@@ -369,6 +396,12 @@ func UpdateUser(userID int64, payload UpdateUserPayload) error {
 // Supprime un utilisateur de la base de données.
 func DeleteUser(userID int64) error {
 	log.Printf("[DeleteUser] Suppression de l'utilisateur (ID: %d)", userID)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[DeleteUser][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	_, err := database.DB.Exec(`DELETE FROM users WHERE id = $1`, userID)
 	if err != nil {
 		log.Printf("[DeleteUser][ERREUR] Erreur lors de la suppression de l'utilisateur (ID: %d): %v", userID, err)
@@ -381,6 +414,11 @@ func DeleteUser(userID int64) error {
 // GetProfileStats récupère les statistiques d'un profil utilisateur
 func GetProfileStats(userID int64) (*ProfileStats, error) {
 	log.Printf("[GetProfileStats] Récupération des stats pour user %d", userID)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetProfileStats][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
 
 	var stats ProfileStats
 
@@ -431,6 +469,11 @@ func GetProfileStats(userID int64) (*ProfileStats, error) {
 // GetUserPosts récupère les posts d'un utilisateur avec pagination
 func GetUserPosts(userID int64, page, limit int, postType string) ([]*UserPost, error) {
 	log.Printf("[GetUserPosts] Récupération posts pour user %d (page=%d, limit=%d, type=%s)", userID, page, limit, postType)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetUserPosts][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
 
 	offset := (page - 1) * limit
 
@@ -519,6 +562,11 @@ func GetUserPosts(userID int64, page, limit int, postType string) ([]*UserPost, 
 func UpdateUserAvatar(userID int64, avatarURL string) error {
 	log.Printf("[UpdateUserAvatar] Mise à jour avatar pour user %d: %s", userID, avatarURL)
 
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[UpdateUserAvatar][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `UPDATE users SET avatar_url = $1, updated_at = NOW() WHERE id = $2`
 
 	result, err := database.DB.Exec(query, avatarURL, userID)
@@ -539,6 +587,11 @@ func UpdateUserAvatar(userID int64, avatarURL string) error {
 // UpdateUserBio met à jour la bio d'un utilisateur
 func UpdateUserBio(userID int64, bio string) error {
 	log.Printf("[UpdateUserBio] Mise à jour bio pour user %d", userID)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[UpdateUserBio][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
 
 	query := `UPDATE users SET bio = $1, updated_at = NOW() WHERE id = $2`
 
@@ -561,6 +614,11 @@ func UpdateUserBio(userID int64, bio string) error {
 func CheckUsernameAvailability(username string) (bool, error) {
 	log.Printf("[CheckUsernameAvailability] Vérification disponibilité username: %s", username)
 
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[CheckUsernameAvailability][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	var count int
 	query := `SELECT COUNT(*) FROM users WHERE username = $1`
 
@@ -581,6 +639,11 @@ func CheckUsernameAvailability(username string) (bool, error) {
 func GetUserPostsCount(userID int64) (int, error) {
 	log.Printf("[GetUserPostsCount] Récupération nombre de posts pour user %d", userID)
 
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetUserPostsCount][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	var count int
 	query := `SELECT COUNT(*) FROM posts WHERE user_id = $1`
 
@@ -597,6 +660,11 @@ func GetUserPostsCount(userID int64) (int, error) {
 // GetUserFollowersCount récupère le nombre d'abonnés d'un utilisateur (si créateur)
 func GetUserFollowersCount(userID int64) (int, error) {
 	log.Printf("[GetUserFollowersCount] Récupération nombre de followers pour user %d", userID)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetUserFollowersCount][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
 
 	var count int
 	query := `SELECT COUNT(*) FROM subscriptions WHERE creator_id = $1 AND status = true`
@@ -615,6 +683,11 @@ func GetUserFollowersCount(userID int64) (int, error) {
 func GetUserFollowingCount(userID int64) (int, error) {
 	log.Printf("[GetUserFollowingCount] Récupération nombre de following pour user %d", userID)
 
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetUserFollowingCount][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	var count int
 	query := `SELECT COUNT(*) FROM subscriptions WHERE subscriber_id = $1 AND status = true`
 
@@ -631,6 +704,11 @@ func GetUserFollowingCount(userID int64) (int, error) {
 // ===== NOUVEAU : GetUserPostsCountByType récupère le nombre de posts d'un utilisateur selon le type de visibilité =====
 func GetUserPostsCountByType(userID int64, postType string) (int, error) {
 	log.Printf("[GetUserPostsCountByType] Récupération nombre de posts pour user %d (type: %s)", userID, postType)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetUserPostsCountByType][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
 
 	var query string
 	var args []interface{}
@@ -660,6 +738,11 @@ func GetUserPostsCountByType(userID int64, postType string) (int, error) {
 
 func GetAllUsers() ([]*domain.User, error) {
 	log.Printf("[GetAllUsers] Récupération de tous les utilisateurs")
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetAllUsers][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
 
 	rows, err := database.DB.Query(`
 		SELECT id, first_name, last_name, username, email, password, role, avatar_url, bio, created_at, updated_at

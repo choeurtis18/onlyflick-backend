@@ -1,4 +1,4 @@
-// lib/models/subscription_model.dart
+// lib/core/models/subscription_model.dart
 
 class Subscription {
   final int id;

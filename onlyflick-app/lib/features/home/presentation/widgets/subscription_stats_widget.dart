@@ -28,35 +28,32 @@ class SubscriptionStatsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        // Posts (non cliquable)
-        _buildStatColumn(
-          title: 'Posts',
-          value: _formatCount(postsCount),
-          onTap: null, // Posts non cliquables pour l'instant
-        ),
-        
-        // Abonnés (cliquable)
-        _buildStatColumn(
-          title: isCreator ? 'Abonnés' : 'Abonnés',
-          value: _formatCount(followersCount),
-          onTap: () => _navigateToFollowers(context),
-        ),
-        
-        // Abonnements ou Revenus selon le type d'utilisateur
-        _buildStatColumn(
-          title: isCreator ? 'Revenus' : 'Abonnements',
-          value: isCreator 
-            ? '${totalEarnings.toStringAsFixed(2)}€'
-            : _formatCount(followingCount),
-          onTap: isCreator 
-            ? null // Revenus non cliquables
-            : () => _navigateToFollowing(context),
-        ),
-      ],
-    );
+   return Row(
+  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+  children: [
+    if (isCreator)
+      _buildStatColumn(
+        title: 'Posts',
+        value: _formatCount(postsCount),
+        onTap: null,
+      ),
+
+    _buildStatColumn(
+      title: 'Abonnés',
+      value: _formatCount(followersCount),
+      onTap: () => _navigateToFollowers(context),
+    ),
+
+    _buildStatColumn(
+      title: isCreator ? 'Revenus' : 'Abonnements',
+      value: isCreator
+          ? '${totalEarnings.toStringAsFixed(2)}€'
+          : _formatCount(followingCount),
+      onTap: isCreator ? null : () => _navigateToFollowing(context),
+    ),
+  ],
+);
+
   }
 
   Widget _buildStatColumn({

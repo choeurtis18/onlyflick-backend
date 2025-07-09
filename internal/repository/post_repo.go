@@ -20,6 +20,11 @@ import (
 func CreatePost(post *domain.Post) error {
 	log.Printf("[PostRepo] Création d'un nouveau post pour l'utilisateur ID: %d", post.UserID)
 
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[CreatePost][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `
 		INSERT INTO posts (user_id, title, description, media_url, file_id, visibility, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
@@ -52,6 +57,11 @@ func CreatePost(post *domain.Post) error {
 func CreatePostTag(postID int64, tagCategory string) error {
 	log.Printf("[PostRepo] Insertion tag '%s' pour post %d", tagCategory, postID)
 
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[CreatePostTag][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `
 		INSERT INTO post_tags (post_id, category)
 		VALUES ($1, $2)
@@ -73,6 +83,11 @@ func CreatePostTag(postID int64, tagCategory string) error {
 func DeletePostTags(postID int64) error {
 	log.Printf("[PostRepo] Suppression de tous les tags pour le post %d", postID)
 
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[DeletePostTags][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `DELETE FROM post_tags WHERE post_id = $1`
 
 	result, err := database.DB.Exec(query, postID)
@@ -89,6 +104,11 @@ func DeletePostTags(postID int64) error {
 // GetPostTags récupère tous les tags d'un post
 func GetPostTags(postID int64) ([]string, error) {
 	log.Printf("[PostRepo] Récupération des tags pour le post %d", postID)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetPostTags][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
 
 	query := `
 		SELECT category 
@@ -126,6 +146,11 @@ func GetPostTags(postID int64) ([]string, error) {
 // UpdatePostTags met à jour les tags d'un post (supprime les anciens et ajoute les nouveaux)
 func UpdatePostTags(postID int64, newTags []string) error {
 	log.Printf("[PostRepo] Mise à jour des tags pour le post %d: %v", postID, newTags)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[UpdatePostTags][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
 
 	// Commencer une transaction
 	tx, err := database.DB.Begin()
@@ -171,6 +196,11 @@ func UpdatePostTags(postID int64, newTags []string) error {
 func ListPostsByUser(userID int64) ([]domain.Post, error) {
 	log.Printf("[PostRepo] Liste des posts pour l'utilisateur ID: %d", userID)
 
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[ListPostsByUser][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `
 		SELECT id, user_id, title, description, media_url, visibility, created_at, updated_at
 		FROM posts
@@ -212,6 +242,11 @@ func ListPostsByUser(userID int64) ([]domain.Post, error) {
 func DeletePost(postID int64) error {
 	log.Printf("[PostRepo] Suppression du post ID: %d", postID)
 
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[DeletePost][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `DELETE FROM posts WHERE id = $1`
 	result, err := database.DB.ExecContext(context.Background(), query, postID)
 	if err != nil {
@@ -237,6 +272,11 @@ func DeletePost(postID int64) error {
 // UpdatePost met à jour un post existant.
 func UpdatePost(post *domain.Post) error {
 	log.Printf("[PostRepo] Mise à jour du post ID: %d", post.ID)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[UpdatePost][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
 
 	query := `
 		UPDATE posts
@@ -267,6 +307,11 @@ func UpdatePost(post *domain.Post) error {
 // ListVisiblePosts retourne les posts visibles selon le rôle avec informations utilisateur complètes.
 func ListVisiblePosts(userRole string) ([]domain.Post, error) {
 	log.Printf("[PostRepo] Listing des posts visibles pour le rôle : %s", userRole)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[ListVisiblePosts][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
 
 	var query string
 	if userRole == "subscriber" || userRole == "creator" || userRole == "admin" {
@@ -403,6 +448,11 @@ func ListVisiblePosts(userRole string) ([]domain.Post, error) {
 func GetPostByID(postID int64) (*domain.Post, error) {
 	log.Printf("[PostRepo] Récupération du post ID: %d", postID)
 
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetPostByID][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `
 		SELECT 
 			p.id, 
@@ -516,9 +566,8 @@ func getRecommendedPostsWithoutTags(userID int64, limit, offset int) ([]interfac
 	log.Printf("[PostRepo] Recommandations sans filtrage tags pour user %d", userID)
 
 	// Nettoyer les prepared statements existants au début
-	_, err := database.DB.Exec("DEALLOCATE ALL")
-	if err != nil {
-		log.Printf("[PostRepo][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[getRecommendedPostsWithoutTags][WARN] Impossible de nettoyer les prepared statements: %v", err)
 	}
 
 	// 🔥 CORRECTION : Ajouter author_avatar dans le SELECT
@@ -551,15 +600,7 @@ func getRecommendedPostsWithoutTags(userID int64, limit, offset int) ([]interfac
 
 	args := []interface{}{limit, offset}
 
-	// Préparer explicitement la requête
-	stmt, err := database.DB.Prepare(query)
-	if err != nil {
-		log.Printf("[PostRepo][ERREUR] Erreur préparation requête : %v", err)
-		return nil, 0, err
-	}
-	defer stmt.Close()
-
-	rows, err := stmt.Query(args...)
+	rows, err := database.DB.Query(query, args...)
 	if err != nil {
 		log.Printf("[PostRepo][ERREUR] Erreur query posts recommandés : %v", err)
 		return nil, 0, err
@@ -582,6 +623,7 @@ func getRecommendedPostsWithoutTags(userID int64, limit, offset int) ([]interfac
 	log.Printf("[PostRepo] ✅ %d posts recommandés trouvés (total: %d)", len(posts), total)
 	return posts, total, nil
 }
+
 // getRecommendedPostsWithTags - AVEC AVATAR
 func getRecommendedPostsWithTags(userID int64, tags []string, limit, offset int) ([]interface{}, int, error) {
 	log.Printf("[PostRepo] Recommandations avec filtrage tags: %v pour user %d", tags, userID)
@@ -592,9 +634,8 @@ func getRecommendedPostsWithTags(userID int64, tags []string, limit, offset int)
 	}
 
 	// Nettoyer les prepared statements existants
-	_, err := database.DB.Exec("DEALLOCATE ALL")
-	if err != nil {
-		log.Printf("[PostRepo][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[getRecommendedPostsWithTags][WARN] Impossible de nettoyer les prepared statements: %v", err)
 	}
 
 	// Construction cohérente des arguments
@@ -637,15 +678,7 @@ func getRecommendedPostsWithTags(userID int64, tags []string, limit, offset int)
 		LIMIT $%d OFFSET $%d
 	`, strings.Join(tagPlaceholders, ","), limitPos, offsetPos)
 
-	// Préparer explicitement la requête
-	stmt, err := database.DB.Prepare(query)
-	if err != nil {
-		log.Printf("[PostRepo][ERREUR] Erreur préparation requête avec tags : %v", err)
-		return nil, 0, err
-	}
-	defer stmt.Close()
-
-	rows, err := stmt.Query(args...)
+	rows, err := database.DB.Query(query, args...)
 	if err != nil {
 		log.Printf("[PostRepo][ERREUR] Erreur query posts recommandés avec tags : %v", err)
 		return nil, 0, err
@@ -675,6 +708,11 @@ func getRecommendedPostsWithTags(userID int64, tags []string, limit, offset int)
 
 // countRecommendedPostsWithoutTags - Fonction de comptage pour les posts sans tags
 func countRecommendedPostsWithoutTags(userID int64) (int, error) {
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[countRecommendedPostsWithoutTags][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `
 		SELECT COUNT(DISTINCT p.id)
 		FROM posts p
@@ -695,6 +733,11 @@ func countRecommendedPostsWithoutTags(userID int64) (int, error) {
 func countRecommendedPostsWithTags(userID int64, tags []string) (int, error) {
 	if len(tags) == 0 {
 		return countRecommendedPostsWithoutTags(userID)
+	}
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[countRecommendedPostsWithTags][WARN] Impossible de nettoyer les prepared statements: %v", err)
 	}
 
 	var args []interface{}
@@ -793,6 +836,11 @@ func scanPostsResults(rows *sql.Rows) ([]interface{}, error) {
 func ListPostsFromCreator(creatorID int64, includePrivate bool) ([]*domain.Post, error) {
 	log.Printf("[PostRepo] Listing des posts du créateur ID: %d (includePrivate: %v)", creatorID, includePrivate)
 
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[ListPostsFromCreator][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `
 		SELECT id, user_id, title, description, media_url, visibility, created_at, updated_at
 		FROM posts
@@ -829,6 +877,11 @@ func ListPostsFromCreator(creatorID int64, includePrivate bool) ([]*domain.Post,
 func ListSubscriberOnlyPosts(creatorID int64) ([]*domain.Post, error) {
 	log.Printf("[PostRepo] Listing des posts 'subscriber only' pour le créateur ID: %d", creatorID)
 
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[ListSubscriberOnlyPosts][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `
 		SELECT id, user_id, title, description, media_url, file_id, visibility, created_at, updated_at
 		FROM posts
@@ -860,6 +913,11 @@ func ListSubscriberOnlyPosts(creatorID int64) ([]*domain.Post, error) {
 // GetTagsStatistics retourne le nombre de posts pour chaque tag
 func GetTagsStatistics() (map[string]int, error) {
 	log.Printf("[PostRepo] 📊 Récupération des statistiques de tags")
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetTagsStatistics][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
 
 	query := `
 		SELECT 
@@ -905,6 +963,11 @@ func GetTagsStatistics() (map[string]int, error) {
 
 // GetTotalPublicPosts retourne le nombre total de posts publics
 func GetTotalPublicPosts() (int, error) {
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetTotalPublicPosts][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `SELECT COUNT(*) FROM posts WHERE visibility = 'public'`
 
 	var total int
@@ -922,6 +985,11 @@ func GetTotalPublicPosts() (int, error) {
 func GetPostsByTag(tagCategory string, limit, offset int) ([]int64, error) {
 	log.Printf("[PostRepo] Recherche des posts avec le tag '%s' (limit: %d, offset: %d)", 
 		tagCategory, limit, offset)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetPostsByTag][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
 
 	query := `
 		SELECT post_id 
@@ -961,6 +1029,11 @@ func GetPostsByTag(tagCategory string, limit, offset int) ([]int64, error) {
 func CountPostsByTag(tagCategory string) (int, error) {
 	log.Printf("[PostRepo] Comptage des posts avec le tag '%s'", tagCategory)
 
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[CountPostsByTag][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
+
 	query := `SELECT COUNT(*) FROM post_tags WHERE category = $1`
 
 	var count int
@@ -977,6 +1050,11 @@ func CountPostsByTag(tagCategory string) (int, error) {
 // GetAllTags récupère tous les tags distincts utilisés dans l'application
 func GetAllTags() ([]string, error) {
 	log.Println("[PostRepo] Récupération de tous les tags distincts")
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[GetAllTags][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
 
 	query := `
 		SELECT DISTINCT category 
@@ -1013,6 +1091,11 @@ func GetAllTags() ([]string, error) {
 // TagExists vérifie si un tag spécifique existe dans la base de données
 func TagExists(tagCategory string) (bool, error) {
 	log.Printf("[PostRepo] Vérification de l'existence du tag '%s'", tagCategory)
+
+	// Nettoyer les prepared statements existants
+	if _, err := database.DB.Exec("DEALLOCATE ALL"); err != nil {
+		log.Printf("[TagExists][WARN] Impossible de nettoyer les prepared statements: %v", err)
+	}
 
 	query := `SELECT EXISTS(SELECT 1 FROM post_tags WHERE category = $1)`
 

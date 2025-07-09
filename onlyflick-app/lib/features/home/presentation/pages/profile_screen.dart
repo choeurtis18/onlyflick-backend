@@ -137,7 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           Expanded(
             child: SubscriptionStatsWidget(
               // Utiliser les données du provider avec stats d'abonnements intégrées
-              postsCount: profileProvider.postsCount,
+postsCount: userIsCreator ? profileProvider.postsCount : 0,
               followersCount: profileProvider.followersCount,
               followingCount: profileProvider.followingCount,
               totalEarnings: profileProvider.totalEarnings,

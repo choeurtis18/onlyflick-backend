@@ -1,4 +1,4 @@
-// lib/features/posts/presentation/pages/post_detail_page.dart
+// lib/features/home/presentation/pages/post_detail_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';

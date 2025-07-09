@@ -1,4 +1,4 @@
-// onlyflick-app/lib/features/messaging/services/websocket_service.dart
+// onlyflick-app/lib/core//services/websocket_service.dart
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';

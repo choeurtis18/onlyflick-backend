@@ -1,4 +1,4 @@
-// onlyflick-app/lib/features/messaging/services/messaging_service.dart
+// /lib/core//services/messaging_service.dart
 import 'package:flutter/foundation.dart';
 import '../../../core/services/api_service.dart';
 import '../models/message_models.dart';

@@ -1,4 +1,4 @@
-// lib/main.dart - Application principale avec router corrigé
+// lib/main.dart 
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

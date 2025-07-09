@@ -1,4 +1,4 @@
-// onlyflick-app/lib/core/providers/messaging_provider.dart
+//lib/core/providers/messaging_provider.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../services/messaging_service.dart';

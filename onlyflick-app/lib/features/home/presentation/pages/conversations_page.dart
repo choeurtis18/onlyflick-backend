@@ -1,4 +1,4 @@
-// onlyflick-app/lib/features/messaging/pages/conversations_page.dart
+//lib/features/home/presentation/pages/conversations_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/providers/messaging_provider.dart';

@@ -1,4 +1,4 @@
-// lib/features/search/models/search_models.dart
+// lib/core/models/search_models.dart
 
 // ===== ENUMS =====
 
