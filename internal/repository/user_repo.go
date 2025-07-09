@@ -387,7 +387,6 @@ func GetProfileStats(userID int64) (*ProfileStats, error) {
 
 	var stats ProfileStats
 
-	// Récupération séparée de chaque statistique pour éviter les conflits de prepared statements
 	
 	// 1. Nombre de posts
 	var postsCount int
@@ -459,7 +458,6 @@ func GetUserPosts(userID int64, page, limit int, postType string) ([]*UserPost, 
 
 	offset := (page - 1) * limit
 
-	// Requête simplifiée sans sous-requêtes dans le SELECT pour éviter les problèmes de prepared statements
 	baseQuery := `
 		SELECT 
 			p.id,
@@ -540,7 +538,6 @@ func GetUserPosts(userID int64, page, limit int, postType string) ([]*UserPost, 
 	return posts, nil
 }
 
-// Fonctions utilitaires pour éviter les conflits de prepared statements
 func getLikesCountForPost(postID int64) int {
 	var count int
 	err := database.DB.QueryRow("SELECT COUNT(*) FROM likes WHERE post_id = $1", postID).Scan(&count)

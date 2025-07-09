@@ -15,10 +15,16 @@ import 'package:matchmaker/core/providers/messaging_provider.dart';
 import 'package:matchmaker/core/providers/search_provider.dart';
 
 import 'package:matchmaker/core/config/stripe_config.dart';
+// 🔥 NOUVEAU: Import du service de test de connexion
+import 'package:matchmaker/core/services/api_health_service.dart';
+import 'package:matchmaker/core/config/app_config.dart';
 
 void main() async {
   // 🔧 INITIALISATION FLUTTER OBLIGATOIRE
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // 🔥 NOUVEAU: Affichage des informations de configuration
+  AppConfig.printDebugInfo();
   
   // 💳 INITIALISATION STRIPE
   try {
@@ -87,11 +93,38 @@ class OnlyFlickBootstrap extends StatelessWidget {
     );
   }
 
-  /// Initialise l'application avec les services API
+  /// 🔥 NOUVEAU: Initialise l'application avec test de connexion API
   Future<void> _initializeApp() async {
     print('🚀 [Bootstrap] Initializing OnlyFlick...');
     
-    // Initialiser le service API
+    // 🔥 ÉTAPE 1: Test de connexion à l'API
+    print('🔍 [Bootstrap] Testing API connection...');
+    final healthService = ApiHealthService();
+    final healthResult = await healthService.testConnection();
+    
+    // Afficher le résultat du test
+    healthResult.printResult();
+    
+    if (!healthResult.success) {
+      print('❌ [Bootstrap] API connection failed - continuing anyway...');
+      if (AppConfig.isProduction) {
+        // En production, on peut continuer même si l'API ne répond pas temporairement
+        print('⚠️ [Bootstrap] Production mode - API may be temporarily unavailable');
+      }
+    } else {
+      print('✅ [Bootstrap] API connection successful!');
+      
+      // 🔥 ÉTAPE 2: Test des endpoints essentiels
+      print('🔍 [Bootstrap] Testing essential endpoints...');
+      final endpointsResults = await healthService.testEssentialEndpoints();
+      
+      print('📊 [Bootstrap] Endpoints test results:');
+      for (final result in endpointsResults) {
+        result.printResult();
+      }
+    }
+    
+    // 🔥 ÉTAPE 3: Initialiser le service API
     await ApiService().initialize();
     
     // 💳 Vérification finale de Stripe
@@ -137,7 +170,7 @@ class OnlyFlickApp extends StatelessWidget {
   }
 }
 
-/// Écran de chargement personnalisé OnlyFlick
+/// 🔥 NOUVEAU: Écran de chargement avec informations de connexion
 class _LoadingScreen extends StatelessWidget {
   const _LoadingScreen();
 
@@ -201,12 +234,35 @@ class _LoadingScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               
-              // 🎯 TEXTE DE CHARGEMENT AMÉLIORÉ
-              const Column(
+              // 🔥 NOUVEAU: Informations de connexion
+              Column(
                 children: [
-                  
-                 
-                 
+                  Text(
+                    'Connexion à ${AppConfig.isProduction ? 'la production' : 'l\'environnement de développement'}...',
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (AppConfig.isProduction)
+                    const Text(
+                      '🌐 Production: massive-period-412821.lm.r.appspot.com',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 10,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  if (!AppConfig.isProduction)
+                    Text(
+                      '🔧 Dev: ${AppConfig.baseUrl}',
+                      style: const TextStyle(
+                        color: Colors.orange,
+                        fontSize: 10,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
                 ],
               ),
             ],
@@ -217,7 +273,7 @@ class _LoadingScreen extends StatelessWidget {
   }
 }
 
-/// Écran d'erreur personnalisé OnlyFlick
+/// 🔥 AMÉLIORÉ: Écran d'erreur avec plus d'informations
 class _ErrorScreen extends StatelessWidget {
   final String error;
   
@@ -252,10 +308,12 @@ class _ErrorScreen extends StatelessWidget {
                 const SizedBox(height: 32),
                 
                 // Titre d'erreur
-                const Text(
-                  'Impossible de se connecter',
+                Text(
+                  AppConfig.isProduction 
+                    ? 'Impossible de se connecter à la production'
+                    : 'Impossible de se connecter au serveur local',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -263,17 +321,49 @@ class _ErrorScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 
-                // Description
-                const Text(
-                  'Vérifiez que votre backend OnlyFlick est démarré sur le port 8080',
+                // 🔥 NOUVEAU: Description selon l'environnement
+                Text(
+                  AppConfig.isProduction
+                    ? 'Le serveur de production OnlyFlick semble indisponible. Veuillez réessayer dans quelques minutes.'
+                    : 'Vérifiez que votre backend OnlyFlick est démarré sur le port 8080',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     color: Colors.grey,
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
+                
+                // 🔥 NOUVEAU: URL de connexion
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade900,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'URL tentée:',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        AppConfig.baseUrl,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
                 
                 Text(
                   'Erreur: $error',
@@ -314,46 +404,46 @@ class _ErrorScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 
-                // 🎯 INSTRUCTIONS DE DEBUG AMÉLIORÉES
-                const Column(
-                  children: [
-                    Text(
-                      'Assurez-vous que votre serveur Go est démarré:',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
-                      ),
+                // 🔥 AMÉLIORÉ: Instructions selon l'environnement
+                if (!AppConfig.isProduction) ...[
+                  const Text(
+                    'Assurez-vous que votre serveur Go est démarré:',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 12,
                     ),
-                    SizedBox(height: 4),
-                    Text(
-                      'go run cmd/server/main.go',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontFamily: 'monospace',
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'go run cmd/server/main.go',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontFamily: 'monospace',
                     ),
-                    SizedBox(height: 8),
-                    Text(
-                      '💳 Vérifiez aussi vos clés Stripe dans .env',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 10,
-                      ),
+                  ),
+                  const SizedBox(height: 8),
+                ] else ...[
+                  const Text(
+                    'Environnement de production - Vérifiez votre connexion internet',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 12,
                     ),
-                    SizedBox(height: 4),
-                    Text(
-                      '🔐 Redirection automatique après déconnexion activée',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.green,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                
+                Text(
+                  '🌍 Environnement: ${AppConfig.currentEnvironment.displayName}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.blue,
+                    fontSize: 10,
+                  ),
                 ),
               ],
             ),
