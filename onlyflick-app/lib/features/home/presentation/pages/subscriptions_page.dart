@@ -31,17 +31,27 @@ class _SubscriptionsPageState extends State<SubscriptionsPage>
   @override
   void initState() {
     super.initState();
-    _initializeTabController();
     _loadCurrentUserData();
   }
 
   void _initializeTabController() {
-    // Initialiser avec 2 onglets par défaut
-    _tabController = TabController(length: 2, vsync: this);
+    // Calculer le nombre d'onglets nécessaires
+    int tabCount = 0;
+    if (_showFollowersTab) tabCount++;
+    if (_showFollowingTab) tabCount++;
+    
+    _tabController = TabController(length: tabCount, vsync: this);
     
     // Définir l'onglet initial si spécifié
     if (widget.initialTab == "following") {
-      _tabController.index = 1;
+      // Si on veut l'onglet "following" mais qu'on n'a que l'onglet "followers"
+      if (_showFollowersTab && !_showFollowingTab) {
+        _tabController.index = 0;
+      } else if (_showFollowersTab && _showFollowingTab) {
+        _tabController.index = 1; // "following" est le second onglet
+      } else if (!_showFollowersTab && _showFollowingTab) {
+        _tabController.index = 0; // "following" est le seul onglet
+      }
     }
   }
 
@@ -54,27 +64,22 @@ class _SubscriptionsPageState extends State<SubscriptionsPage>
         isLoadingUserData = false;
       });
       
-      // Réorganiser les onglets selon le rôle et si c'est le profil courant
-      _updateTabsBasedOnRole();
+      // Initialiser le TabController après avoir chargé les données
+      _initializeTabController();
     } catch (e) {
       setState(() {
         isLoadingUserData = false;
       });
-    }
-  }
-
-  void _updateTabsBasedOnRole() {
-    // Si c'est un utilisateur non-créateur regardant son propre profil,
-    // on ne montre que les abonnements
-    if (widget.isCurrentUser && currentUserRole != AppConstants.creatorRole) {
-      _tabController.dispose();
-      _tabController = TabController(length: 1, vsync: this);
+      // Initialiser avec des valeurs par défaut
+      _initializeTabController();
     }
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    if (mounted) {
+      _tabController.dispose();
+    }
     super.dispose();
   }
 
@@ -118,6 +123,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage>
         userId: widget.userId,
         listType: "followers",
         isCurrentUser: widget.isCurrentUser,
+        showHeader: false, // Ne pas afficher le header interne
       ));
     }
     
@@ -126,6 +132,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage>
         userId: widget.userId,
         listType: "following",
         isCurrentUser: widget.isCurrentUser,
+        showHeader: false, // Ne pas afficher le header interne
       ));
     }
     
@@ -152,7 +159,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage>
     final tabs = _buildTabs();
     final tabViews = _buildTabViews();
 
-    // Si on n'a qu'un seul onglet, afficher directement le contenu
+    // Si on n'a qu'un seul onglet, afficher directement le contenu sans TabBar
     if (tabs.length == 1) {
       return Scaffold(
         appBar: AppBar(
@@ -164,6 +171,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage>
       );
     }
 
+    // Si on a plusieurs onglets, utiliser TabBar
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isCurrentUser ? 'Mes abonnements' : 'Abonnements'),

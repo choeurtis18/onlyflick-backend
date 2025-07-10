@@ -18,7 +18,7 @@ class SubscriptionService {
       }
 
       final url = '$_baseUrl/users/$userId/followers';
-      print('🌐 [SubscriptionService] Calling getFollowers: $url'); // Debug
+      print('🌐 [SubscriptionService] Calling getFollowers: $url'); 
       
       final response = await http.get(
         Uri.parse(url),
@@ -28,8 +28,8 @@ class SubscriptionService {
         },
       );
 
-      print('🔍 [SubscriptionService] getFollowers status: ${response.statusCode}'); // Debug
-      print('🔍 [SubscriptionService] getFollowers body: ${response.body}'); // Debug
+      print('🔍 [SubscriptionService] getFollowers status: ${response.statusCode}'); 
+      print('🔍 [SubscriptionService] getFollowers body: ${response.body}'); 
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -50,7 +50,7 @@ class SubscriptionService {
         throw Exception('Erreur lors de la récupération des abonnés: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ [SubscriptionService] getFollowers error: $e'); // Debug
+      print('❌ [SubscriptionService] getFollowers error: $e'); 
       throw Exception('Erreur réseau: $e');
     }
   }
@@ -64,7 +64,7 @@ class SubscriptionService {
       }
 
       final url = '$_baseUrl/users/$userId/following';
-      print('🌐 [SubscriptionService] Calling getFollowing: $url'); // Debug
+      print('🌐 [SubscriptionService] Calling getFollowing: $url'); 
       
       final response = await http.get(
         Uri.parse(url),
@@ -74,8 +74,8 @@ class SubscriptionService {
         },
       );
 
-      print('🔍 [SubscriptionService] getFollowing status: ${response.statusCode}'); // Debug
-      print('🔍 [SubscriptionService] getFollowing body: ${response.body}'); // Debug
+      print('🔍 [SubscriptionService] getFollowing status: ${response.statusCode}'); 
+      print('🔍 [SubscriptionService] getFollowing body: ${response.body}'); 
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -96,7 +96,7 @@ class SubscriptionService {
         throw Exception('Erreur lors de la récupération des abonnements: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ [SubscriptionService] getFollowing error: $e'); // Debug
+      print('❌ [SubscriptionService] getFollowing error: $e'); 
       throw Exception('Erreur réseau: $e');
     }
   }
@@ -110,7 +110,7 @@ class SubscriptionService {
       }
 
       final url = '$_baseUrl/follow/$creatorId';
-      print('🌐 [SubscriptionService] Calling followCreator: $url'); // Debug
+      print('🌐 [SubscriptionService] Calling followCreator: $url'); 
 
       final response = await http.post(
         Uri.parse(url),
@@ -120,7 +120,7 @@ class SubscriptionService {
         },
       );
 
-      print('🔍 [SubscriptionService] followCreator status: ${response.statusCode}'); // Debug
+      print('🔍 [SubscriptionService] followCreator status: ${response.statusCode}'); 
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return true;
@@ -139,7 +139,7 @@ class SubscriptionService {
         }
       }
     } catch (e) {
-      print('❌ [SubscriptionService] followCreator error: $e'); // Debug
+      print('❌ [SubscriptionService] followCreator error: $e'); 
       throw Exception('Erreur réseau: $e');
     }
   }
@@ -153,7 +153,7 @@ class SubscriptionService {
       }
 
       final url = '$_baseUrl/follow/$creatorId';
-      print('🌐 [SubscriptionService] Calling unfollowCreator: $url'); // Debug
+      print('🌐 [SubscriptionService] Calling unfollowCreator: $url'); 
 
       final response = await http.delete(
         Uri.parse(url),
@@ -163,7 +163,7 @@ class SubscriptionService {
         },
       );
 
-      print('🔍 [SubscriptionService] unfollowCreator status: ${response.statusCode}'); // Debug
+      print('🔍 [SubscriptionService] unfollowCreator status: ${response.statusCode}'); 
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         return true;
@@ -180,7 +180,7 @@ class SubscriptionService {
         }
       }
     } catch (e) {
-      print('❌ [SubscriptionService] unfollowCreator error: $e'); // Debug
+      print('❌ [SubscriptionService] unfollowCreator error: $e'); 
       throw Exception('Erreur réseau: $e');
     }
   }
@@ -194,7 +194,7 @@ class SubscriptionService {
       }
 
       final url = '$_baseUrl/users/$creatorId/subscription-status';
-      print('🌐 [SubscriptionService] Calling isFollowing: $url'); // Debug
+      print('🌐 [SubscriptionService] Calling isFollowing: $url'); 
 
       final response = await http.get(
         Uri.parse(url),
@@ -204,7 +204,7 @@ class SubscriptionService {
         },
       );
 
-      print('🔍 [SubscriptionService] isFollowing status: ${response.statusCode}'); // Debug
+      print('🔍 [SubscriptionService] isFollowing status: ${response.statusCode}'); 
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -212,7 +212,7 @@ class SubscriptionService {
       }
       return false;
     } catch (e) {
-      print('❌ [SubscriptionService] isFollowing error: $e'); // Debug
+      print('❌ [SubscriptionService] isFollowing error: $e'); 
       return false;
     }
   }
@@ -226,7 +226,7 @@ class SubscriptionService {
       }
 
       final url = '$_baseUrl/users/$userId/stats';
-      print('🌐 [SubscriptionService] Calling getSubscriptionStats: $url'); // Debug
+      print('🌐 [SubscriptionService] Calling getSubscriptionStats: $url'); 
 
       final response = await http.get(
         Uri.parse(url),
@@ -236,7 +236,7 @@ class SubscriptionService {
         },
       );
 
-      print('🔍 [SubscriptionService] getSubscriptionStats status: ${response.statusCode}'); // Debug
+      print('🔍 [SubscriptionService] getSubscriptionStats status: ${response.statusCode}'); 
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -251,7 +251,7 @@ class SubscriptionService {
         throw Exception('Erreur lors de la récupération des statistiques: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ [SubscriptionService] getSubscriptionStats error: $e'); // Debug
+      print('❌ [SubscriptionService] getSubscriptionStats error: $e'); 
       return {
         'followers_count': 0,
         'following_count': 0,
@@ -260,7 +260,7 @@ class SubscriptionService {
     }
   }
 
-  // ========= MÉTHODES POUR PAIEMENTS =========
+  //  MÉTHODES POUR PAIEMENTS 
 
   /// S'abonner à un créateur avec paiement
   /// Retourne le client_secret pour Stripe ou une erreur structurée
@@ -276,7 +276,7 @@ class SubscriptionService {
       }
 
       final url = '$_baseUrl/subscriptions/$creatorId/payment';
-      print('🌐 [SubscriptionService] Calling subscribeWithPayment: $url'); // Debug
+      print('🌐 [SubscriptionService] Calling subscribeWithPayment: $url'); 
       
       final response = await http.post(
         Uri.parse(url),
@@ -286,8 +286,8 @@ class SubscriptionService {
         },
       );
 
-      print('🔍 [SubscriptionService] subscribeWithPayment status: ${response.statusCode}'); // Debug
-      print('🔍 [SubscriptionService] subscribeWithPayment body: ${response.body}'); // Debug
+      print('🔍 [SubscriptionService] subscribeWithPayment status: ${response.statusCode}'); 
+      print('🔍 [SubscriptionService] subscribeWithPayment body: ${response.body}'); 
 
       final data = json.decode(response.body);
 
@@ -335,7 +335,7 @@ class SubscriptionService {
         };
       }
     } catch (e) {
-      print('❌ [SubscriptionService] subscribeWithPayment error: $e'); // Debug
+      print('❌ [SubscriptionService] subscribeWithPayment error: $e'); 
       return {
         'success': false,
         'error_type': 'network_error',
@@ -353,7 +353,7 @@ class SubscriptionService {
       }
 
       final url = '$_baseUrl/subscriptions/$creatorId';
-      print('🌐 [SubscriptionService] Calling unsubscribe: $url'); // Debug
+      print('🌐 [SubscriptionService] Calling unsubscribe: $url'); 
       
       final response = await http.delete(
         Uri.parse(url),
@@ -363,7 +363,7 @@ class SubscriptionService {
         },
       );
 
-      print('🔍 [SubscriptionService] unsubscribe status: ${response.statusCode}'); // Debug
+      print('🔍 [SubscriptionService] unsubscribe status: ${response.statusCode}'); 
       final data = json.decode(response.body);
 
       if (response.statusCode == 200) {
@@ -375,7 +375,7 @@ class SubscriptionService {
         throw Exception(data['error'] ?? 'Erreur lors du désabonnement');
       }
     } catch (e) {
-      print('❌ [SubscriptionService] unsubscribe error: $e'); // Debug
+      print('❌ [SubscriptionService] unsubscribe error: $e'); 
       throw Exception('Erreur réseau: $e');
     }
   }

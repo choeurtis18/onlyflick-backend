@@ -313,58 +313,7 @@ Widget _buildHeader() {
           
           const SizedBox(height: 16),
           
-          // Date d'expiration et CVC
-          Row(
-            children: [
-              Expanded(
-                child: _buildInputField(
-                  label: 'Date d\'expiration',
-                  child: TextFormField(
-                    decoration: const InputDecoration(
-                      hintText: 'MM/AA',
-                      hintStyle: TextStyle(
-                        color: Color(0xFF9CA3AF),
-                        fontSize: 14,
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF1A1A1A),
-                      fontWeight: FontWeight.w500,
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildInputField(
-                  label: 'Code de sécurité',
-                  child: TextFormField(
-                    decoration: const InputDecoration(
-                      hintText: 'CVC',
-                      hintStyle: TextStyle(
-                        color: Color(0xFF9CA3AF),
-                        fontSize: 14,
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF1A1A1A),
-                      fontWeight: FontWeight.w500,
-                    ),
-                    keyboardType: TextInputType.number,
-                    obscureText: true,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          
+         
           const SizedBox(height: 20),
           
           // Badge sécurité et cartes acceptées

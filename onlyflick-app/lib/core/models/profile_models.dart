@@ -1,7 +1,7 @@
 // lib/core/models/profile_models.dart
 import '../../features/auth/models/auth_models.dart';
 
-// ===== MODÈLES DE DONNÉES PROFIL =====
+//  MODÈLES DE DONNÉES PROFIL 
 
 /// Statistiques du profil utilisateur
 class ProfileStats {
@@ -48,7 +48,6 @@ class ProfileStats {
     );
   }
 
-  /// Copie avec modification
   ProfileStats copyWith({
     int? postsCount,
     int? followersCount,
@@ -282,9 +281,8 @@ class UsernameCheckResponse {
   int get hashCode => Object.hash(username, available);
 }
 
-// ===== RÉSULTATS D'OPÉRATIONS =====
+//  RÉSULTATS D'OPÉRATIONS 
 
-/// Résultat pour les statistiques profil
 class ProfileStatsResult {
   final bool isSuccess;
   final ProfileStats? data;

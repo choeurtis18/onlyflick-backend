@@ -48,7 +48,7 @@ class _SubscriptionManagementPageState extends State<SubscriptionManagementPage>
   }
 
   Future<void> _loadData() async {
-    final userId = widget.userId ?? 1; // TODO: Récupérer l'ID de l'utilisateur connecté
+    final userId = widget.userId ?? 1; 
     
     await Future.wait([
       _loadFollowing(userId),
@@ -403,7 +403,6 @@ class _SubscriptionManagementPageState extends State<SubscriptionManagementPage>
               IconButton(
                 onPressed: () {
                   // Navigation vers le profil de l'abonné
-                  // Navigator.pushNamed(context, '/profile/${userProfile.id}');
                 },
                 icon: const Icon(Icons.person),
                 tooltip: 'Voir le profil',

@@ -337,7 +337,7 @@ class AuthError {
     );
   }
 
-  /// ✅ CORRECTION: Gestion correcte des erreurs selon le code HTTP et le contexte
+  /// Gestion correcte des erreurs selon le code HTTP et le contexte
   factory AuthError.fromApiResponse(String apiMessage, int? statusCode) {
     switch (statusCode) {
       case 400:
@@ -403,7 +403,7 @@ class AuthError {
     );
   }
 
-  /// ✅ NOUVEAU: Méthodes utilitaires
+  /// : Méthodes utilitaires
   bool get isCredentialsError => type == AuthErrorType.invalidCredentials;
   bool get isSessionExpired => type == AuthErrorType.sessionExpired;
   bool get isNetworkError => type == AuthErrorType.network;
@@ -458,7 +458,7 @@ class AuthResult {
 
   bool get isFailure => !isSuccess;
   
-  /// ✅ NOUVEAU: Méthodes utilitaires
+  /// : Méthodes utilitaires
   String get errorMessage => error?.userFriendlyMessage ?? '';
   AuthErrorType? get errorType => error?.type;
 

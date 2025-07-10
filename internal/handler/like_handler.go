@@ -37,7 +37,7 @@ func LikePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ✅ CORRECTION: Récupérer le nombre total de likes après le toggle
+	// Récupérer le nombre total de likes après le toggle
 	likesCount, err := repository.GetLikesCount(postID)
 	if err != nil {
 		log.Printf("[LikePost] Erreur récupération likes count (postID=%d) : %v", postID, err)
@@ -51,7 +51,7 @@ func LikePost(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("[LikePost] Utilisateur %d a %s le post %d (total likes: %d)", userID, status, postID, likesCount)
 
-	// ✅ CORRECTION: Retourner liked ET likes_count
+	// Retourner liked ET likes_count
 	response.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"liked":       liked,
 		"likes_count": likesCount,

@@ -201,7 +201,7 @@ class _TagsFilterWidgetState extends State<TagsFilterWidget> {
       case 'tous':
         return '🏷️';
       
-      // ✅ NOUVEAUX TAGS de votre base de données avec emojis
+      // X TAGS de votre base de données avec emojis
       case 'wellness':
         return '🌿';
       
@@ -263,34 +263,34 @@ class _TagsFilterWidgetState extends State<TagsFilterWidget> {
     // Utiliser les vraies données de votre base de données comme fallback
     switch (tag.toLowerCase()) {
       case 'wellness':
-        return 7; // Basé sur vos vraies données
+        return 7;
       case 'beauté':
       case 'beaute':
-        return 7; // Basé sur vos vraies données
+        return 7;
       case 'art':
-        return 10; // Basé sur vos vraies données
+        return 10;
       case 'musique':
-        return 10; // Basé sur vos vraies données
+        return 10;
       case 'cuisine':
-        return 8; // Basé sur vos vraies données
+        return 8;
       case 'football':
-        return 5; // Basé sur vos vraies données
+        return 5;
       case 'basket':
-        return 5; // Basé sur vos vraies données
+        return 5;
       case 'mode':
-        return 5; // Basé sur vos vraies données
+        return 5;
       case 'cinéma':
       case 'cinema':
-        return 5; // Basé sur vos vraies données
+        return 5;
       case 'actualités':
       case 'actualites':
-        return 5; // Basé sur vos vraies données
+        return 5;
       case 'mangas':
-        return 5; // Basé sur vos vraies données
+        return 5;
       case 'memes':
-        return 5; // Basé sur vos vraies données
+        return 5;
       case 'tech':
-        return 7; // Basé sur vos vraies données
+        return 7;
       default:
         return 0; // Tags inconnus
     }
@@ -308,7 +308,7 @@ extension on _TagsFilterWidgetState {
   }
 }
 
-/// Widget de tag personnalisable (version standalone améliorée)
+/// Widget de tag personnalisable
 class TagChip extends StatelessWidget {
   final String label;
   final bool isSelected;

@@ -6,11 +6,11 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/models/post_models.dart';
 import '../../../../core/providers/posts_providers.dart';
 import '../../../../core/services/posts_service.dart';
-import '../../../../core/models/report_models.dart'; // ✅ AJOUT
-import '../../../home/presentation/widgets/report_dialog.dart'; // ✅ AJOUT
+import '../../../../core/models/report_models.dart'; 
+import '../../../home/presentation/widgets/report_dialog.dart'; 
 import '../pages/public_profile_page.dart';
 
-/// Page de détail d'un post avec design moderne (style TikTok/Instagram)
+/// Page de détail d'un post 
 class PostDetailPage extends StatefulWidget {
   final int postId;
   final Post? initialPost;
@@ -145,7 +145,7 @@ class _PostDetailPageState extends State<PostDetailPage>
     }
   }
 
-  /// ❤️ GESTION DU LIKE
+  ///  GESTION DU LIKE
   Future<void> _handleLike() async {
     if (_post == null) return;
 
@@ -170,7 +170,7 @@ class _PostDetailPageState extends State<PostDetailPage>
     await postsProvider.toggleLike(_post!.id);
   }
 
-  /// 💬 AJOUT D'UN COMMENTAIRE
+  /// AJOUT D'UN COMMENTAIRE
   Future<void> _handleAddComment() async {
     final content = _commentController.text.trim();
     if (content.isEmpty || _isAddingComment) return;
@@ -254,7 +254,7 @@ class _PostDetailPageState extends State<PostDetailPage>
     });
   }
 
-  /// 📱 SNACKBAR
+  /// SNACKBAR
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -266,7 +266,7 @@ class _PostDetailPageState extends State<PostDetailPage>
     );
   }
 
-  /// 🎨 GÉNÉRATION DE COULEUR DYNAMIQUE
+  ///  GÉNÉRATION DE COULEUR DYNAMIQUE
   Color _generateBackgroundColor() {
     if (_post?.tags != null && _post!.tags.isNotEmpty) {
       final tag = _post!.tags.first.toLowerCase();
@@ -373,7 +373,7 @@ class _PostDetailPageState extends State<PostDetailPage>
     );
   }
 
-  /// 🚫 POST NON TROUVÉ
+  /// POST NON TROUVÉ
   Widget _buildNotFoundState() {
     return const Center(
       child: Column(
@@ -390,7 +390,7 @@ class _PostDetailPageState extends State<PostDetailPage>
     );
   }
 
-  /// 🎨 CONTENU PRINCIPAL
+  ///  CONTENU PRINCIPAL
   Widget _buildMainContent() {
     return Stack(
       children: [
@@ -460,7 +460,7 @@ class _PostDetailPageState extends State<PostDetailPage>
     );
   }
 
-  /// 🖼️ IMAGE PRINCIPALE (PLEIN ÉCRAN PARALLAX)
+  ///  IMAGE PRINCIPALE (PLEIN ÉCRAN PARALLAX)
   Widget _buildMainImage() {
     return Positioned.fill(
       child: GestureDetector(
@@ -539,7 +539,7 @@ class _PostDetailPageState extends State<PostDetailPage>
     );
   }
 
-  /// ⚡ ACTIONS FLOTTANTES
+  ///  ACTIONS FLOTTANTES
   Widget _buildFloatingActions() {
     return Consumer<PostsProvider>(
       builder: (context, postsProvider, _) {
@@ -789,7 +789,7 @@ class _PostDetailPageState extends State<PostDetailPage>
     );
   }
 
-  /// 📝 TITRE ET DESCRIPTION DU POST
+  /// TITRE ET DESCRIPTION DU POST
   Widget _buildPostTitle() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -891,7 +891,7 @@ class _PostDetailPageState extends State<PostDetailPage>
     );
   }
 
-  /// 💬 SHEET COMMENTAIRES
+  ///  SHEET COMMENTAIRES
   Widget _buildCommentsSheet() {
     return Positioned.fill(
       child: GestureDetector(
@@ -978,7 +978,7 @@ class _PostDetailPageState extends State<PostDetailPage>
     );
   }
 
-  /// 💬 ITEM COMMENTAIRE AVEC SIGNALEMENT
+  ///  ITEM COMMENTAIRE AVEC SIGNALEMENT
   Widget _buildCommentItem(Comment comment) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -1086,7 +1086,7 @@ class _PostDetailPageState extends State<PostDetailPage>
     );
   }
 
-  /// ✍️ SECTION AJOUT COMMENTAIRE
+  ///  SECTION AJOUT COMMENTAIRE
   Widget _buildAddCommentSection() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1181,7 +1181,7 @@ class _PostDetailPageState extends State<PostDetailPage>
     );
   }
 
-  /// 🔧 MENU D'OPTIONS - MISE À JOUR AVEC SIGNALEMENT
+  /// MENU D'OPTIONS
   void _showOptionsMenu() {
     showModalBottomSheet(
       context: context,
@@ -1251,7 +1251,7 @@ class _PostDetailPageState extends State<PostDetailPage>
               },
             ),
             
-            // Signaler - NOUVEAU SYSTÈME
+            // Signaler
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
@@ -1265,7 +1265,7 @@ class _PostDetailPageState extends State<PostDetailPage>
               subtitle: const Text('Signaler ce contenu'),
               onTap: () {
                 Navigator.pop(context);
-                _showReportDialog(); // ✅ NOUVEAU SYSTÈME
+                _showReportDialog(); 
               },
             ),
             

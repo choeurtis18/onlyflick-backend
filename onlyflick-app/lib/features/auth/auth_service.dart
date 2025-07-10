@@ -23,7 +23,7 @@ class AuthService {
         // Sauvegarder le token automatiquement
         await _apiService.setToken(authData.token);
         
-        // ✅ NOUVEAU: Sauvegarder l'ID utilisateur
+        // : Sauvegarder l'ID utilisateur
         await _apiService.setCurrentUser(authData.userId);
         
         debugPrint('🔐 Login successful for user ID: ${authData.userId} (${authData.username})');
@@ -60,7 +60,7 @@ class AuthService {
         // Sauvegarder le token automatiquement
         await _apiService.setToken(authData.token);
         
-        // ✅ NOUVEAU: Sauvegarder l'ID utilisateur
+        // : Sauvegarder l'ID utilisateur
         await _apiService.setCurrentUser(authData.userId);
         
         debugPrint('🔐 Registration successful for user ID: ${authData.userId}, username: ${authData.username}');
@@ -230,7 +230,7 @@ class AuthService {
     }
   }
 
-  /// ✅ NOUVEAU: Déconnexion complète (token + ID utilisateur)
+  /// : Déconnexion complète (token + ID utilisateur)
   Future<void> logout() async {
     try {
       debugPrint('🔐 Logging out user...');
@@ -255,7 +255,7 @@ class AuthService {
     }
   }
 
-  /// ✅ NOUVEAU: Vérification complète de la session
+  /// : Vérification complète de la session
   Future<bool> isLoggedIn() async {
     // Vérifier d'abord les données locales
     if (!_apiService.isAuthenticated) {
@@ -311,7 +311,7 @@ class AuthService {
     }
   }
 
-  /// ✅ NOUVEAU: Rafraîchissement du token (si supporté par votre backend)
+  /// : Rafraîchissement du token (si supporté par votre backend)
   Future<bool> refreshToken() async {
     try {
       debugPrint('🔐 Attempting to refresh token...');
@@ -348,7 +348,7 @@ class AuthService {
     }
   }
 
-  /// ✅ NOUVEAU: Getters pour les informations de session
+  /// : Getters pour les informations de session
   
   /// Vérifie si un token est stocké localement
   bool hasToken() => _apiService.hasToken;
@@ -365,30 +365,30 @@ class AuthService {
   /// Obtient les informations complètes de session
   Map<String, dynamic> get sessionInfo => _apiService.sessionInfo;
 
-  /// ✅ NOUVEAU: Gestion des erreurs d'authentification
+  /// : Gestion des erreurs d'authentification
   void _handleAuthError() {
     debugPrint('⚠️ Authentication error detected, logging out...');
     logout();
   }
 
-  /// ✅ NOUVEAU: Validation d'email (utilitaire)
+  /// : Validation d'email (utilitaire)
   bool isValidEmail(String email) {
     return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email);
   }
 
-  /// ✅ NOUVEAU: Validation de mot de passe (utilitaire)
+  /// : Validation de mot de passe (utilitaire)
   bool isValidPassword(String password) {
     // Au moins 8 caractères
     return password.length >= 8;
   }
 
-  /// ✅ NOUVEAU: Validation d'username (utilitaire)
+  /// : Validation d'username (utilitaire)
   bool isValidUsername(String username) {
     // Entre 3 et 20 caractères, lettres, chiffres, tiret et underscore
     return RegExp(r'^[a-zA-Z0-9_-]{3,20}$').hasMatch(username);
   }
 
-  /// ✅ NOUVEAU: Méthode pour obtenir l'état complet de l'authentification
+  /// : Méthode pour obtenir l'état complet de l'authentification
   Future<AuthenticationState> getAuthenticationState() async {
     if (!isAuthenticated) {
       return AuthenticationState.notAuthenticated;
@@ -409,14 +409,14 @@ class AuthService {
     }
   }
 
-  /// ✅ NOUVEAU: Nettoyage des ressources
+  /// : Nettoyage des ressources
   void dispose() {
     // Si vous avez des streams ou timers à nettoyer
     debugPrint('🔐 AuthService disposed');
   }
 }
 
-/// ✅ NOUVEAU: Énumération pour l'état d'authentification
+/// : Énumération pour l'état d'authentification
 enum AuthenticationState {
   notAuthenticated,  // Pas de session locale
   authenticated,     // Session valide
@@ -424,7 +424,7 @@ enum AuthenticationState {
   error,            // Erreur de vérification
 }
 
-/// ✅ NOUVEAU: Extension pour des méthodes utilitaires
+/// : Extension pour des méthodes utilitaires
 extension AuthenticationStateExtension on AuthenticationState {
   bool get isAuthenticated => this == AuthenticationState.authenticated;
   bool get needsLogin => this == AuthenticationState.notAuthenticated || this == AuthenticationState.expired;

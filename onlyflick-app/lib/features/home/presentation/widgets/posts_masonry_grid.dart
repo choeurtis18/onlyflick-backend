@@ -376,17 +376,14 @@ class _PostGridItemState extends State<_PostGridItem>
     );
   }
 
-  /// Génère un nombre de likes factice pour la démo
   int _generateFakeLikes() {
-    // Utilise l'ID du post et son titre pour générer un nombre cohérent
     final seed = widget.post.id.hashCode + widget.post.title.hashCode;
     final random = seed.abs();
-    return 15 + (random % 500); // Entre 15 et 515 likes
+    return 15 + (random % 500); 
   }
 
   String _getContentType() {
-    // Logique simple pour déterminer le type de contenu
-    // À adapter selon votre modèle de données
+   
     if (widget.post.mediaUrl.contains('.mp4') || 
         widget.post.mediaUrl.contains('video')) {
       return 'video';

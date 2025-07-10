@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import '../models/search_models.dart';
 import 'api_service.dart';
 
-/// Service simplifié pour la recherche d'utilisateurs uniquement
 class SearchService {
   final ApiService _apiService = ApiService();
   
@@ -165,7 +164,6 @@ Future<ApiResponse<Map<String, dynamic>>> searchPosts({
     debugPrint('🧹 Search cache cleared');
   }
 
-  /// Debug: Affiche les stats du cache
   void logCacheStats() {
     debugPrint('📊 Search cache stats: ${_searchCache.length} entries');
     for (final key in _searchCache.keys) {
@@ -175,7 +173,7 @@ Future<ApiResponse<Map<String, dynamic>>> searchPosts({
   }
 }
 
-/// Types d'interaction pour le tracking (renommé pour éviter le conflit)
+/// Types d'interaction pour le tracking
 enum UserInteractionType {
   view,
   like,

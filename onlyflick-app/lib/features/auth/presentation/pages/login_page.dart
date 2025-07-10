@@ -24,7 +24,6 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
-    // ✅ CORRECTION: Retirer le listener avant disposal
     try {
       final authProvider = context.read<AuthProvider>();
       authProvider.removeListener(_onAuthStateChanged);
@@ -50,7 +49,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _onAuthStateChanged() {
-    // ✅ CORRECTION: Vérifier si le widget est toujours monté
     if (!mounted) return;
     
     final authProvider = context.read<AuthProvider>();
@@ -105,7 +103,6 @@ class _LoginPageState extends State<LoginPage> {
       final authProvider = context.read<AuthProvider>();
       final success = await authProvider.login(email, password);
 
-      // ✅ CORRECTION: Vérifier mounted après appel async
       if (!mounted) return;
 
       if (success) {
@@ -145,14 +142,10 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      // 🔥 AJOUTÉ: AppBar avec bouton de debug
       appBar: kDebugMode ? AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: Text(
-          'Mode Debug',
-          style: TextStyle(color: Colors.red, fontSize: 12),
-        ),
+        
         actions: [
           IconButton(
             icon: Icon(Icons.network_check, color: Colors.red),
@@ -183,26 +176,7 @@ class _LoginPageState extends State<LoginPage> {
                           children: [
                             const SizedBox(height: 24),
                             
-                            // 🔥 AJOUTÉ: Indicateur d'environnement en mode debug
-                            if (kDebugMode) ...[
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: Colors.red, width: 1),
-                                ),
-                                child: Text(
-                                  '🐛 MODE DEBUG - iOS Network',
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                            ],
+                        
                             
                             // Logo et titre
                             Center(

@@ -75,7 +75,6 @@ class StripeConfig {
     return false;
   }
 
-  // Thème Stripe personnalisé
   static ThemeData getStripeTheme(BuildContext context) {
     final baseColor = Theme.of(context).primaryColor;
 

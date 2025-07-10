@@ -9,7 +9,6 @@ import '../../../../features/auth/auth_provider.dart';
 import '../../../home/presentation/widgets/buttons/subscription_button.dart';
 
 /// Page pour afficher le profil public d'un utilisateur avec statistiques
-/// Permet de s'abonner si c'est un créateur avec système de paiement intégré
 class PublicProfilePage extends StatefulWidget {
   final int userId;
   final String? username;
@@ -58,7 +57,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
     }
   }
 
-  /// 📋 CHARGE LE PROFIL PUBLIC
+  /// CHARGE LE PROFIL PUBLIC
   Future<void> _loadProfile() async {
     setState(() {
       _isLoadingProfile = true;
@@ -90,7 +89,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
     }
   }
 
-  /// 🎯 CHARGE LE STATUT D'ABONNEMENT
+  ///  CHARGE LE STATUT D'ABONNEMENT
   Future<void> _loadSubscriptionStatus() async {
     if (!_profile!.isCreator) return;
 
@@ -109,7 +108,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
     }
   }
 
-  /// 📚 CHARGE LES POSTS DE L'UTILISATEUR
+  ///  CHARGE LES POSTS DE L'UTILISATEUR
   Future<void> _loadUserPosts({bool refresh = false}) async {
     if (_isLoadingPosts) return;
 
@@ -188,7 +187,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
     );
   }
 
-  /// 🎨 APP BAR MODERNE
+  /// APP BAR MODERNE
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.white,
@@ -218,7 +217,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
     );
   }
 
-  /// 🏗️ CORPS PRINCIPAL
+  ///  CORPS PRINCIPAL
   Widget _buildBody() {
     if (_isLoadingProfile) {
       return const Center(
@@ -306,7 +305,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
     );
   }
 
-  /// 👤 EN-TÊTE DU PROFIL
+  /// EN-TÊTE DU PROFIL
   Widget _buildProfileHeader() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -560,7 +559,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
   }
 
 
-  /// 📱 SECTION PUBLICATIONS
+  /// SECTION PUBLICATIONS
   Widget _buildPublicationsSection() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -750,7 +749,7 @@ Widget _buildInlineSubscriptionButton() {
     );
   }
 
-  /// 🎨 GRILLE DES POSTS
+  ///  GRILLE DES POSTS
   Widget _buildPostsGrid() {
     return Column(
       children: [
@@ -815,7 +814,7 @@ Widget _buildInlineSubscriptionButton() {
     );
   }
 
-  /// 🎯 ITEM DE POST MODERNE
+  ///  ITEM DE POST 
   Widget _buildPostItem(UserPost post, int index) {
     return GestureDetector(
       onTap: () {
@@ -948,7 +947,7 @@ Widget _buildInlineSubscriptionButton() {
     );
   }
 
-  /// 🎨 PLACEHOLDER AVEC COULEURS DYNAMIQUES
+  ///  PLACEHOLDER AVEC COULEURS DYNAMIQUES
   Widget _buildPostPlaceholder(UserPost post, int index) {
     final gradients = [
       [const Color(0xFF667eea), const Color(0xFF764ba2)], // bleu-violet

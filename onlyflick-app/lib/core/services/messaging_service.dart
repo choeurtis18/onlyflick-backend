@@ -3,12 +3,11 @@ import 'package:flutter/foundation.dart';
 import '../../../core/services/api_service.dart';
 import '../models/message_models.dart';
 
-/// Service pour la messagerie adapté à votre backend Go OnlyFlick
+/// Service pour la messagerie 
 class MessagingService {
   final ApiService _apiService = ApiService();
 
   /// Récupérer toutes les conversations de l'utilisateur connecté
-  /// Backend: GET /conversations -> handler.GetMyConversations
 Future<MessagingResult<List<Conversation>>> getMyConversations() async {
   try {
     debugPrint('💬 Fetching user conversations...');
@@ -27,7 +26,6 @@ Future<MessagingResult<List<Conversation>>> getMyConversations() async {
       
       debugPrint('🔍 PARSING CONVERSATIONS:');
       
-      // Votre backend retourne probablement directement une liste de conversations
       if (responseData is List) {
         debugPrint('✅ Response is List with ${responseData.length} items');
         
@@ -39,24 +37,22 @@ Future<MessagingResult<List<Conversation>>> getMyConversations() async {
           if (item is Map<String, dynamic>) {
             debugPrint('Keys available: ${item.keys.toList()}');
             
-            // Debug chaque champ important
             debugPrint('  id: ${item['id']} (${item['id']?.runtimeType})');
             debugPrint('  user1_id: ${item['user1_id']} (${item['user1_id']?.runtimeType})');
             debugPrint('  user2_id: ${item['user2_id']} (${item['user2_id']?.runtimeType})');
             debugPrint('  created_at: ${item['created_at']} (${item['created_at']?.runtimeType})');
             debugPrint('  updated_at: ${item['updated_at']} (${item['updated_at']?.runtimeType})');
             
-            // Champs utilisateur (probablement manquants)
+            // Champs utilisateur 
             debugPrint('  other_user_username: ${item['other_user_username']} (${item['other_user_username']?.runtimeType})');
             debugPrint('  other_user_first_name: ${item['other_user_first_name']} (${item['other_user_first_name']?.runtimeType})');
             debugPrint('  other_user_last_name: ${item['other_user_last_name']} (${item['other_user_last_name']?.runtimeType})');
             debugPrint('  other_user_avatar: ${item['other_user_avatar']} (${item['other_user_avatar']?.runtimeType})');
             
-            // Dernier message (probablement manquant)
+            // Dernier message 
             debugPrint('  last_message: ${item['last_message']} (${item['last_message']?.runtimeType})');
             debugPrint('  unread_count: ${item['unread_count']} (${item['unread_count']?.runtimeType})');
             
-            // Autres champs possibles
             item.forEach((key, value) {
               if (!['id', 'user1_id', 'user2_id', 'created_at', 'updated_at', 
                     'other_user_username', 'other_user_first_name', 'other_user_last_name', 
@@ -81,7 +77,6 @@ Future<MessagingResult<List<Conversation>>> getMyConversations() async {
         }
       } else if (responseData is Map<String, dynamic>) {
         debugPrint('Response is Map, looking for conversations inside...');
-        // Si emballé dans un objet
         if (responseData['conversations'] is List) {
           final conversationsList = responseData['conversations'] as List;
           conversations = conversationsList
@@ -113,7 +108,6 @@ Future<MessagingResult<List<Conversation>>> getMyConversations() async {
 }
 
   /// Récupérer les messages d'une conversation spécifique
-  /// Backend: GET /conversations/{id}/messages -> handler.GetMessagesInConversation
   Future<MessagingResult<List<Message>>> getMessagesInConversation(int conversationId) async {
     try {
       debugPrint('💬 Fetching messages for conversation $conversationId...');
@@ -162,7 +156,6 @@ Future<MessagingResult<List<Conversation>>> getMyConversations() async {
   }
 
   /// Envoyer un message dans une conversation
-  /// Backend: POST /conversations/{id}/messages -> handler.SendMessageInConversation
   Future<MessagingResult<Message>> sendMessage(int conversationId, String content) async {
     try {
       debugPrint('💬 Sending message to conversation $conversationId...');
@@ -182,13 +175,10 @@ Future<MessagingResult<List<Conversation>>> getMyConversations() async {
         final responseData = response.data;
         Message message;
         
-        // Votre backend retourne probablement directement le message créé
         if (responseData is Map<String, dynamic>) {
-          // Si c'est directement le message
           if (responseData.containsKey('id') && responseData.containsKey('content')) {
             message = Message.fromJson(responseData);
           }
-          // Si emballé dans un objet
           else if (responseData['message'] != null) {
             message = Message.fromJson(responseData['message'] as Map<String, dynamic>);
           }
@@ -220,7 +210,6 @@ Future<MessagingResult<List<Conversation>>> getMyConversations() async {
   }
 
   /// Démarrer une nouvelle conversation avec un utilisateur
-  /// Backend: POST /conversations/{receiverId} -> handler.StartConversation
   Future<MessagingResult<Conversation>> createConversation(int otherUserId) async {
     try {
       debugPrint('💬 Creating conversation with user $otherUserId...');
@@ -232,11 +221,9 @@ Future<MessagingResult<List<Conversation>>> getMyConversations() async {
         Conversation conversation;
         
         if (responseData is Map<String, dynamic>) {
-          // Si c'est directement la conversation
           if (responseData.containsKey('id')) {
             conversation = Conversation.fromJson(responseData);
           }
-          // Si emballé dans un objet
           else if (responseData['conversation'] != null) {
             conversation = Conversation.fromJson(responseData['conversation'] as Map<String, dynamic>);
           }
@@ -268,8 +255,6 @@ Future<MessagingResult<List<Conversation>>> getMyConversations() async {
   }
 
   /// Rechercher des utilisateurs pour démarrer une conversation
-  /// NOTE: Cette fonctionnalité pourrait ne pas exister dans votre backend actuel
-  /// Vous pourriez avoir besoin d'ajouter cet endpoint en Go
   Future<MessagingResult<List<User>>> searchUsers(String query) async {
     try {
       debugPrint('💬 Searching users with query: $query');
@@ -324,8 +309,6 @@ Future<MessagingResult<List<Conversation>>> getMyConversations() async {
   }
 
   /// Marquer une conversation comme lue
-  /// NOTE: Cette fonctionnalité pourrait ne pas exister dans votre backend actuel
-  /// Vous pourriez avoir besoin d'ajouter cet endpoint en Go
   Future<MessagingResult<void>> markConversationAsRead(int conversationId) async {
     try {
       debugPrint('💬 Marking conversation $conversationId as read...');
@@ -412,28 +395,3 @@ Future<MessagingResult<List<Conversation>>> getMyConversations() async {
     }
   }
 }
-
-/*
-📝 NOTES SUR L'ADAPTATION À VOTRE BACKEND :
-
-✅ ENDPOINTS EXISTANTS DANS VOTRE BACKEND :
-- GET /conversations (GetMyConversations)
-- GET /conversations/{id}/messages (GetMessagesInConversation) 
-- POST /conversations/{id}/messages (SendMessageInConversation)
-- POST /conversations/{receiverId} (StartConversation)
-
-❓ ENDPOINTS QUI POURRAIENT MANQUER :
-- GET /users/search (pour rechercher des utilisateurs)
-- PATCH /conversations/{id}/read (pour marquer comme lu)
-
-🔧 ACTIONS À PRENDRE :
-1. Testez d'abord avec les endpoints existants
-2. Si /users/search n'existe pas, utilisez searchUsersAlternative()
-3. Si /conversations/{id}/read n'existe pas, commentez temporairement cette fonctionnalité
-
-📊 ADAPTATIONS FAITES :
-- Utilisation de vos vraies routes API
-- Gestion flexible des formats de réponse JSON
-- Méthodes alternatives pour les fonctionnalités manquantes
-- Logs détaillés pour faciliter le débogage
-*/

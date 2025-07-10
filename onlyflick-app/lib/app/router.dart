@@ -16,12 +16,12 @@ import 'package:matchmaker/features/admin/creators/creators_page.dart';
 import 'package:matchmaker/features/admin/creator_requests/creator_requests_page.dart';
 import 'package:matchmaker/features/admin/reports/reports_page.dart';
 
-/// 🔧 FONCTION POUR CRÉER LE ROUTER AVEC AUTHPROVIDER
+///  FONCTION POUR CRÉER LE ROUTER AVEC AUTHPROVIDER
 GoRouter createRouter(AuthProvider authProvider) {
   return GoRouter(
     initialLocation: '/login',
     
-    // 🚨 IMPORTANT: Écouter les changements d'AuthProvider
+    // Écouter les changements d'AuthProvider
     refreshListenable: authProvider,
     
     // Gestion de la redirection selon l'état d'authentification et rôle
@@ -42,7 +42,7 @@ GoRouter createRouter(AuthProvider authProvider) {
       final isCreatePostRoute = currentPath == '/create-post';
       final isAdminRoute = currentPath.startsWith('/admin');
       
-      // 🔐 Si l'utilisateur N'EST PAS connecté
+      //  Si l'utilisateur N'EST PAS connecté
       if (!isAuthenticated) {
         if (isProtectedRoute) {
           debugPrint('🔄 [Router] User not authenticated, redirecting to login');
@@ -52,7 +52,7 @@ GoRouter createRouter(AuthProvider authProvider) {
         return null;
       }
       
-      // 🔐 Si l'utilisateur EST connecté
+      // Si l'utilisateur EST connecté
       if (isAuthenticated) {
         // Si sur une route d'auth, rediriger vers l'accueil
         if (isAuthRoute) {
@@ -60,15 +60,15 @@ GoRouter createRouter(AuthProvider authProvider) {
           return '/';
         }
         
-        // 🎨 Protection spéciale pour la création de post (créateurs seulement)
+        //  Protection spéciale pour la création de post (créateurs seulement)
         if (isCreatePostRoute && user?.isCreator != true) {
-          debugPrint('🔄 [Router] Non-creator trying to access create post, redirecting to main');
+          debugPrint('[Router] Non-creator trying to access create post, redirecting to main');
           return '/';
         }
         
         // 👨‍💼 Protection spéciale pour l'admin (admins seulement)
         if (isAdminRoute && user?.role != 'admin') {
-          debugPrint('🔄 [Router] Non-admin trying to access admin routes, redirecting to main');
+          debugPrint('[Router] Non-admin trying to access admin routes, redirecting to main');
           return '/';
         }
       }
@@ -78,14 +78,14 @@ GoRouter createRouter(AuthProvider authProvider) {
     },
     
     routes: [
-      // 🏠 Route principale
+      //  Route principale
       GoRoute(
         path: '/',
         name: 'main',
         builder: (BuildContext context, GoRouterState state) => const MainScreen(),
       ),
       
-      // 🔐 Routes d'authentification
+      //  Routes d'authentification
       GoRoute(
         path: '/login',
         name: 'login',
@@ -97,28 +97,28 @@ GoRouter createRouter(AuthProvider authProvider) {
         builder: (BuildContext context, GoRouterState state) => const RegisterPage(),
       ),
       
-      // 📝 Route pour la création de post (protégée pour les créateurs)
+      // Route pour la création de post (protégée pour les créateurs)
       GoRoute(
         path: '/create-post',
         name: 'createPost',
         builder: (BuildContext context, GoRouterState state) => const CreatePostPage(),
       ),
       
-      // 🔍 Route pour la page de recherche et découverte
+      //  Route pour la page de recherche et découverte
       GoRoute(
         path: '/search',
         name: 'search',
         builder: (BuildContext context, GoRouterState state) => const SearchPage(),
       ),
 
-      // 🧪 Route de test WebSocket
+      // Route de test WebSocket
       GoRoute(
         path: '/websocket-test',
         name: 'websocketTest',
         builder: (BuildContext context, GoRouterState state) => const WebSocketTestPage(),
       ),
 
-      // 👨‍💼 Routes d'administration
+      // Routes d'administration
       GoRoute(
         path: '/admin',
         name: 'adminDashboard',
@@ -148,6 +148,4 @@ GoRouter createRouter(AuthProvider authProvider) {
   );
 }
 
-/// 🔄 ROUTER PRINCIPAL (pour compatibilité avec votre code existant)
-/// Cette variable sera initialisée dans main.dart avec l'AuthProvider
 late GoRouter router;

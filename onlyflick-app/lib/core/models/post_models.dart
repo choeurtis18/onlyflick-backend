@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 
-/// Modèle pour un post avec informations utilisateur complètes
 class Post {
   final int id;
   final int userId;
@@ -19,7 +18,6 @@ class Post {
   final DateTime createdAt;
   final DateTime updatedAt;
   
-  // ===== NOUVELLES PROPRIÉTÉS UTILISATEUR =====
   final String authorUsername;    // Nom d'utilisateur de l'auteur
   final String authorFirstName;   // Prénom de l'auteur
   final String authorLastName;    // Nom de famille de l'auteur
@@ -27,7 +25,6 @@ class Post {
   final String authorBio;         // Bio de l'auteur
   final String authorRole;        // Rôle de l'auteur (creator, subscriber, etc.)
   
-  // ===== COMPTEURS INITIAUX =====
   final int initialLikesCount;    // Nombre de likes depuis la DB
   final int initialCommentsCount; // Nombre de commentaires depuis la DB
 
@@ -45,7 +42,6 @@ class Post {
     required this.visibility,
     required this.createdAt,
     required this.updatedAt,
-    // ===== PARAMÈTRES UTILISATEUR AVEC VALEURS PAR DÉFAUT =====
     this.authorUsername = '',
     this.authorFirstName = '',
     this.authorLastName = '',
@@ -73,7 +69,6 @@ class Post {
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
       
       // ===== PARSING DES DONNÉES UTILISATEUR =====
-      // Support de plusieurs formats de clés JSON (backend peut envoyer différents formats)
       authorUsername: json['author_username'] ?? 
                      json['username'] ?? 
                      json['user_username'] ?? '',
@@ -107,23 +102,23 @@ class Post {
   
   /// Nom d'affichage de l'auteur (priorité au username)
   String get authorDisplayName {
-    // 1. Priorité au username s'il est valide (non vide et pas un fallback généré)
+    //  Priorité au username s'il est valide (non vide et pas un fallback généré)
     if (authorUsername.isNotEmpty && !authorUsername.startsWith('user')) {
       return authorUsername;
     }
     
-    // 2. Sinon, construire le nom complet à partir du prénom et nom
+    // Sinon, construire le nom complet à partir du prénom et nom
     final fullName = authorFullName;
     if (fullName.isNotEmpty) {
       return fullName;
     }
     
-    // 3. En dernier recours, utiliser le username même s'il commence par "user"
+    // En dernier recours, utiliser le username même s'il commence par "user"
     if (authorUsername.isNotEmpty) {
       return authorUsername;
     }
     
-    // 4. Fallback final
+    // Fallback final
     return 'Utilisateur $userId';
   }
   

@@ -35,7 +35,7 @@ class _FeedScreenState extends State<FeedScreen> {
       _postsProvider.initializeFeed();
     });
     
-    // ✅ AJOUT: Listener pour le scroll infini
+    // Listener pour le scroll infini
     _scrollController.addListener(_onScroll);
   }
 
@@ -46,7 +46,7 @@ class _FeedScreenState extends State<FeedScreen> {
     super.dispose();
   }
 
-  // ✅ NOUVEAU: Méthode pour détecter le scroll infini
+  //  Méthode pour détecter le scroll infini
   void _onScroll() {
     if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.8) {
       // Charger plus de posts quand on arrive à 80% du scroll
@@ -85,10 +85,8 @@ class _FeedScreenState extends State<FeedScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header moderne avec bouton +
             _buildModernHeader(),
             
-            // Feed avec vraies données
             Expanded(
               child: Consumer<PostsProvider>(
                 builder: (context, postsProvider, _) {
@@ -107,7 +105,6 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  /// Header moderne avec logo OnlyFlick et actions (bouton + pour créateurs)
   Widget _buildModernHeader() {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, _) {
@@ -167,7 +164,6 @@ class _FeedScreenState extends State<FeedScreen> {
               // Actions à droite
               Row(
                 children: [
-                  // Badge Créateur (si applicable)
                   if (isCreator) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -222,7 +218,7 @@ class _FeedScreenState extends State<FeedScreen> {
                     const SizedBox(width: 12),
                   ],
 
-                  // Bouton Messages - Navigation ajoutée
+                  // Bouton Messages 
                   GestureDetector(
                     onTap: _navigateToMessages,
                     child: Container(
@@ -243,7 +239,7 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  /// ✅ MODIFICATION: Contenu du feed avec scroll infini
+  /// Contenu du feed avec scroll infini
   Widget _buildFeedContent(PostsProvider postsProvider) {
     if (postsProvider.isLoading && !postsProvider.hasData) {
       return const Center(
@@ -330,16 +326,16 @@ class _FeedScreenState extends State<FeedScreen> {
       );
     }
 
-    // ✅ MODIFICATION: Affichage des posts avec scroll infini
+    // Affichage des posts avec scroll infini
     return ListView.builder(
       controller: _scrollController,
       physics: const BouncingScrollPhysics(),
-      // ✅ MODIFICATION: Compter les posts + indicateur de refresh + indicateur de chargement
+      // Compter les posts + indicateur de refresh + indicateur de chargement
       itemCount: postsProvider.posts.length + 
                  (postsProvider.isRefreshing ? 1 : 0) + 
                  (postsProvider.hasMorePosts ? 1 : 0),
       itemBuilder: (context, index) {
-        // ✅ MODIFICATION: Indicateur de chargement en haut pendant le refresh
+        // Indicateur de chargement en haut pendant le refresh
         if (postsProvider.isRefreshing && index == 0) {
           return Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -356,10 +352,10 @@ class _FeedScreenState extends State<FeedScreen> {
           );
         }
 
-        // ✅ MODIFICATION: Ajuster l'index si on a l'indicateur de refresh
+        // Ajuster l'index si on a l'indicateur de refresh
         final postIndex = postsProvider.isRefreshing ? index - 1 : index;
         
-        // ✅ NOUVEAU: Indicateur de chargement en bas pour le scroll infini
+        // Indicateur de chargement en bas pour le scroll infini
         if (postIndex >= postsProvider.posts.length) {
           if (postsProvider.hasMorePosts) {
             return Container(
@@ -389,7 +385,7 @@ class _FeedScreenState extends State<FeedScreen> {
               ),
             );
           } else {
-            // ✅ NOUVEAU: Message de fin de contenu
+            //  Message de fin de contenu
             return Container(
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: Center(

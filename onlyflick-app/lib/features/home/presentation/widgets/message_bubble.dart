@@ -170,7 +170,6 @@ class _MessageBubbleState extends State<MessageBubble>
     );
   }
 
-  /// Container principal du message avec design premium
   Widget _buildMessageContainer(ThemeData theme) {
     return Hero(
       tag: 'message_${widget.message.id}',
@@ -295,7 +294,6 @@ class _MessageBubbleState extends State<MessageBubble>
     return 'U';
   }
 
-  /// Formate l'heure d'envoi du message avec style OnlyFlick
   String _formatTime(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);

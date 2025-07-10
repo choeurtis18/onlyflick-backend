@@ -82,7 +82,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     super.dispose();
   }
 
-  /// 🎯 NAVIGATION VERS LE PROFIL UTILISATEUR
+  ///  NAVIGATION VERS LE PROFIL UTILISATEUR
   void _navigateToUserProfile() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -184,7 +184,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
-  /// 🎨 HEADER AVEC NAVIGATION VERS PROFIL
+  ///  HEADER AVEC NAVIGATION VERS PROFIL
   Widget _buildCleanHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -354,7 +354,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     });
   }
 
-  /// 🚩 SIGNALEMENT DE COMMENTAIRE - MÉTHODE CORRIGÉE
+  ///  SIGNALEMENT DE COMMENTAIRE - MÉTHODE CORRIGÉE
   void _showReportCommentDialog(models.Comment comment) {
     // Construire l'aperçu du commentaire
     String contentPreview = comment.content;
@@ -362,7 +362,6 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
       contentPreview = '${contentPreview.substring(0, 60)}...';
     }
 
-    // ✅ UTILISATION CORRECTE DE LA MÉTHODE STATIQUE
     ReportDialog.show(
       context,
       contentType: ContentType.comment,
@@ -377,7 +376,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     });
   }
 
-  /// 🖼️ IMAGE AVEC DOUBLE TAP LIKE
+  ///  IMAGE AVEC DOUBLE TAP LIKE
   Widget _buildCleanImage() {
     return GestureDetector(
       onDoubleTap: _handleDoubleTapLike,
@@ -486,7 +485,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
-  /// ⚡ ACTIONS (like, commentaire, partage, bookmark)
+  ///  ACTIONS (like, commentaire, partage, bookmark)
   Widget _buildCleanActions(bool isLiked, int likesCount, int commentsCount) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -557,7 +556,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
-  /// 📝 DESCRIPTION ET TITRE
+  ///  DESCRIPTION ET TITRE
   Widget _buildCleanDescription() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -633,7 +632,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
-  /// 💬 SECTION COMMENTAIRES
+  /// SECTION COMMENTAIRES
   Widget _buildCleanCommentsSection(PostsProvider postsProvider) {
     return FutureBuilder<List<models.Comment>>(
       future: postsProvider.getComments(widget.post.id),
@@ -658,7 +657,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
-  /// 💬 COMMENTAIRE COMPACT
+  /// COMMENTAIRE COMPACT
   Widget _buildCompactComment(models.Comment comment) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -705,7 +704,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
-  /// ✍️ SECTION AJOUT COMMENTAIRE
+  ///  SECTION AJOUT COMMENTAIRE
   Widget _buildCleanAddCommentSection() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -784,7 +783,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
-  /// 📤 PARTAGE DU POST
+  /// PARTAGE DU POST
   void _sharePost() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -794,7 +793,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
-  /// 💬 MODAL COMMENTAIRES COMPLETS - REDESIGN MODERNE
+  ///  MODAL COMMENTAIRES 
   void _showCommentsModal(BuildContext context, List<models.Comment> comments) {
     showModalBottomSheet(
       context: context,
@@ -975,7 +974,7 @@ class _ConnectedPostWidgetState extends State<ConnectedPostWidget>
     );
   }
 
-  /// 💬 ITEM COMMENTAIRE MODERNE
+  ///  ITEM COMMENTAIRE 
   Widget _buildModernCommentItem(models.Comment comment, int index) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),

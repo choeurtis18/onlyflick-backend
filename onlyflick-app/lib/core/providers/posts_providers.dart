@@ -24,7 +24,6 @@ class PostsProvider extends ChangeNotifier {
   String? _error;
   int? _currentUserId;
 
-  // ✅ AJOUT: Variables pour le scroll infini
   bool _hasMorePosts = true;
   bool _isLoadingMore = false;
   static const int _pageSize = 10; // Taille des pages
@@ -78,7 +77,7 @@ class PostsProvider extends ChangeNotifier {
     }
   }
 
-  /// ✅ MODIFICATION: Charge la première page de posts
+  ///  Charge la première page de posts
   Future<void> loadPosts() async {
     debugPrint('📱 Loading first page of posts...');
     
@@ -111,7 +110,7 @@ class PostsProvider extends ChangeNotifier {
     }
   }
 
-  /// ✅ NOUVEAU: Charge plus de posts pour le scroll infini
+  /// : Charge plus de posts pour le scroll infini
   Future<void> loadMorePosts() async {
     if (_isLoadingMore || !_hasMorePosts || _state == FeedState.error) {
       return;
@@ -158,7 +157,7 @@ class PostsProvider extends ChangeNotifier {
     }
   }
 
-  /// ✅ MODIFICATION: Actualise le feed
+  /// Actualise le feed
   Future<void> refreshPosts() async {
     debugPrint('🔄 Refreshing posts...');
     
@@ -192,12 +191,12 @@ class PostsProvider extends ChangeNotifier {
     }
   }
 
-  /// ✅ NOUVEAU: Charge les likes pour tous les posts actuels
+  /// Charge les likes pour tous les posts actuels
   Future<void> _loadLikesForCurrentPosts() async {
     await _loadLikesForPosts(_posts);
   }
 
-  /// ✅ NOUVEAU: Charge les likes pour une liste de posts spécifique
+  /// : Charge les likes pour une liste de posts spécifique
   Future<void> _loadLikesForPosts(List<Post> posts) async {
     final List<Future<void>> likesLoaders = [];
     
@@ -229,7 +228,7 @@ class PostsProvider extends ChangeNotifier {
     }
   }
 
-  /// ✅ NOUVEAU: Remet à zéro la pagination
+  /// Remet à zéro la pagination
   void _resetPagination() {
     _currentOffset = 0;
     _hasMorePosts = true;
@@ -315,7 +314,7 @@ class PostsProvider extends ChangeNotifier {
       if (result.isSuccess && result.data != null) {
         // Ajouter le commentaire au cache
         if (_commentsCache.containsKey(postId)) {
-          _commentsCache[postId]!.insert(0, result.data!); // Ajouter en premier
+          _commentsCache[postId]!.insert(0, result.data!); 
         } else {
           _commentsCache[postId] = [result.data!];
         }
@@ -361,7 +360,6 @@ class PostsProvider extends ChangeNotifier {
   void _clearCache() {
     _likesCountCache.clear();
     _commentsCache.clear();
-    // Ne pas effacer _userLikesCache ici car on veut le conserver
   }
 
   /// Nettoie les données de l'utilisateur (appelé lors de la déconnexion)

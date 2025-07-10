@@ -75,7 +75,7 @@ class PublicUserProfile {
     this.subscriptionPrice,
     this.currency,
     this.viewerSubscription,
-    // ===== NOUVEAU : Stats avec valeur par défaut =====
+    //    Stats avec valeur par défaut 
     this.stats = const UserStats(postsCount: 0, followersCount: 0, followingCount: 0),
   });
 
@@ -96,7 +96,7 @@ class PublicUserProfile {
       viewerSubscription: json['viewer_subscription'] != null
           ? ViewerSubscription.fromJson(json['viewer_subscription'])
           : null,
-      // ===== NOUVEAU : Parsing des statistiques =====
+      //  Parsing des statistiques 
       stats: json['stats'] != null
           ? UserStats.fromJson(json['stats'] as Map<String, dynamic>)
           : UserStats.empty(),
@@ -130,7 +130,7 @@ class PublicUserProfile {
     return '${subscriptionPrice}€ / mois';
   }
 
-  /// ===== NOUVEAU : Formatage des statistiques pour l'affichage =====
+  ///  Formatage des statistiques pour l'affichage 
   String get followersCountFormatted => _formatCount(stats.followersCount);
   String get followingCountFormatted => _formatCount(stats.followingCount);
   String get postsCountFormatted => _formatCount(stats.postsCount);
@@ -523,7 +523,7 @@ class UserSearchResponse {
   String toString() => 'UserSearchResponse(query: $query, total: $total, count: ${users.length})';
 }
 
-/// ===== NOUVEAU : Modèle pour les posts d'un utilisateur =====
+///  Modèle pour les posts d'un utilisateur 
 
 /// Post d'un utilisateur pour le profil public
 class UserPost {

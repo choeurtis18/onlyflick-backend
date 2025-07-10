@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../../core/services/api_service.dart';
-import '../../features/auth/models/auth_models.dart' as auth_models;  // ===== AJOUT ALIAS =====
+import '../../features/auth/models/auth_models.dart' as auth_models;  
 import '../models/profile_models.dart'; 
 
 /// Service pour les opérations de profil utilisateur
@@ -24,7 +24,7 @@ class ProfileService {
       } else {
         debugPrint('❌ Failed to fetch profile stats: ${response.error}');
         return ProfileStatsResult.failure(
-          auth_models.AuthError.fromApiResponse(  // ===== CORRECTION ALIAS =====
+          auth_models.AuthError.fromApiResponse(  
             response.error ?? 'Erreur de récupération des statistiques',
             response.statusCode,
           ),
@@ -32,7 +32,7 @@ class ProfileService {
       }
     } catch (e) {
       debugPrint('❌ Profile stats fetch error: $e');
-      return ProfileStatsResult.failure(auth_models.AuthError.network());  // ===== CORRECTION ALIAS =====
+      return ProfileStatsResult.failure(auth_models.AuthError.network());  
     }
   }
 
@@ -45,7 +45,7 @@ class ProfileService {
     try {
       debugPrint('📝 Fetching user posts (page: $page, type: $type)');
       
-      // ✅ CORRECTION: Utiliser dynamic pour éviter le problème de parsing
+      // Utiliser dynamic pour éviter le problème de parsing
       final response = await _apiService.get<dynamic>(
         '/profile/posts?page=$page&limit=$limit&type=$type',
         fromJson: (json) => json, // Pas de parsing direct
@@ -54,7 +54,7 @@ class ProfileService {
       if (response.isSuccess && response.data != null) {
         debugPrint('📝 Raw response received, parsing posts...');
         
-        // ✅ CORRECTION: Parsing manuel avec gestion d'erreur
+        // Parsing manuel avec gestion d'erreur
         List<UserPost> posts = [];
         
         try {
@@ -71,13 +71,13 @@ class ProfileService {
           } else {
             debugPrint('❌ Response data is not a List: ${response.data.runtimeType}');
             return UserPostsResult.failure(
-              auth_models.AuthError.validation('response', 'Format de réponse invalide')  // ===== CORRECTION 2 ARGS =====
+              auth_models.AuthError.validation('response', 'Format de réponse invalide')  
             );
           }
         } catch (parseError) {
           debugPrint('❌ Error parsing posts: $parseError');
           return UserPostsResult.failure(
-            auth_models.AuthError.validation('parsing', 'Erreur de traitement des posts: $parseError')  // ===== CORRECTION 2 ARGS =====
+            auth_models.AuthError.validation('parsing', 'Erreur de traitement des posts: $parseError')  
           );
         }
         
@@ -86,7 +86,7 @@ class ProfileService {
       } else {
         // debugPrint('❌ Failed to fetch user posts: ${response.error}');
         return UserPostsResult.failure(
-          auth_models.AuthError.fromApiResponse(  // ===== CORRECTION ALIAS =====
+          auth_models.AuthError.fromApiResponse(  
             response.error ?? 'Erreur de récupération des posts',
             response.statusCode,
           ),
@@ -94,7 +94,7 @@ class ProfileService {
       }
     } catch (e) {
       debugPrint('❌ User posts fetch error: $e');
-      return UserPostsResult.failure(auth_models.AuthError.network());  // ===== CORRECTION ALIAS =====
+      return UserPostsResult.failure(auth_models.AuthError.network());  
     }
   }
 
@@ -106,7 +106,7 @@ class ProfileService {
       // Validation basique du fichier
       if (!imageFile.existsSync()) {
         return AvatarUploadResult.failure(
-          auth_models.AuthError.validation('file', 'Fichier image non trouvé')  // ===== CORRECTION 2 ARGS =====
+          auth_models.AuthError.validation('file', 'Fichier image non trouvé')  
         );
       }
 
@@ -115,7 +115,7 @@ class ProfileService {
       final fileSizeInMB = fileSizeInBytes / (1024 * 1024);
       if (fileSizeInMB > 5) {
         return AvatarUploadResult.failure(
-          auth_models.AuthError.validation('size', 'Image trop volumineuse (${fileSizeInMB.toStringAsFixed(1)}MB). Maximum 5MB.')  // ===== CORRECTION 2 ARGS =====
+          auth_models.AuthError.validation('size', 'Image trop volumineuse (${fileSizeInMB.toStringAsFixed(1)}MB). Maximum 5MB.')  
         );
       }
 
@@ -126,7 +126,7 @@ class ProfileService {
           !fileName.endsWith('.png') && 
           !fileName.endsWith('.gif')) {
         return AvatarUploadResult.failure(
-          auth_models.AuthError.validation('format', 'Format non supporté. Utilisez JPG, PNG ou GIF.')  // ===== CORRECTION 2 ARGS =====
+          auth_models.AuthError.validation('format', 'Format non supporté. Utilisez JPG, PNG ou GIF.')  
         );
       }
 
@@ -134,7 +134,7 @@ class ProfileService {
         '/profile/avatar',
         fields: {}, // Pas de champs texte pour l'avatar
         files: {
-          'avatar': imageFile, // Nom du champ attendu par le backend
+          'avatar': imageFile, 
         },
         fromJson: (json) => AvatarUploadResponse.fromJson(json),
       );
@@ -145,7 +145,7 @@ class ProfileService {
       } else {
         debugPrint('❌ Failed to upload avatar: ${response.error}');
         return AvatarUploadResult.failure(
-          auth_models.AuthError.fromApiResponse(  // ===== CORRECTION ALIAS =====
+          auth_models.AuthError.fromApiResponse(  
             response.error ?? 'Erreur lors de l\'upload de l\'avatar',
             response.statusCode,
           ),
@@ -153,7 +153,7 @@ class ProfileService {
       }
     } catch (e) {
       debugPrint('❌ Avatar upload error: $e');
-      return AvatarUploadResult.failure(auth_models.AuthError.network());  // ===== CORRECTION ALIAS =====
+      return AvatarUploadResult.failure(auth_models.AuthError.network());  
     }
   }
 
@@ -165,7 +165,7 @@ class ProfileService {
       // Validation de la bio
       if (bio.length > 500) {
         return BioUpdateResult.failure(
-          auth_models.AuthError.validation('bio', 'Bio trop longue (${bio.length}/500 caractères)')  // ===== CORRECTION 2 ARGS =====
+          auth_models.AuthError.validation('bio', 'Bio trop longue (${bio.length}/500 caractères)')  
         );
       }
 
@@ -183,7 +183,7 @@ class ProfileService {
       } else {
         debugPrint('❌ Failed to update bio: ${response.error}');
         return BioUpdateResult.failure(
-          auth_models.AuthError.fromApiResponse(  // ===== CORRECTION ALIAS =====
+          auth_models.AuthError.fromApiResponse(  
             response.error ?? 'Erreur lors de la mise à jour de la bio',
             response.statusCode,
           ),
@@ -191,7 +191,7 @@ class ProfileService {
       }
     } catch (e) {
       debugPrint('❌ Bio update error: $e');
-      return BioUpdateResult.failure(auth_models.AuthError.network());  // ===== CORRECTION ALIAS =====
+      return BioUpdateResult.failure(auth_models.AuthError.network());  
     }
   }
 
@@ -203,19 +203,19 @@ class ProfileService {
       // Validation du username
       if (username.trim().isEmpty) {
         return UsernameCheckResult.failure(
-          auth_models.AuthError.validation('username', 'Username ne peut pas être vide')  // ===== CORRECTION 2 ARGS =====
+          auth_models.AuthError.validation('username', 'Username ne peut pas être vide')  
         );
       }
 
       if (username.length < 3 || username.length > 50) {
         return UsernameCheckResult.failure(
-          auth_models.AuthError.validation('username', 'Username doit faire entre 3 et 50 caractères')  // ===== CORRECTION 2 ARGS =====
+          auth_models.AuthError.validation('username', 'Username doit faire entre 3 et 50 caractères')  
         );
       }
 
-      final response = await _apiService.get<auth_models.UsernameCheckResponse>(  // ===== CORRECTION ALIAS =====
+      final response = await _apiService.get<auth_models.UsernameCheckResponse>(  
         '/profile/username/check?username=${Uri.encodeComponent(username.trim().toLowerCase())}',
-        fromJson: (json) => auth_models.UsernameCheckResponse.fromJson(json),  // ===== CORRECTION ALIAS =====
+        fromJson: (json) => auth_models.UsernameCheckResponse.fromJson(json),  
       );
 
       if (response.isSuccess && response.data != null) {
@@ -224,7 +224,7 @@ class ProfileService {
       } else {
         debugPrint('❌ Failed to check username: ${response.error}');
         return UsernameCheckResult.failure(
-          auth_models.AuthError.fromApiResponse(  // ===== CORRECTION ALIAS =====
+          auth_models.AuthError.fromApiResponse(  
             response.error ?? 'Erreur lors de la vérification du username',
             response.statusCode,
           ),
@@ -232,18 +232,18 @@ class ProfileService {
       }
     } catch (e) {
       debugPrint('❌ Username check error: $e');
-      return UsernameCheckResult.failure(auth_models.AuthError.network());  // ===== CORRECTION ALIAS =====
+      return UsernameCheckResult.failure(auth_models.AuthError.network());  
     }
   }
 }
 
-// ===== RÉSULTATS D'OPÉRATIONS =====
+//  RÉSULTATS D'OPÉRATIONS 
 
 /// Résultat pour les statistiques profil
 class ProfileStatsResult {
   final bool isSuccess;
   final ProfileStats? data;
-  final auth_models.AuthError? error;  // ===== CORRECTION ALIAS =====
+  final auth_models.AuthError? error;  
 
   const ProfileStatsResult._({
     required this.isSuccess,
@@ -255,7 +255,7 @@ class ProfileStatsResult {
     return ProfileStatsResult._(isSuccess: true, data: data);
   }
 
-  factory ProfileStatsResult.failure(auth_models.AuthError error) {  // ===== CORRECTION ALIAS =====
+  factory ProfileStatsResult.failure(auth_models.AuthError error) {  
     return ProfileStatsResult._(isSuccess: false, error: error);
   }
 
@@ -271,7 +271,7 @@ class ProfileStatsResult {
 class UserPostsResult {
   final bool isSuccess;
   final List<UserPost>? data;
-  final auth_models.AuthError? error;  // ===== CORRECTION ALIAS =====
+  final auth_models.AuthError? error;  
 
   const UserPostsResult._({
     required this.isSuccess,
@@ -283,7 +283,7 @@ class UserPostsResult {
     return UserPostsResult._(isSuccess: true, data: data);
   }
 
-  factory UserPostsResult.failure(auth_models.AuthError error) {  // ===== CORRECTION ALIAS =====
+  factory UserPostsResult.failure(auth_models.AuthError error) {  
     return UserPostsResult._(isSuccess: false, error: error);
   }
 
@@ -299,7 +299,7 @@ class UserPostsResult {
 class AvatarUploadResult {
   final bool isSuccess;
   final AvatarUploadResponse? data;
-  final auth_models.AuthError? error;  // ===== CORRECTION ALIAS =====
+  final auth_models.AuthError? error;  
 
   const AvatarUploadResult._({
     required this.isSuccess,
@@ -311,7 +311,7 @@ class AvatarUploadResult {
     return AvatarUploadResult._(isSuccess: true, data: data);
   }
 
-  factory AvatarUploadResult.failure(auth_models.AuthError error) {  // ===== CORRECTION ALIAS =====
+  factory AvatarUploadResult.failure(auth_models.AuthError error) {  
     return AvatarUploadResult._(isSuccess: false, error: error);
   }
 
@@ -326,7 +326,7 @@ class AvatarUploadResult {
 /// Résultat pour la mise à jour de bio
 class BioUpdateResult {
   final bool isSuccess;
-  final auth_models.AuthError? error;  // ===== CORRECTION ALIAS =====
+  final auth_models.AuthError? error;  
 
   const BioUpdateResult._({
     required this.isSuccess,
@@ -337,7 +337,7 @@ class BioUpdateResult {
     return const BioUpdateResult._(isSuccess: true);
   }
 
-  factory BioUpdateResult.failure(auth_models.AuthError error) {  // ===== CORRECTION ALIAS =====
+  factory BioUpdateResult.failure(auth_models.AuthError error) {  
     return BioUpdateResult._(isSuccess: false, error: error);
   }
 
@@ -352,8 +352,8 @@ class BioUpdateResult {
 /// Résultat pour la vérification de username
 class UsernameCheckResult {
   final bool isSuccess;
-  final auth_models.UsernameCheckResponse? data;  // ===== CORRECTION ALIAS =====
-  final auth_models.AuthError? error;  // ===== CORRECTION ALIAS =====
+  final auth_models.UsernameCheckResponse? data;  
+  final auth_models.AuthError? error;  
 
   const UsernameCheckResult._({
     required this.isSuccess,
@@ -361,11 +361,11 @@ class UsernameCheckResult {
     this.error,
   });
 
-  factory UsernameCheckResult.success(auth_models.UsernameCheckResponse data) {  // ===== CORRECTION ALIAS =====
+  factory UsernameCheckResult.success(auth_models.UsernameCheckResponse data) {  
     return UsernameCheckResult._(isSuccess: true, data: data);
   }
 
-  factory UsernameCheckResult.failure(auth_models.AuthError error) {  // ===== CORRECTION ALIAS =====
+  factory UsernameCheckResult.failure(auth_models.AuthError error) {  
     return UsernameCheckResult._(isSuccess: false, error: error);
   }
 

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
-// 🔥 NOUVEAU: Import de la configuration centralisée
+//  Import de la configuration centralisée
 import '../config/app_config.dart';
 
 class ApiService {
@@ -11,13 +11,13 @@ class ApiService {
   factory ApiService() => _instance;
   ApiService._internal();
 
-  // 🔥 NOUVEAU: Utilisation d'AppConfig au lieu de la configuration en dur
+  //  Utilisation d'AppConfig au lieu de la configuration en dur
   static String get _baseUrl => AppConfig.baseUrl;
 
   final http.Client _client = http.Client();
   String? _token;
   
-  // ✅ NOUVEAU: Gestion de l'ID utilisateur connecté
+  // : Gestion de l'ID utilisateur connecté
   int? _currentUserId;
 
   // Headers par défaut pour les requêtes JSON
@@ -35,23 +35,23 @@ class ApiService {
   /// Getter public pour accéder à l'URL de base
   String get baseUrl => _baseUrl;
 
-  /// ✅ NOUVEAU: Getter pour obtenir l'ID de l'utilisateur connecté
+  /// : Getter pour obtenir l'ID de l'utilisateur connecté
   int? get currentUserId => _currentUserId;
 
-  /// ✅ NOUVEAU: Vérifie si un utilisateur est connecté
+  /// : Vérifie si un utilisateur est connecté
   bool get hasCurrentUser => _currentUserId != null;
 
-  /// 🔥 NOUVEAU: Initialise le service avec debug info et test de connexion
+  ///  Initialise le service avec debug info et test de connexion
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
     
     // Charger le token
     _token = prefs.getString(AppConfig.tokenKey);
     
-    // ✅ NOUVEAU: Charger l'ID utilisateur
+    // : Charger l'ID utilisateur
     _currentUserId = prefs.getInt('current_user_id');
     
-    // 🔥 NOUVEAU: Affichage des informations de debug
+    //  Affichage des informations de debug
     if (AppConfig.enableDetailedLogs) {
       debugPrint('🔐 ApiService initialized with token: ${_token != null}');
       debugPrint('🔐 Current user ID: $_currentUserId');
@@ -78,7 +78,7 @@ class ApiService {
     }
   }
 
-  /// ✅ NOUVEAU: Met à jour l'ID de l'utilisateur connecté (appelé après login)
+  /// : Met à jour l'ID de l'utilisateur connecté (appelé après login)
   Future<void> setCurrentUser(int userId) async {
     _currentUserId = userId;
     final prefs = await SharedPreferences.getInstance();
@@ -88,7 +88,7 @@ class ApiService {
     }
   }
 
-  /// ✅ NOUVEAU: Efface l'ID de l'utilisateur (appelé lors du logout)
+  /// : Efface l'ID de l'utilisateur (appelé lors du logout)
   Future<void> clearCurrentUser() async {
     _currentUserId = null;
     final prefs = await SharedPreferences.getInstance();
@@ -98,7 +98,7 @@ class ApiService {
     }
   }
 
-  /// ✅ NOUVEAU: Déconnexion complète (token + user)
+  /// : Déconnexion complète (token + user)
   Future<void> logout() async {
     await setToken(null);
     await clearCurrentUser();
@@ -273,7 +273,7 @@ class ApiService {
     }
   }
 
-  /// 🔥 AMÉLIORÉ: Méthode privée pour effectuer les requêtes HTTP standard avec timeouts configurés
+  ///  Méthode privée pour effectuer les requêtes HTTP standard avec timeouts configurés
   Future<ApiResponse<T>> _makeRequest<T>(
     String method,
     String endpoint, {
@@ -341,7 +341,7 @@ class ApiService {
       return ApiResponse.error('Format de réponse invalide');
     } catch (e) {
       debugPrint('❌ Unexpected error: $e');
-      // 🔥 NOUVEAU: Message d'erreur spécifique selon l'environnement
+      //  Message d'erreur spécifique selon l'environnement
       if (AppConfig.isProduction) {
         return ApiResponse.error('Serveur temporairement indisponible. Veuillez réessayer.');
       } else {
@@ -361,7 +361,6 @@ class ApiService {
     return Uri.parse(url);
   }
 
-  /// ✅ CORRECTION MAJEURE: Traite la réponse HTTP avec gestion des listes JSON
   ApiResponse<T> _handleResponse<T>(
     http.Response response,
     T Function(Map<String, dynamic>)? fromJson,
@@ -389,14 +388,13 @@ class ApiService {
       // Gestion des réponses de succès (2xx)
       if (statusCode >= 200 && statusCode < 300) {
         
-        // ✅ CORRECTION MAJEURE: Gestion spécifique pour les réponses de type liste
         if (fromJson != null) {
           if (jsonData is Map<String, dynamic>) {
             // Cas normal : JSON object -> utiliser fromJson
             final data = fromJson(jsonData);
             return ApiResponse.success(data, statusCode);
           } else if (jsonData is List) {
-            // ✅ NOUVEAU: Cas spécifique pour les listes JSON
+            // : Cas spécifique pour les listes JSON
             // Dans ce cas, on retourne directement la liste sans parser
             if (AppConfig.enableHttpLogs) {
               debugPrint('📡 Response is a List, returning as-is');
@@ -426,7 +424,7 @@ class ApiService {
           debugPrint('❌ Server error message: $message');
         }
         
-        // ✅ CORRECTION: Gestion spécifique des erreurs 401
+        // Gestion spécifique des erreurs 401
         if (statusCode == 401) {
           // Analyser le message pour déterminer le type d'erreur
           if (message.toLowerCase().contains('session') || 
@@ -454,7 +452,6 @@ class ApiService {
       // Si on ne peut pas parser le JSON, utiliser le body brut
       final errorMessage = response.body.isNotEmpty ? response.body : 'Erreur de format de réponse';
       
-      // ✅ MÊME LOGIQUE: Gestion spécifique des erreurs 401 sans JSON
       if (statusCode == 401) {
         if (errorMessage.toLowerCase().contains('session') || 
             errorMessage.toLowerCase().contains('expir') ||
@@ -471,12 +468,11 @@ class ApiService {
     }
   }
 
-  /// Gère les erreurs d'authentification (401) - uniquement pour session expirée
+  /// Gère les erreurs d'authentification (401) 
   void _handleUnauthorized() {
     if (AppConfig.enableHttpLogs) {
       debugPrint('⚠️ Session expired - clearing local session');
     }
-    // ✅ IMPORTANT: Ne nettoyer la session que pour les vraies expirations
     logout();
   }
 
@@ -502,7 +498,7 @@ class ApiService {
     );
   }
 
-  /// 🔥 AMÉLIORÉ: Test de connectivité avec endpoint spécifique
+  ///  Test de connectivité avec endpoint spécifique
   Future<bool> testConnection() async {
     try {
       final response = await get(AppConfig.healthCheckUrl.replaceFirst(_baseUrl, ''));
@@ -513,10 +509,10 @@ class ApiService {
     }
   }
 
-  /// ✅ NOUVEAU: Vérifie si l'utilisateur est authentifié et valide
+  /// : Vérifie si l'utilisateur est authentifié et valide
   bool get isAuthenticated => hasToken && hasCurrentUser;
 
-  /// ✅ NOUVEAU: Obtient les informations de session
+  /// : Obtient les informations de session
   Map<String, dynamic> get sessionInfo => {
         'hasToken': hasToken,
         'hasUser': hasCurrentUser,

@@ -4,8 +4,8 @@ class ApiConstants {
   // URL de base de votre API Go
   static const String baseUrl = 'http://localhost:8080';
   
-  // Pour l'émulateur Android, utilisez : 'http://10.0.2.2:8080/api'
-  // Pour un appareil physique, utilisez l'IP de votre machine : 'http://192.168.x.x:8080/api'
+  // Pour l'émulateur Android, on utilise : 'http://10.0.2.2:8080/api'
+  // Pour un appareil physique, on utilise l'IP de la machine : 'http://192.168.x.x:8080/api'
   
   // Endpoints de l'API
   static const String loginEndpoint = '/login';

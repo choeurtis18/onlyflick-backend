@@ -48,7 +48,6 @@ class _ConversationsPageState extends State<ConversationsPage> {
     );
   }
 
-  /// AppBar moderne style OnlyFlick
   PreferredSizeWidget _buildAppBar() {
   return AppBar(
     backgroundColor: Colors.white,
@@ -99,7 +98,6 @@ class _ConversationsPageState extends State<ConversationsPage> {
         },
       ),
       
-      // 🧪 Bouton Test WebSocket (pour développement)
       IconButton(
         onPressed: () {
           Navigator.of(context).pushNamed('websocketTest');

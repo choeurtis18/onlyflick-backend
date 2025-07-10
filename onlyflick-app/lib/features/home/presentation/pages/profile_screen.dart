@@ -137,7 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           Expanded(
             child: SubscriptionStatsWidget(
               // Utiliser les données du provider avec stats d'abonnements intégrées
-postsCount: userIsCreator ? profileProvider.postsCount : 0,
+              postsCount: userIsCreator ? profileProvider.postsCount : 0,
               followersCount: profileProvider.followersCount,
               followingCount: profileProvider.followingCount,
               totalEarnings: profileProvider.totalEarnings,
@@ -233,7 +233,7 @@ postsCount: userIsCreator ? profileProvider.postsCount : 0,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ===== NOM D'AFFICHAGE PUBLIC : @USERNAME =====
+          //  NOM D'AFFICHAGE PUBLIC : @USERNAME 
           Text(
             user?.displayName ?? 'Utilisateur',  // displayName retourne @username ou fullName
             style: const TextStyle(
@@ -475,9 +475,9 @@ postsCount: userIsCreator ? profileProvider.postsCount : 0,
     );
   }
 
-  // 🔥 GRILLE AMÉLIORÉE : Gestion différenciée pour créateurs et abonnés
+  //  Gestion différenciée pour créateurs et abonnés
   Widget _buildGrid({required String type, required ProfileProvider profileProvider, required bool userIsCreator}) {
-    // 🔥 État de chargement
+    //  État de chargement
     if (profileProvider.isLoadingPosts) {
       return const Center(
         child: Column(
@@ -491,7 +491,7 @@ postsCount: userIsCreator ? profileProvider.postsCount : 0,
       );
     }
 
-    // 🔥 GESTION D'ERREUR DIFFÉRENCIÉE PAR RÔLE
+    //  GESTION D'ERREUR DIFFÉRENCIÉE PAR RÔLE
     if (profileProvider.error != null) {
       // Pour les créateurs : afficher l'erreur avec possibilité de retry
       if (userIsCreator) {
@@ -527,9 +527,9 @@ postsCount: userIsCreator ? profileProvider.postsCount : 0,
           .toList();
     }
 
-    // 🔥 ÉTAT VIDE DIFFÉRENCIÉ PAR RÔLE
+    //  ÉTAT VIDE DIFFÉRENCIÉ PAR RÔLE
     if (filteredPosts.isEmpty) {
-      // 🔥 Vérifier si on est encore en train d'initialiser
+      //  Vérifier si on est encore en train d'initialiser
       if (!profileProvider.isInitialized) {
         return const Center(
           child: Column(
@@ -543,12 +543,12 @@ postsCount: userIsCreator ? profileProvider.postsCount : 0,
         );
       }
       
-      // 🔥 ÉTAT VIDE POUR ABONNÉS (subscribers)
+      // ÉTAT VIDE POUR ABONNÉS (subscribers)
       if (!userIsCreator) {
         return _buildSubscriberEmptyState();
       }
       
-      // 🔥 ÉTAT VIDE POUR CRÉATEURS
+      //  ÉTAT VIDE POUR CRÉATEURS
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -613,7 +613,6 @@ postsCount: userIsCreator ? profileProvider.postsCount : 0,
     );
   }
 
- // 🔥 NOUVEL ÉTAT VIDE ÉLÉGANT POUR LES ABONNÉS (avec scroll)
   Widget _buildSubscriberEmptyState() {
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -710,7 +709,6 @@ postsCount: userIsCreator ? profileProvider.postsCount : 0,
               ],
             ),
             
-            // Espace supplémentaire pour éviter le débordement
             SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 20),
           ],
         ),
@@ -1013,7 +1011,7 @@ postsCount: userIsCreator ? profileProvider.postsCount : 0,
     );
   }
 
-  // ✅ MÉTHODE MODIFIÉE : Menu des paramètres avec option WebSocket Test
+  //  Menu des paramètres avec option WebSocket Test
   void _showSettingsMenu() {
     final user = context.read<AuthProvider>().user;
     
@@ -1034,7 +1032,6 @@ postsCount: userIsCreator ? profileProvider.postsCount : 0,
               const Divider(),
             ],
             
-            // ===== 🧪 OPTION TEST WEBSOCKET (DÉVELOPPEMENT) =====
             ListTile(
               leading: const Icon(Icons.wifi_tethering, color: Colors.blue),
               title: const Text('Test WebSocket'),
@@ -1087,7 +1084,7 @@ postsCount: userIsCreator ? profileProvider.postsCount : 0,
     );
   }
 
-  /// 🚀 MÉTHODE AMÉLIORÉE : Demande de passage en créateur avec API
+  /// Demande de passage en créateur avec API
   Future<void> _handleCreatorUpgrade() async {
     // Confirmer l'action avec l'utilisateur
     final confirmed = await _showCreatorUpgradeDialog();
@@ -1179,7 +1176,7 @@ postsCount: userIsCreator ? profileProvider.postsCount : 0,
     }
   }
 
-  /// 🤔 DIALOGUE DE CONFIRMATION POUR DEVENIR CRÉATEUR
+  /// DIALOGUE DE CONFIRMATION POUR DEVENIR CRÉATEUR
   Future<bool> _showCreatorUpgradeDialog() async {
     return await showDialog<bool>(
       context: context,
@@ -1501,9 +1498,7 @@ postsCount: userIsCreator ? profileProvider.postsCount : 0,
           ),
         );
 
-        // Navigation vers l'écran de login
-        // Le AuthProvider redirigera automatiquement vers login
-        // grâce au state management dans votre app principale
+       
       }
 
     } catch (e) {

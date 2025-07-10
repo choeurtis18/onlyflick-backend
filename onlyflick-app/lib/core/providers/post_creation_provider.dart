@@ -34,7 +34,7 @@ class PostCreationProvider extends ChangeNotifier {
   final TextEditingController descriptionController = TextEditingController();
   PostVisibility _selectedVisibility = PostVisibility.public;
 
-  // ===== GESTION DES TAGS =====
+  //  GESTION DES TAGS 
   List<String> _selectedTags = []; // Tags sélectionnés pour le post
   List<String> _availableTags = [   // Tags disponibles dans l'app (clés backend)
     'wellness',
@@ -65,7 +65,7 @@ class PostCreationProvider extends ChangeNotifier {
   bool get canSubmit => hasImage && 
                        titleController.text.trim().isNotEmpty && 
                        descriptionController.text.trim().isNotEmpty &&
-                       _selectedTags.isNotEmpty && // ✅ Au moins un tag requis
+                       _selectedTags.isNotEmpty && // Au moins un tag requis
                        !isLoading;
 
   /// Détecte si on est sur un simulateur
@@ -97,7 +97,7 @@ class PostCreationProvider extends ChangeNotifier {
     _setState(PostCreationState.error);
   }
 
-  // ===== GESTION DES TAGS =====
+  //  GESTION DES TAGS 
 
   /// Convertit une clé de tag en nom d'affichage
   static String getTagDisplayName(String key) {
@@ -181,7 +181,7 @@ class PostCreationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ===== GESTION DES IMAGES =====
+  //  GESTION DES IMAGES 
 
   /// Sélectionne une image depuis la galerie
   Future<void> selectImageFromGallery() async {
@@ -415,7 +415,7 @@ class PostCreationProvider extends ChangeNotifier {
     );
   }
 
-  // ===== CRÉATION DU POST =====
+  //  CRÉATION DU POST 
 
   /// Crée le post avec toutes les données collectées
   Future<void> createPost() async {
@@ -433,7 +433,7 @@ class PostCreationProvider extends ChangeNotifier {
         description: descriptionController.text.trim(),
         imageFile: _selectedImage!,
         visibility: _selectedVisibility,
-        tags: _selectedTags, // ✅ Maintenant supporté par le service
+        tags: _selectedTags, 
       );
 
       if (result.isSuccess && result.data != null) {
@@ -447,7 +447,7 @@ class PostCreationProvider extends ChangeNotifier {
     }
   }
 
-  // ===== VALIDATION =====
+  //  VALIDATION 
 
   /// Valide les données du formulaire
   String? validateForm() {
@@ -504,7 +504,7 @@ class PostCreationProvider extends ChangeNotifier {
     return errors;
   }
 
-  // ===== HELPER METHODS =====
+  //  HELPER METHODS 
 
   /// Retourne le nombre de caractères restants pour le titre
   int get titleRemainingChars => 100 - titleController.text.length;
@@ -525,7 +525,7 @@ class PostCreationProvider extends ChangeNotifier {
     return '${_selectedTags.length} tags sélectionnés';
   }
 
-  // ===== RESET ET NETTOYAGE =====
+  //  RESET ET NETTOYAGE 
 
   /// Remet à zéro tous les champs du formulaire
   void reset() {
@@ -560,7 +560,7 @@ class PostCreationProvider extends ChangeNotifier {
       print('Selected Tags: $_selectedTags');
       print('Can Submit: $canSubmit');
       print('Validation Errors: $validationErrors');
-      print('================================');
+      print('==');
     }
   }
 }
