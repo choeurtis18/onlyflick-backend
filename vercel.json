@@ -1,0 +1,13 @@
+{
+    "buildCommand": "cd onlyflick-app && flutter build web",
+    "outputDirectory": "onlyflick-app/build/web",
+    "installCommand": "echo 'No install needed'",
+    "framework": null,
+    "functions": {},
+    "routes": [
+      {
+        "src": "/(.*)",
+        "dest": "/index.html"
+      }
+    ]
+  }
