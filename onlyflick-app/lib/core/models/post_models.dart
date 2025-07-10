@@ -76,8 +76,7 @@ class Post {
       // Support de plusieurs formats de clés JSON (backend peut envoyer différents formats)
       authorUsername: json['author_username'] ?? 
                      json['username'] ?? 
-                     json['user_username'] ??
-                     'user${json['user_id'] ?? 'unknown'}',
+                     json['user_username'] ?? '',
       authorFirstName: json['author_first_name'] ?? 
                       json['first_name'] ?? 
                       json['user_first_name'] ?? '',
@@ -108,11 +107,24 @@ class Post {
   
   /// Nom d'affichage de l'auteur (priorité au username)
   String get authorDisplayName {
-    if (authorUsername.isNotEmpty && authorUsername != 'user${userId}unknown') {
+    // 1. Priorité au username s'il est valide (non vide et pas un fallback généré)
+    if (authorUsername.isNotEmpty && !authorUsername.startsWith('user')) {
       return authorUsername;
     }
+    
+    // 2. Sinon, construire le nom complet à partir du prénom et nom
     final fullName = authorFullName;
-    return fullName.isNotEmpty ? fullName : 'Utilisateur $userId';
+    if (fullName.isNotEmpty) {
+      return fullName;
+    }
+    
+    // 3. En dernier recours, utiliser le username même s'il commence par "user"
+    if (authorUsername.isNotEmpty) {
+      return authorUsername;
+    }
+    
+    // 4. Fallback final
+    return 'Utilisateur $userId';
   }
   
   /// URL de l'avatar avec fallback
@@ -313,13 +325,19 @@ class Comment {
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
       
-      // ===== DONNÉES UTILISATEUR =====
+      // ===== DONNÉES UTILISATEUR - Support multiple formats =====
       authorUsername: json['author_username'] ?? 
                      json['username'] ?? 
-                     'user${json['user_id'] ?? 'unknown'}',
-      authorFirstName: json['author_first_name'] ?? json['first_name'] ?? '',
-      authorLastName: json['author_last_name'] ?? json['last_name'] ?? '',
-      authorAvatarUrl: json['author_avatar_url'] ?? json['avatar_url'] ?? '',
+                     json['user_username'] ?? '',
+      authorFirstName: json['author_first_name'] ?? 
+                      json['first_name'] ?? 
+                      json['user_first_name'] ?? '',
+      authorLastName: json['author_last_name'] ?? 
+                     json['last_name'] ?? 
+                     json['user_last_name'] ?? '',
+      authorAvatarUrl: json['author_avatar_url'] ?? 
+                      json['avatar_url'] ?? 
+                      json['user_avatar_url'] ?? '',
     );
   }
 
@@ -334,16 +352,28 @@ class Comment {
     'author_first_name': authorFirstName,
     'author_last_name': authorLastName,
     'author_avatar_url': authorAvatarUrl,
-    
   };
 
-  /// Nom d'affichage de l'auteur
+  /// Nom d'affichage de l'auteur - LOGIQUE CORRIGÉE
   String get authorDisplayName {
+    // 1. Priorité au username s'il est valide (non vide et pas un fallback généré)
     if (authorUsername.isNotEmpty && !authorUsername.startsWith('user')) {
       return authorUsername;
     }
+    
+    // 2. Sinon, construire le nom complet à partir du prénom et nom
     final fullName = '$authorFirstName $authorLastName'.trim();
-    return fullName.isNotEmpty ? fullName : 'Utilisateur $userId';
+    if (fullName.isNotEmpty) {
+      return fullName;
+    }
+    
+    // 3. En dernier recours, utiliser le username même s'il commence par "user"
+    if (authorUsername.isNotEmpty) {
+      return authorUsername;
+    }
+    
+    // 4. Fallback final
+    return 'Utilisateur $userId';
   }
   
   /// URL de l'avatar avec fallback
