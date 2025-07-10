@@ -47,6 +47,14 @@ jobs:
             exit 1
           fi
 
+      - name: Create test environment file
+        run: |
+          echo "SECRET_KEY=12345678901234567890123456789012" > .env
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/onlyflick_test?sslmode=disable" >> .env
+          echo "CI=true" >> .env
+          echo "ENVIRONMENT=test" >> .env
+          echo "Created .env file for CI testing"
+
       - name: Build
         run: |
           if [ -f "go.mod" ]; then
@@ -60,9 +68,10 @@ jobs:
 
       - name: Run all tests
         env:
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          SECRET_KEY: "12345678901234567890123456789012"
           # Utilise le service postgres défini ci-dessus
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/onlyflick_test?sslmode=disable"
+          CI: "true"
         run: |
           # Si go.mod à la racine, on teste tout le projet
           if [ -f "go.mod" ]; then
