@@ -3,7 +3,6 @@
     "outputDirectory": "onlyflick-app/build/web",
     "installCommand": "echo 'No install needed'",
     "framework": null,
-    "functions": {},
     "routes": [
       {
         "src": "/(.*)",
