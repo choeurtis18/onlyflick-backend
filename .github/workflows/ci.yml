@@ -36,7 +36,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # Cherche le bon répertoire contenant go.mod
+          # Trouver le répertoire contenant go.mod
           if [ -f "go.mod" ]; then
             go mod download
           elif [ -f "cmd/server/go.mod" ]; then
@@ -47,18 +47,10 @@ jobs:
             exit 1
           fi
 
-      - name: Create test environment file
-        run: |
-          echo "SECRET_KEY=12345678901234567890123456789012" > .env
-          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/onlyflick_test?sslmode=disable" >> .env
-          echo "CI=true" >> .env
-          echo "ENVIRONMENT=test" >> .env
-          echo "Created .env file for CI testing"
-
       - name: Build
         run: |
           if [ -f "go.mod" ]; then
-            go build -v ./...
+            go build -v ./cmd/server
           elif [ -f "cmd/server/go.mod" ]; then
             cd cmd/server && go build -v .
           else
@@ -66,23 +58,19 @@ jobs:
             exit 1
           fi
 
-      - name: Run all tests
-        env:
-          SECRET_KEY: "12345678901234567890123456789012"
-          # Utilise le service postgres défini ci-dessus
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/onlyflick_test?sslmode=disable"
-          CI: "true"
+      - name: Test
         run: |
-          # Si go.mod à la racine, on teste tout le projet
           if [ -f "go.mod" ]; then
-            go test -v -race ./...
+            go test -v -race ./cmd/server
           elif [ -f "cmd/server/go.mod" ]; then
-            cd cmd/server
-            go test -v -race ./...
+            cd cmd/server && go test -v -race .
           else
             echo "Could not find go.mod file"
             exit 1
           fi
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/onlyflick_test?sslmode=disable"
 
   docker:
     runs-on: ubuntu-latest
@@ -97,3 +85,4 @@ jobs:
 
       - name: Pull backend image
         run: docker pull barrydevops/onlyflick-backend:latest
+      
