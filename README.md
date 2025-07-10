@@ -12,12 +12,6 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 - **Tests** : Tests unitaires + Performances + E2E validés
 - **Sécurité** : JWT + AES + CORS configurés
 
-### URLs Actives
-
-- **Application** : <http://onlyflick.local>
-- **API Backend** : <http://api.onlyflick.local>
-- **Monitoring** : <http://grafana.local> (admin/admin123)
-
 ## Stack technique
 
 - **Frontend** : Flutter Web (Interface MatchMaker)
@@ -30,7 +24,7 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 - **Tests** : Suite complète (unitaires, intégration, E2E, performance)
 - **Upload** : ImageKit pour les médias
 
-## 🚀 Prérequis
+## Prérequis
 
 - **Go 1.22+**
 - **Docker & Docker Compose** (ou Kubernetes)
@@ -38,7 +32,7 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 - **PostgreSQL 16** (local ou distant)
 - **(optionnel)** accès à ImageKit pour les uploads de médias en production
 
-## 🛠️ Installation & Build
+## Installation & Build
 
 1. **Clonez le repo**
 
@@ -59,7 +53,7 @@ go mod download
 go build -v ./...
 ```
 
-## 🏃‍♂️ Exécution locale
+## Exécution locale
 
 1. **Lancez PostgreSQL** (via Docker Compose ou Kubernetes)
 
@@ -134,11 +128,23 @@ spec:
 ### Stack de monitoring
 
 - **Prometheus** - Collecte et stockage métriques time-series
+<img width="1794" height="1016" alt="Prometheus_only_backend" src="https://github.com/user-attachments/assets/1af10b2c-acdb-4bec-8449-a38e870eb0c7" />
 - **Sentry** - Collecte des erreurs côté Front
+<img width="1851" height="971" alt="Sentry_error_flutter" src="https://github.com/user-attachments/assets/86f509e5-78d4-4832-a1d3-90277f6253a4" />
+
 - **Grafana** - Dashboards et visualisation métriques
+  
 - **Node Exporter** - Métriques système (CPU, RAM, Disk)
-- **Kube-State-Metrics** - Métriques état cluster Kubernetes
+  
 - **AlertManager** - Gestion et routing des alertes
+  
+<img width="1920" height="1080" alt="Monitoring_Grafana_OnlyFlickApp" src="https://github.com/user-attachments/assets/1d028ccb-9187-4708-9b12-3a742a93c06a" />
+
+- **Kube-State-Metrics** - Métriques état cluster Kubernetes
+
+<img width="1794" height="1016" alt="Kubernetes_API_Server" src="https://github.com/user-attachments/assets/dd1512fc-f858-42a7-9493-cd06239e87a9" />
+<img width="1794" height="1016" alt="Kubernetes_Namespace_Monitoring" src="https://github.com/user-attachments/assets/9fc66901-1b72-486c-91c6-8eed77ef1711" />
+
 
 ### Métriques collectées
 
@@ -147,7 +153,7 @@ spec:
 - Métriques Kubernetes (pods, nodes, deployments)
 - Métriques business (utilisateurs, posts, messages)
 
-## ✅ Tests
+## Tests
 
 ### Tests unitaires
 
@@ -231,7 +237,7 @@ echo "User: admin"
 echo "Password: $(kubectl get secret grafana-admin --namespace monitoring -o jsonpath="{.data.GF_SECURITY_ADMIN_PASSWORD}" | base64 -d)"
 ```
 
-### 🎉 FÉLICITATIONS
+### FÉLICITATIONS
 
 Votre plateforme sociale **OnlyFlick/MatchMaker** est maintenant **100% déployée et opérationnelle** ! L'application combine une interface Flutter moderne avec un backend Go robuste, le tout orchestré sur Kubernetes avec monitoring intégré.
 
