@@ -14,10 +14,14 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 <br/>
 <br/>
 
-**Site Web en production :** [onlyflick](https://steady-beijinho-3cba0c.netlify.app/#/login)
-**Tableau kanban :** [Notion](https://western-cereal-a39.notion.site/1ea3b17dc80c80c191f8df757de32744?v=1ea3b17dc80c808d9fe9000cb5fafc65)
-**Wireframe :** [Figma](https://www.figma.com/design/RdPh9Vqpi6SrS6dXGWe7Yx/OnlyFlick---Wireframe?node-id=2547-3430&t=3Q27SaSfp48n3j2r-0)
-**Diagrame UML :** [DbDiagram.io](https://i.postimg.cc/rmXQqVzn/MCD-Only-Flick.png)
+## 🔗 Liens importants du projet
+
+- 📄 **Cahier des charges** : [Télécharger le PDF](https://github.com/choeurtis18/onlyflick-backend/blob/main/Cahier%20des%20charges%20OnlyFlick%20.pdf)
+- 🌐 **Site web en production** : [onlyflick.netlify.app](https://onlyflick.netlify.app/)
+- 📋 **Tableau Kanban (Notion)** : [Voir le suivi projet](https://western-cereal-a39.notion.site/1ea3b17dc80c80c191f8df757de32744?v=1ea3b17dc80c808d9fe9000cb5fafc65)
+- 🎨 **Wireframe (Figma)** : [Consulter le design](https://www.figma.com/design/RdPh9Vqpi6SrS6dXGWe7Yx/OnlyFlick---Wireframe?node-id=2547-3430&t=3Q27SaSfp48n3j2r-0)
+- 🗂️ **Diagramme UML (DbDiagram)** : [Voir le MCD](https://i.postimg.cc/rmXQqVzn/MCD-Only-Flick.png)
+
 
 
 ##  Comptes de démonstration (production)
