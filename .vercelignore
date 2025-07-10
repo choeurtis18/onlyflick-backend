@@ -1,0 +1,16 @@
+# Ignorer le backend Go
+api/
+cmd/
+internal/
+migrations/
+pkg/
+tests/
+*.go
+go.mod
+go.sum
+Dockerfile
+docker-compose.yml
+k8s/
+
+# Garder seulement le frontend Flutter
+!onlyflick-app/
