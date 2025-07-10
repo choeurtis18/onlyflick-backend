@@ -129,7 +129,9 @@ spec:
 
 - **Prometheus** - Collecte et stockage métriques time-series
 <img width="1794" height="1016" alt="Prometheus_only_backend" src="https://github.com/user-attachments/assets/1af10b2c-acdb-4bec-8449-a38e870eb0c7" />
+
 - **Sentry** - Collecte des erreurs côté Front
+  
 <img width="1851" height="971" alt="Sentry_error_flutter" src="https://github.com/user-attachments/assets/86f509e5-78d4-4832-a1d3-90277f6253a4" />
 
 - **Grafana** - Dashboards et visualisation métriques
