@@ -14,7 +14,7 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 <br/>
 <br/>
 
-## 🔗 Liens importants du projet
+## Liens importants du projet
 
 - 📄 **Cahier des charges** : [Télécharger le PDF](https://github.com/choeurtis18/onlyflick-backend/blob/main/Cahier%20des%20charges%20OnlyFlick%20.pdf)
 - 📱 **Application mobile (APK)** : [Télécharger l’APK OnlyFlick](https://github.com/choeurtis18/onlyflick-backend/releases/download/APK/OnlyFlick_V1.0.apk)
