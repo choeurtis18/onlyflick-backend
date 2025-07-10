@@ -9,5 +9,17 @@
         "src": "/(.*)",
         "dest": "/index.html"
       }
+    ],
+    "github": {
+      "silent": true
+    },
+    "builds": [
+      {
+        "src": "onlyflick-app/**",
+        "use": "@vercel/static-build",
+        "config": {
+          "distDir": "build/web"
+        }
+      }
     ]
   }
