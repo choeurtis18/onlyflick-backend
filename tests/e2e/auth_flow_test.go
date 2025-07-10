@@ -12,6 +12,7 @@ import (
 	"onlyflick/internal/utils"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,21 +22,19 @@ import (
 )
 
 func setupE2EEnv(t *testing.T) {
-	// Charger le fichier .env depuis la racine du projet
+	// Charger le .env à la racine du projet
 	envPath := filepath.Join("..", "..", ".env")
 	if err := godotenv.Load(envPath); err != nil {
-		t.Logf("Impossible de charger le fichier .env: %v", err)
-		// Fallback avec valeurs par défaut
+		t.Logf("Impossible de charger .env: %v", err)
+		// Valeurs par défaut
 		os.Setenv("SECRET_KEY", "12345678901234567890123456789012")
 		os.Setenv("DATABASE_URL", "postgresql://onlyflick_db_owner:npg_GuDKP6U3gYtZ@ep-curly-sun-a2np1ifi-pooler.eu-central-1.aws.neon.tech/onlyflick_db?sslmode=require")
 	}
 
-	// Vérifier que les variables d'environnement critiques sont définies
 	secretKey := os.Getenv("SECRET_KEY")
 	databaseURL := os.Getenv("DATABASE_URL")
-
 	if secretKey == "" {
-		t.Log("SECRET_KEY non définie, utilisation de la valeur par défaut")
+		t.Log("SECRET_KEY non définie, fallback par défaut")
 		secretKey = "12345678901234567890123456789012"
 		os.Setenv("SECRET_KEY", secretKey)
 	}
@@ -45,37 +44,39 @@ func setupE2EEnv(t *testing.T) {
 
 	t.Logf("SECRET_KEY chargée: %s", secretKey)
 	t.Logf("DATABASE_URL chargée: %s", databaseURL)
-
-	// Configurer la clé pour les utils
 	utils.SetSecretKeyForTesting(secretKey)
 
-	// Initialiser la base de données manuellement si elle n'existe pas
+	// Initialiser la connexion DB si nécessaire
 	if database.DB == nil {
 		db, err := sql.Open("postgres", databaseURL)
 		if err != nil {
-			t.Fatalf("Impossible d'ouvrir la connexion à la base de données: %v", err)
+			t.Fatalf("Impossible d'ouvrir la BD: %v", err)
 		}
-
 		if err := db.Ping(); err != nil {
-			t.Fatalf("Impossible de se connecter à la base de données: %v", err)
+			t.Fatalf("Impossible de pinger la BD: %v", err)
 		}
-
 		database.DB = db
 	}
 }
 
 func TestRegisterLoginProfileFlow(t *testing.T) {
-	// Configuration de l'environnement E2E
+	// 1) Setup E2E env
 	setupE2EEnv(t)
 
-	// Générer un email unique avec plus de précision
+	// 2) Générer email unique & username tronqué à 20 chars max
 	testEmail := fmt.Sprintf("e2e_%d_%d@example.com", time.Now().Unix(), time.Now().Nanosecond())
+	rawUsername := strings.Split(testEmail, "@")[0]
+	username := rawUsername
+	if len(username) > 20 {
+		username = username[:20]
+	}
 	t.Logf("Test email: %s", testEmail)
+	t.Logf("Test username: %s", username)
 
-	// Nettoyage plus agressif - supprimer tous les emails e2e de test
+	// 3) Nettoyage avant test
 	cleanupAllTestData(t)
 
-	// Nettoyage après le test
+	// 4) Nettoyage après test
 	t.Cleanup(func() {
 		cleanupTestData(t, testEmail)
 		cleanupAllTestData(t)
@@ -84,8 +85,9 @@ func TestRegisterLoginProfileFlow(t *testing.T) {
 
 	router := api.SetupRoutes()
 
-	// 1. Register
+	// --- Étape 1 : Inscription ---
 	registerPayload := map[string]string{
+		"username":   username,
 		"email":      testEmail,
 		"password":   "supersecret",
 		"first_name": "E2E",
@@ -94,14 +96,13 @@ func TestRegisterLoginProfileFlow(t *testing.T) {
 	registerBody, _ := json.Marshal(registerPayload)
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(registerBody))
 	req.Header.Set("Content-Type", "application/json")
-
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 
 	t.Logf("Register response: %s", rr.Body.String())
 	assert.Equal(t, http.StatusCreated, rr.Code)
 
-	// 2. Login
+	// --- Étape 2 : Connexion ---
 	loginPayload := map[string]string{
 		"email":    testEmail,
 		"password": "supersecret",
@@ -121,7 +122,7 @@ func TestRegisterLoginProfileFlow(t *testing.T) {
 	assert.True(t, ok, "Token should be a string")
 	assert.NotEmpty(t, token)
 
-	// 3. Get Profile
+	// --- Étape 3 : Profil ---
 	req = httptest.NewRequest(http.MethodGet, "/profile", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	rr = httptest.NewRecorder()
@@ -129,18 +130,5 @@ func TestRegisterLoginProfileFlow(t *testing.T) {
 
 	t.Logf("Profile response: %s", rr.Body.String())
 	assert.Equal(t, http.StatusOK, rr.Code)
-	assert.Contains(t, rr.Body.String(), "email")
-}
-
-// cleanupAllTestData supprime tous les utilisateurs de test e2e
-func cleanupAllTestData(t *testing.T) {
-	if database.DB == nil {
-		return
-	}
-
-	// Supprimer tous les utilisateurs avec des emails commençant par e2e_
-	_, err := database.DB.Exec("DELETE FROM users WHERE email LIKE 'e2e_%@example.com'")
-	if err != nil {
-		t.Logf("Erreur lors du nettoyage global des données de test: %v", err)
-	}
+	assert.Contains(t, rr.Body.String(), `"email"`)
 }
