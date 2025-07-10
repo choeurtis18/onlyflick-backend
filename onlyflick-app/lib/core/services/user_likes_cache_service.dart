@@ -41,7 +41,7 @@ class UserLikesCacheService {
       for (final key in prefs.getKeys()) {
         if (key.startsWith(userPrefix)) {
           // Extraire l'ID du post de la clé
-          final postIdStr = key.substring(userPrefix.length + 1); // +1 pour le _
+          final postIdStr = key.substring(userPrefix.length + 1); 
           final postId = int.tryParse(postIdStr);
           if (postId != null) {
             likes[postId] = prefs.getBool(key) ?? false;

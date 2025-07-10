@@ -142,7 +142,6 @@ class _RecommendedPostsSectionState extends State<RecommendedPostsSection> {
         'offset': offset.toString(),
       };
 
-      // Ajouter les tags s'ils sont spécifiés
       if (tags.isNotEmpty) {
         queryParams['tags'] = tags.join(',');
       }
@@ -424,7 +423,6 @@ class _RecommendedPostsSectionState extends State<RecommendedPostsSection> {
   }
 }
 
-/// Layout masonry moderne avec métadonnées et actions
 class _ModernMasonryGrid extends StatelessWidget {
   final List<Post> posts;
   final Function(Post) onPostTap;

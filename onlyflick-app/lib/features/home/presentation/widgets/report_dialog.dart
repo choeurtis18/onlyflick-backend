@@ -29,7 +29,7 @@ class ReportDialog extends StatefulWidget {
   }) {
     return showDialog<bool>(
       context: context,
-      barrierDismissible: false, // Empêcher la fermeture accidentelle
+      barrierDismissible: false, 
       builder: (context) => ReportDialog(
         contentType: contentType,
         contentId: contentId,

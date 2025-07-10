@@ -9,7 +9,6 @@ import '../widgets/message_bubble.dart';
 import '../widgets/typing_indicator.dart';
 import '../../../../core/services/api_service.dart';
 
-/// Page de chat premium pour OnlyFlick avec design moderne
 class ChatPage extends StatefulWidget {
   final Conversation conversation;
 
@@ -37,7 +36,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   Timer? _typingTimer;
   bool _isTypingIndicatorSent = false;
   
-  // ✅ NOUVEAU: Variables pour l'auto-scroll
+  // : Variables pour l'auto-scroll
   int _previousMessageCount = 0;
   StreamSubscription<MessagingProvider>? _messagingProviderSubscription;
 
@@ -72,20 +71,20 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
       final messagingProvider = context.read<MessagingProvider>();
       
       try {
-        // 1. D'abord charger les messages
+        //  D'abord charger les messages
         debugPrint('📋 ChatPage: Loading messages for conversation ${widget.conversation.id}...');
         await messagingProvider.loadMessages(widget.conversation.id);
         
-        // 2. Puis connecter le WebSocket pour les messages temps réel
+        //  Puis connecter le WebSocket pour les messages temps réel
         debugPrint('🔌 ChatPage: Connecting WebSocket...');
         await _connectToWebSocket();
         
-        // ✅ 3. Scroll vers le bas après le chargement initial
+        //  Scroll vers le bas après le chargement initial
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollToBottom(animated: false); // Pas d'animation pour le chargement initial
         });
         
-        // ✅ 4. Configurer le listener pour l'auto-scroll
+        //  Configurer le listener pour l'auto-scroll
         _setupMessageListener();
         
       } catch (e) {
@@ -97,7 +96,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     _messageController.addListener(_onTextChanged);
   }
 
-  /// ✅ NOUVELLE MÉTHODE: Configure l'écoute des nouveaux messages pour auto-scroll
+  ///  Configure l'écoute des nouveaux messages pour auto-scroll
   void _setupMessageListener() {
     final messagingProvider = context.read<MessagingProvider>();
     _previousMessageCount = messagingProvider.activeMessages.length;
@@ -105,7 +104,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     debugPrint('📜 ChatPage: Setting up message listener (initial count: $_previousMessageCount)');
   }
 
-  /// ✅ NOUVELLE MÉTHODE: Scroll automatique vers le bas
+  ///  Scroll automatique vers le bas
   void _scrollToBottom({bool animated = true}) {
     if (!_scrollController.hasClients) {
       debugPrint('📜 ChatPage: ScrollController has no clients, skipping scroll');
@@ -200,7 +199,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     _fadeController.dispose();
     _slideController.dispose();
     
-    // ✅ NOUVEAU: Nettoyer le subscription
+    // : Nettoyer le subscription
     _messagingProviderSubscription?.cancel();
     
     // Nettoyer l'état de frappe
@@ -238,7 +237,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
               Expanded(
                 child: Consumer<MessagingProvider>(
                   builder: (context, messagingProvider, child) {
-                    // ✅ NOUVEAU: Vérifier les nouveaux messages pour auto-scroll
+                    // : Vérifier les nouveaux messages pour auto-scroll
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       _checkForNewMessages(messagingProvider);
                     });
@@ -654,7 +653,6 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                 final reversedIndex = messagingProvider.activeMessages.length - 1 - messageIndex;
                 final message = messagingProvider.activeMessages[reversedIndex];
                 
-                // ✅ AMÉLIORATION: Filtrage plus strict des messages vides
                 if (message.content.trim().isEmpty || message.content == "null" || message.content == "") {
                   debugPrint('⚠️ ChatPage: Empty message detected in UI! ID: ${message.id}, Content: "${message.content}"');
                   return const SizedBox.shrink(); // Ne pas afficher les messages vides
@@ -680,7 +678,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     );
   }
 
-  /// Zone de saisie des messages avec design premium
+  /// Zone de saisie des messages 
   Widget _buildMessageInputSection(ThemeData theme) {
     return Container(
       decoration: BoxDecoration(
@@ -749,7 +747,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                         style: const TextStyle(
                           fontSize: 16,
                           height: 1.4,
-                          color: Color(0xFF1A1A1A), // Couleur de texte visible
+                          color: Color(0xFF1A1A1A), 
                         ),
                         onSubmitted: (value) => _sendMessage(),
                         onChanged: (value) {
@@ -873,11 +871,11 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     );
   }
 
-  /// ✅ MÉTHODE MISE À JOUR: Envoie un message avec auto-scroll et meilleure gestion d'erreurs
+  ///  Envoie un message avec auto-scroll 
   Future<void> _sendMessage() async {
     final content = _messageController.text.trim();
     
-    // ✅ PROTECTION RENFORCÉE: Ne pas envoyer de messages vides
+    // Ne pas envoyer de messages vides
     if (content.isEmpty || content == "" || content == "null") {
       debugPrint('📤 ChatPage: Cannot send empty message');
       return;
@@ -892,7 +890,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
       final messageCopy = content;
       _messageController.clear();
       
-      // ✅ Arrêter l'indicateur de frappe immédiatement
+      //  Arrêter l'indicateur de frappe immédiatement
       _stopTypingIndicator();
       
       // Envoyer le message
@@ -902,7 +900,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
       if (success) {
         debugPrint('✅ ChatPage: Message sent successfully');
         
-        // ✅ Scroll vers le bas après l'envoi réussi
+        // Scroll vers le bas après l'envoi réussi
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollToBottom();
         });
@@ -913,7 +911,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
       } else {
         debugPrint('❌ ChatPage: Failed to send message');
         
-        // ✅ Restaurer le texte en cas d'erreur
+        //  Restaurer le texte en cas d'erreur
         _messageController.text = messageCopy;
         
         // Afficher une erreur à l'utilisateur
@@ -963,7 +961,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     }
   }
 
-  /// ✅ NOUVELLE MÉTHODE: Arrête l'indicateur de frappe
+  /// Arrête l'indicateur de frappe
   void _stopTypingIndicator() {
     if (_isTypingIndicatorSent) {
       _isTypingIndicatorSent = false;
@@ -1090,10 +1088,8 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
       return const SizedBox.shrink();
     }
 
-    // Utiliser le vrai nom de l'autre utilisateur depuis la conversation
     String displayName = widget.conversation.otherUserDisplayName;
     
-    // Si on a les informations complètes, les utiliser
     if (widget.conversation.otherUserFirstName != null && 
         widget.conversation.otherUserFirstName!.isNotEmpty &&
         widget.conversation.otherUserLastName != null && 

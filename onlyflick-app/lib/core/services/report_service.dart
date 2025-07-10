@@ -49,7 +49,7 @@ class ReportService {
       debugPrint('📋 Fetching all reports');
       
       final response = await _apiService.get<List<Report>>(
-        '/reports', // Correspond à votre endpoint GET /reports
+        '/reports', 
         fromJson: (json) => (json as List)
             .map((item) => Report.fromJson(item as Map<String, dynamic>))
             .toList(),
@@ -76,7 +76,7 @@ class ReportService {
       debugPrint('⏳ Fetching pending reports');
       
       final response = await _apiService.get<List<Report>>(
-        '/reports/pending', // Correspond à votre endpoint GET /reports/pending
+        '/reports/pending',
         fromJson: (json) => (json as List)
             .map((item) => Report.fromJson(item as Map<String, dynamic>))
             .toList(),
@@ -106,7 +106,7 @@ class ReportService {
       debugPrint('🔄 Updating report $reportId status to ${status.name}');
       
       final response = await _apiService.patch<Map<String, dynamic>>(
-        '/reports/$reportId/status', // Correspond à votre endpoint PATCH /reports/{id}/status
+        '/reports/$reportId/status', 
         body: {'status': status.name},
         fromJson: (json) => json as Map<String, dynamic>,
       );

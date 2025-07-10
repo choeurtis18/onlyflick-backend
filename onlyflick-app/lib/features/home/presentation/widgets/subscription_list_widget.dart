@@ -9,12 +9,14 @@ class SubscriptionListWidget extends StatefulWidget {
   final int userId;
   final String listType; // "followers" ou "following"
   final bool isCurrentUser; // Si c'est le profil de l'utilisateur connecté
+  final bool showHeader; // Pour contrôler l'affichage du header
 
   const SubscriptionListWidget({
     Key? key,
     required this.userId,
     required this.listType,
     this.isCurrentUser = false,
+    this.showHeader = true, // Par défaut, on affiche le header
   }) : super(key: key);
 
   @override
@@ -119,18 +121,24 @@ class _SubscriptionListWidgetState extends State<SubscriptionListWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.listType == "followers" 
-            ? 'Abonnés ($totalCount)' 
-            : 'Abonnements ($totalCount)'
+    // Si showHeader est true, on affiche avec Scaffold et AppBar
+    if (widget.showHeader) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(
+            widget.listType == "followers" 
+              ? 'Abonnés ($totalCount)' 
+              : 'Abonnements ($totalCount)'
+          ),
+          backgroundColor: const Color(AppColors.primaryColor),
+          foregroundColor: Colors.white,
         ),
-        backgroundColor: const Color(AppColors.primaryColor),
-        foregroundColor: Colors.white,
-      ),
-      body: _buildBody(),
-    );
+        body: _buildBody(),
+      );
+    }
+    
+    // Sinon, on affiche juste le body sans header
+    return _buildBody();
   }
 
   Widget _buildBody() {

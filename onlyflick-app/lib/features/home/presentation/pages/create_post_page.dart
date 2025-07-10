@@ -113,7 +113,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                           const SizedBox(height: 16),
                           _buildDescriptionInput(creationProvider),
                           const SizedBox(height: 20),
-                          _buildTagsSelector(creationProvider), // ✅ Nouvelle section tags
+                          _buildTagsSelector(creationProvider),
                           const SizedBox(height: 20),
                           _buildVisibilitySelector(creationProvider, authProvider),
                         ],

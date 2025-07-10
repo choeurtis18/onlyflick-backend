@@ -21,7 +21,7 @@ class ProfileProvider with ChangeNotifier {
 
   // Données
   ProfileStats? _stats;
-  UserStats? _subscriptionStats; // ✅ AJOUT: Stats d'abonnements
+  UserStats? _subscriptionStats; // Stats d'abonnements
   List<UserPost> _userPosts = [];
   String _currentPostsType = 'all'; // 'all', 'public', 'subscriber'
   int _currentPage = 1;
@@ -30,20 +30,19 @@ class ProfileProvider with ChangeNotifier {
   // Erreurs
   String? _error;
 
-  // 🔥 CORRECTION : Flag pour éviter les doubles chargements
   bool _isInitialized = false;
 
   ProfileProvider(this._authProvider) {
     // Écouter les changements d'authentification
     _authProvider.addListener(_onAuthChanged);
     
-    // 🔥 SOLUTION : Chargement différé plus robuste
+    // Chargement différé plus robuste
     if (_authProvider.isAuthenticated) {
       _scheduleInitialLoad();
     }
   }
 
-  // ===== GETTERS =====
+  //  GETTERS 
   bool get isLoadingStats => _isLoadingStats;
   bool get isLoadingPosts => _isLoadingPosts;
   bool get isUploadingAvatar => _isUploadingAvatar;
@@ -53,7 +52,7 @@ class ProfileProvider with ChangeNotifier {
 
   ProfileStats get stats => _stats ?? ProfileStats.empty();
   
-  // ✅ AJOUT: Getters pour les stats d'abonnements intégrées
+  // Getters pour les stats d'abonnements intégrées
   UserStats get subscriptionStats => _subscriptionStats ?? UserStats(
     postsCount: stats.postsCount,
     followersCount: 0,
@@ -62,7 +61,7 @@ class ProfileProvider with ChangeNotifier {
     totalEarnings: stats.totalEarnings,
   );
   
-  // ✅ AJOUT: Getters individuels pour l'affichage
+  // Getters individuels pour l'affichage
   int get postsCount => _subscriptionStats?.postsCount ?? stats.postsCount;
   int get followersCount => _subscriptionStats?.followersCount ?? 0;
   int get followingCount => _subscriptionStats?.followingCount ?? 0;
@@ -75,7 +74,6 @@ class ProfileProvider with ChangeNotifier {
   String? get error => _error;
   bool get isInitialized => _isInitialized;
 
-  // ===== MÉTHODES PUBLIQUES =====
 
   void ensureInitialized() {
     if (!_isInitialized && _authProvider.isAuthenticated) {
@@ -99,10 +97,10 @@ class ProfileProvider with ChangeNotifier {
     // debugPrint('🔄 [ProfileProvider] Refreshing all profile data');
     _clearError();
     
-    // ✅ MODIFICATION: Chargement parallèle des stats et des abonnements
+    // Chargement parallèle des stats et des abonnements
     await Future.wait([
       _loadStats(),
-      _loadSubscriptionStats(), // ✅ AJOUT
+      _loadSubscriptionStats(), 
     ]);
     
     await _loadUserPosts(refresh: true);
@@ -116,7 +114,7 @@ class ProfileProvider with ChangeNotifier {
     await _loadStats();
   }
 
-  /// ✅ AJOUT: Charge spécifiquement les stats d'abonnements
+  /// Charge spécifiquement les stats d'abonnements
   Future<void> loadSubscriptionStats() async {
     await _loadSubscriptionStats();
   }
@@ -145,7 +143,7 @@ class ProfileProvider with ChangeNotifier {
     });
   }
 
-  /// ✅ MODIFICATION: Chargement initial avec stats d'abonnements
+  /// Chargement initial avec stats d'abonnements
   Future<void> _loadInitialData() async {
     if (!_authProvider.isAuthenticated || _isInitialized) return;
 
@@ -153,10 +151,10 @@ class ProfileProvider with ChangeNotifier {
     _isInitialized = true; // 🔥 Marquer comme initialisé
     
     try {
-      // ✅ MODIFICATION: Chargement parallèle des stats (plus rapide)
+      // Chargement parallèle des stats (plus rapide)
       await Future.wait([
         _loadStats(),
-        _loadSubscriptionStats(), // ✅ AJOUT
+        _loadSubscriptionStats(), 
       ]);
       
       await _loadUserPosts(refresh: true);
@@ -193,7 +191,7 @@ class ProfileProvider with ChangeNotifier {
     }
   }
 
-  /// ✅ AJOUT: Charge les statistiques d'abonnements depuis l'API
+  /// Charge les statistiques d'abonnements depuis l'API
   Future<void> _loadSubscriptionStats() async {
     if (!_authProvider.isAuthenticated) return;
     
@@ -211,8 +209,7 @@ class ProfileProvider with ChangeNotifier {
       
     } catch (e) {
       debugPrint('❌ [ProfileProvider] Subscription stats loading error: $e');
-      // Ne pas définir d'erreur pour les stats d'abonnements pour ne pas bloquer l'UI
-      // On garde les stats par défaut
+      
     }
   }
 
@@ -290,15 +287,15 @@ class ProfileProvider with ChangeNotifier {
     }
   }
 
-  /// ✅ MODIFICATION: Efface toutes les données y compris les stats d'abonnements
+  /// Efface toutes les données y compris les stats d'abonnements
   void _clearAllData() {
     _stats = null;
-    _subscriptionStats = null; // ✅ AJOUT
+    _subscriptionStats = null; 
     _userPosts.clear();
     _currentPage = 1;
     _hasMorePosts = true;
     _currentPostsType = 'all';
-    _isInitialized = false; // 🔥 Reset du flag
+    _isInitialized = false; 
     _clearError();
     _safeNotifyListeners();
   }
@@ -478,7 +475,7 @@ class ProfileProvider with ChangeNotifier {
     }
   }
 
-  /// ✅ AJOUT: Méthode pour forcer le rechargement des stats d'abonnements
+  /// Méthode pour forcer le rechargement des stats d'abonnements
   Future<void> refreshSubscriptionStats() async {
     await _loadSubscriptionStats();
   }

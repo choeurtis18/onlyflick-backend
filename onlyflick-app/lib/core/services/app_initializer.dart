@@ -19,22 +19,18 @@ class AppInitializer {
     AppLogger.info('🚀 Starting app initialization...');
 
     try {
-      // 1. Configuration du logger
+      // Configuration du logger
       await _initializeLogger();
 
-      // 2. Affichage des informations de configuration
+      // Affichage des informations de configuration
       _printConfigInfo();
 
-      // 3. Initialisation du service API
+      //  Initialisation du service API
       await _initializeApiService();
 
-      // 4. Vérification de la connectivité (optionnel)
+      // Vérification de la connectivité (optionnel)
       await _checkConnectivity();
 
-      // 5. Autres initialisations futures...
-      // await _initializeNotifications();
-      // await _initializeCrashlytics();
-      // await _initializeAnalytics();
 
       stopwatch.stop();
       _isInitialized = true;
@@ -114,7 +110,6 @@ class AppInitializer {
       }
     } catch (error) {
       AppLogger.warning('⚠️ Connectivity check failed: $error');
-      // Note: On ne fait pas échouer l'initialisation pour des problèmes de réseau
     }
   }
 

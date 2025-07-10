@@ -34,7 +34,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   void dispose() {
-    // ✅ CORRECTION: Retirer le listener avant disposal
+    // Retirer le listener avant disposal
     try {
       final authProvider = context.read<AuthProvider>();
       authProvider.removeListener(_onAuthStateChanged);
@@ -70,7 +70,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _onAuthStateChanged() {
-    // ✅ CORRECTION: Vérifier si le widget est toujours monté
+    // Vérifier si le widget est toujours monté
     if (!mounted) return;
     
     final authProvider = context.read<AuthProvider>();
@@ -204,7 +204,7 @@ class _RegisterPageState extends State<RegisterPage> {
       final authProvider = context.read<AuthProvider>();
       final success = await authProvider.register(firstName, lastName, username, email, password);
 
-      // ✅ CORRECTION: Vérifier mounted après appel async
+      // Vérifier mounted après appel async
       if (!mounted) return;
 
       if (success) {

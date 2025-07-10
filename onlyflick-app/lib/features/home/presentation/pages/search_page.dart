@@ -36,7 +36,7 @@ class _SearchPageState extends State<SearchPage>
   bool _isLoadingTags = true;
   bool _hasTagsError = false;
 
-  // ✅ Variables pour le rafraîchissement
+  //  Variables pour le rafraîchissement
   bool _needsRefresh = false;
   String _currentKey = 'initial'; // Clé unique pour forcer le rebuild
 
@@ -47,7 +47,7 @@ class _SearchPageState extends State<SearchPage>
     _setupScrollListener();
     _loadAvailableTags(); // Charger les tags depuis l'API
     
-    // ✅ Écouter les changements d'état de l'app
+    //  Écouter les changements d'état de l'app
     WidgetsBinding.instance.addObserver(this);
     
     // Animation pour l'arrière-plan
@@ -75,7 +75,7 @@ class _SearchPageState extends State<SearchPage>
     super.dispose();
   }
 
-  // ✅ Détection quand l'app revient au premier plan
+  //  Détection quand l'app revient au premier plan
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
@@ -87,27 +87,27 @@ class _SearchPageState extends State<SearchPage>
     }
   }
 
-  // ✅ Rafraîchissement complet des données
+  //  Rafraîchissement complet des données
   Future<void> _refreshAllData() async {
     debugPrint('🔄 Rafraîchissement complet des données...');
     
     try {
-      // 1. Recharger les tags
+      //  Recharger les tags
       await _loadAvailableTags();
       
-      // 2. Forcer le rafraîchissement des posts en changeant la clé
+      //  Forcer le rafraîchissement des posts en changeant la clé
       setState(() {
         _currentKey = 'refresh_${DateTime.now().millisecondsSinceEpoch}';
       });
       
-      debugPrint('✅ Rafraîchissement terminé avec nouvelle clé: $_currentKey');
+      debugPrint(' Rafraîchissement terminé avec nouvelle clé: $_currentKey');
       
     } catch (e) {
       debugPrint('❌ Erreur lors du rafraîchissement: $e');
     }
   }
 
-  // ✅ Pull-to-refresh handler
+  //  Pull-to-refresh handler
   Future<void> _onRefresh() async {
     debugPrint('🔄 Pull-to-refresh déclenché');
     await _refreshAllData();
@@ -121,7 +121,7 @@ class _SearchPageState extends State<SearchPage>
         _hasTagsError = false;
       });
 
-      // ✅ Utiliser la nouvelle méthode avec rafraîchissement forcé
+      //  Utiliser la nouvelle méthode avec rafraîchissement forcé
       final tags = await TagsService.refreshTags();
       
       if (mounted) {
@@ -131,7 +131,7 @@ class _SearchPageState extends State<SearchPage>
           _hasTagsError = false;
         });
         
-        debugPrint('✅ Tags chargés: $_tags');
+        debugPrint(' Tags chargés: $_tags');
       }
     } catch (e) {
       debugPrint('❌ Erreur chargement tags: $e');
@@ -140,7 +140,7 @@ class _SearchPageState extends State<SearchPage>
         setState(() {
           _isLoadingTags = false;
           _hasTagsError = true;
-          // ✅ Utiliser les bons tags par défaut en cas d'erreur
+          //  Utiliser les bons tags par défaut en cas d'erreur
           _tags = [
             'Tous',
             'Art',
@@ -195,7 +195,7 @@ class _SearchPageState extends State<SearchPage>
     }
   }
 
-  // ✅ Gestion du changement de tag avec rafraîchissement
+  //  Gestion du changement de tag avec rafraîchissement
   void _onTagSelected(String tag) async {
     if (_selectedTag != tag) {
       setState(() {
@@ -206,8 +206,7 @@ class _SearchPageState extends State<SearchPage>
 
       debugPrint('🏷️ Tag sélectionné: $tag (nouvelle clé: $_currentKey)');
 
-      // Le widget RecommendedPostsSection se rechargera automatiquement
-      // grâce à la nouvelle clé unique
+      
     }
   }
 
@@ -250,9 +249,9 @@ class _SearchPageState extends State<SearchPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: _buildAppBar(), // ✅ AppBar avec bouton refresh
+      appBar: _buildAppBar(), //  AppBar avec bouton refresh
       body: RefreshIndicator(
-        onRefresh: _onRefresh, // ✅ Pull-to-refresh
+        onRefresh: _onRefresh, //  Pull-to-refresh
         child: Stack(
           children: [
             // Contenu principal avec animation d'opacité
@@ -270,19 +269,19 @@ class _SearchPageState extends State<SearchPage>
                         SliverToBoxAdapter(
                           child: Column(
                             children: [
-                              // ✅ BARRE DE RECHERCHE
+                              //  BARRE DE RECHERCHE
                               _buildSearchSection(),
                               
-                              // ✅ ESPACEMENT entre recherche et tags
+                              //  ESPACEMENT entre recherche et tags
                               const SizedBox(height: 24),
                               
-                              // ✅ TAGS avec espacement amélioré
+                              //  TAGS avec espacement amélioré
                               _buildTagsSection(),
                               
-                              // ✅ ESPACEMENT entre tags et contenu
+                              //  ESPACEMENT entre tags et contenu
                               const SizedBox(height: 32),
                               
-                              // ✅ CONTENU PRINCIPAL avec clé unique
+                              //  CONTENU PRINCIPAL avec clé unique
                               _buildContent(),
                             ],
                           ),
@@ -320,7 +319,7 @@ class _SearchPageState extends State<SearchPage>
     );
   }
 
-  // ✅ AppBar avec bouton de rafraîchissement
+  //  AppBar avec bouton de rafraîchissement
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.white,
@@ -516,12 +515,12 @@ class _SearchPageState extends State<SearchPage>
     );
   }
 
-  // ✅ Contenu principal avec clé unique pour forcer le rebuild
+  //  Contenu principal avec clé unique pour forcer le rebuild
   Widget _buildContent() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: RecommendedPostsSection(
-        key: ValueKey(_currentKey), // ✅ Clé unique qui change lors du refresh
+        key: ValueKey(_currentKey), //  Clé unique qui change lors du refresh
         selectedTag: _selectedTag,
       ),
     );
@@ -546,7 +545,7 @@ class _SearchPageState extends State<SearchPage>
   }
 }
 
-// ✅ Widget pour les suggestions vides (amélioré)
+//  Widget pour les suggestions vides (amélioré)
 class NoResultsSuggestionWidget extends StatelessWidget {
   final String query;
   final VoidCallback onDismiss;

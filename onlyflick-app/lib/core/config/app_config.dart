@@ -35,7 +35,6 @@ class AppConfig {
   static String get baseUrl {
     switch (_currentEnvironment) {
       case AppEnvironment.production:
-        // 🔥 NOUVELLE URL DE PRODUCTION
         return 'https://massive-period-412821.lm.r.appspot.com';
       case AppEnvironment.staging:
         return 'https://staging-api.onlyflick.io';

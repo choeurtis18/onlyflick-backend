@@ -124,7 +124,7 @@ class ApiHealthService {
       return EndpointTestResult(
         endpoint: endpoint,
         url: url,
-        success: response.statusCode < 500, // Accepter 4xx mais pas 5xx
+        success: response.statusCode < 500, 
         statusCode: response.statusCode,
         responseTime: stopwatch.elapsedMilliseconds,
         message: _getStatusMessage(response.statusCode),

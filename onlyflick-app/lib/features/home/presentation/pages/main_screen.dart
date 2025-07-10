@@ -77,8 +77,8 @@ class _MainScreenState extends State<MainScreen> {
                 children: screens,
               ),
 
-              // ✅ Bouton admin flottant en haut à droite - visible seulement pour les administrateurs
-              if (authProvider.isAdmin) // ← Condition ajoutée ici
+              //  Bouton admin flottant en haut à droite - visible seulement pour les administrateurs
+              if (authProvider.isAdmin) 
                 Positioned(
                   top: 40,
                   right: 16,

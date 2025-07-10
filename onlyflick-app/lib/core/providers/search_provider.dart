@@ -18,22 +18,22 @@ enum SearchState {
 class SearchProvider with ChangeNotifier {
   final SearchService _searchService = SearchService();
 
-  // ===== ÉTAT DE LA RECHERCHE UTILISATEURS =====
+  //  ÉTAT DE LA RECHERCHE UTILISATEURS 
   SearchState _searchState = SearchState.initial;
   SearchResult _searchResult = const SearchResult(posts: [], users: [], total: 0, hasMore: false);
   String? _searchError;
   String _currentQuery = '';
   
-  // ===== ÉTAT DE LA RECHERCHE POSTS =====
+  //  ÉTAT DE LA RECHERCHE POSTS 
   bool _isSearchingPosts = false;
   List<PostWithDetails> _searchedPosts = [];
   String? _postsError;
   
-  // ===== PAGINATION =====
+  //  PAGINATION 
   static const int _pageSize = 20;
   int _searchOffset = 0;
 
-  // ===== GETTERS UTILISATEURS =====
+  //  GETTERS UTILISATEURS 
   SearchState get searchState => _searchState;
   SearchResult get searchResult => _searchResult;
   String? get searchError => _searchError;
@@ -47,17 +47,17 @@ class SearchProvider with ChangeNotifier {
                          _searchState != SearchState.loadingMore && 
                          _currentQuery.isNotEmpty;
 
-  // ===== GETTERS POSTS =====
+  //  GETTERS POSTS 
   bool get isSearchingPosts => _isSearchingPosts;
   List<PostWithDetails> get searchedPosts => _searchedPosts;
   String? get postsError => _postsError;
   bool get hasPostsResults => _searchedPosts.isNotEmpty;
 
-  // ===== GETTERS UTILITAIRES =====
+  //  GETTERS UTILITAIRES 
   bool get isSearching => _searchState == SearchState.loading;
   bool get hasResults => _searchResult.users.isNotEmpty;
 
-  // ===== INITIALISATION =====
+  //  INITIALISATION 
 
   /// Initialise le provider avec gestion d'erreurs
   Future<void> initialize() async {
@@ -84,7 +84,7 @@ class SearchProvider with ChangeNotifier {
     }
   }
 
-  // ===== RECHERCHE D'UTILISATEURS =====
+  // RECHERCHE D'UTILISATEURS 
 
   /// Recherche des utilisateurs par username
   Future<void> searchUsers(String query) async {
@@ -220,7 +220,7 @@ class SearchProvider with ChangeNotifier {
     }
   }
 
-  // ===== RECHERCHE DE POSTS =====
+  //  RECHERCHE DE POSTS 
 
   /// Recherche des posts par tags avec gestion d'erreurs robuste
   Future<void> searchPosts({List<String>? tags}) async {
@@ -322,7 +322,7 @@ _searchedPosts = (data['posts'] as List)
     notifyListeners();
   }
 
-  // ===== TRACKING DES INTERACTIONS =====
+  //  TRACKING DES INTERACTIONS 
 
   /// Track la visualisation d'un profil utilisateur
   Future<void> trackProfileView(UserSearchResult user) async {
@@ -344,7 +344,7 @@ _searchedPosts = (data['posts'] as List)
     }
   }
 
-  // ===== GESTION DES ERREURS =====
+  //  GESTION DES ERREURS 
 
   /// Message d'erreur formaté pour l'utilisateur (utilisateurs)
   String? get userFriendlyError {
@@ -382,7 +382,7 @@ _searchedPosts = (data['posts'] as List)
     return _postsError;
   }
 
-  // ===== MÉTHODES DE DEBUG =====
+  //  MÉTHODES DE DEBUG 
 
   /// Affiche les statistiques de recherche
   void logSearchStats() {
@@ -397,10 +397,10 @@ _searchedPosts = (data['posts'] as List)
     debugPrint('Users Error: $_searchError');
     debugPrint('Posts Error: $_postsError');
     debugPrint('Is searching posts: $_isSearchingPosts');
-    debugPrint('==================');
+    debugPrint('===');
   }
 
-  // ===== RESET ET DISPOSE =====
+  //  RESET ET DISPOSE 
 
   /// Reset complet du provider
   void reset() {

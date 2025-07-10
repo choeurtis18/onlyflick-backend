@@ -161,8 +161,7 @@ class MessagingProvider extends ChangeNotifier {
       return;
     }
     
-    // ✅ AMÉLIORATION: Ne plus ignorer automatiquement ses propres messages
-    // Car cela peut causer des problèmes de synchronisation
+    
     final currentUserId = ApiService().currentUserId;
     if (currentUserId != null && message.senderId == currentUserId) {
       debugPrint('🔄 MessagingProvider: Received own message via WebSocket (ID: ${message.id})');
@@ -178,7 +177,6 @@ class MessagingProvider extends ChangeNotifier {
       final messageExists = currentMessages.any((m) => m.id == message.id);
       
       if (!messageExists) {
-        // ✅ AMÉLIORATION: Insérer le message à la bonne position (par date)
         final updatedMessages = [...currentMessages, message];
         // Trier par date de création pour maintenir l'ordre chronologique
         updatedMessages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
@@ -197,7 +195,6 @@ class MessagingProvider extends ChangeNotifier {
     } else if (message.conversationId != _activeConversationId) {
       debugPrint('📨 MessagingProvider: Message for inactive conversation ${message.conversationId}');
       
-      // ✅ AMÉLIORATION: Même pour les conversations inactives, maintenir le cache
       final currentMessages = _messagesCache[message.conversationId] ?? [];
       final messageExists = currentMessages.any((m) => m.id == message.id);
       
@@ -347,7 +344,7 @@ class MessagingProvider extends ChangeNotifier {
       final result = await _messagingService.getMessagesInConversation(conversationId);
       
       if (result.isSuccess && result.data != null) {
-        // ✅ CORRECTION: Filtrer les messages vides lors du chargement initial
+        // Filtrer les messages vides lors du chargement initial
         final filteredMessages = result.data!.where((message) {
           final hasContent = message.content.trim().isNotEmpty;
           if (!hasContent) {

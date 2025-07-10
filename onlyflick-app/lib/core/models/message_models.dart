@@ -33,9 +33,7 @@ class Message {
       id: json['id'] as int,
       conversationId: json['conversation_id'] as int,
       senderId: json['sender_id'] as int,
-      // FIX: Gestion des valeurs null pour content
       content: (json['content'] as String?) ?? '',
-      // FIX: Gestion des valeurs null pour les dates
       createdAt: DateTime.parse((json['created_at'] as String?) ?? DateTime.now().toIso8601String()),
       updatedAt: DateTime.parse((json['updated_at'] as String?) ?? DateTime.now().toIso8601String()),
       senderUsername: json['sender_username'] as String?,

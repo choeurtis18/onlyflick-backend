@@ -1,7 +1,6 @@
-// onlyflick-app/lib/features/messaging/widgets/typing_indicator.dart
 import 'package:flutter/material.dart';
 
-/// Widget qui affiche l'indicateur de frappe animé avec design premium OnlyFlick
+/// Widget qui affiche l'indicateur de frappe 
 class TypingIndicator extends StatefulWidget {
   final String? userDisplayName;
   final bool showAvatar;
@@ -86,11 +85,9 @@ class _TypingIndicatorState extends State<TypingIndicator>
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Avatar avec effet premium
               if (widget.showAvatar) _buildPremiumAvatar(theme),
               if (widget.showAvatar) const SizedBox(width: 12),
               
-              // Bulle de frappe premium
               Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,7 +111,6 @@ class _TypingIndicatorState extends State<TypingIndicator>
     );
   }
 
-  /// Avatar premium avec effet de glow
   Widget _buildPremiumAvatar(ThemeData theme) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -163,7 +159,6 @@ class _TypingIndicatorState extends State<TypingIndicator>
     );
   }
 
-  /// Nom de l'utilisateur avec style premium
   Widget _buildUserName() {
     return Padding(
       padding: const EdgeInsets.only(left: 16),
@@ -179,7 +174,6 @@ class _TypingIndicatorState extends State<TypingIndicator>
     );
   }
 
-  /// Bulle de frappe avec design premium
   Widget _buildTypingBubble(ThemeData theme) {
     return AnimatedBuilder(
       animation: _breathingAnimation,
@@ -235,7 +229,6 @@ class _TypingIndicatorState extends State<TypingIndicator>
     );
   }
 
-  /// Animation premium des points de frappe
   Widget _buildPremiumTypingDots(ThemeData theme) {
     return AnimatedBuilder(
       animation: _dotsController,
@@ -295,7 +288,6 @@ class _TypingIndicatorState extends State<TypingIndicator>
   }
 }
 
-/// Widget de conteneur premium pour les indicateurs de frappe multiples
 class TypingIndicatorContainer extends StatefulWidget {
   final Map<int, String> typingUsers; // userId -> displayName
   final Map<int, String?> userAvatars; // userId -> avatarUrl

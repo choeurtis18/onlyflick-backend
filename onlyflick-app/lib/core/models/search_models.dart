@@ -96,7 +96,7 @@ class SearchRequest {
   final SortType sortBy;
   final int limit;
   final int offset;
-  final String searchType; // 'posts', 'users', 'discovery'
+  final String searchType; 
 
   const SearchRequest({
     this.query,
@@ -652,7 +652,7 @@ class SearchSuggestion {
   String toString() => 'SearchSuggestion($type: $display)';
 }
 
-// ===== FONCTIONS UTILITAIRES =====
+//  FONCTIONS UTILITAIRES 
 
 /// Calcule le temps écoulé depuis une date
 String _getTimeAgo(DateTime dateTime) {
@@ -672,7 +672,7 @@ String _getTimeAgo(DateTime dateTime) {
   }
 }
 
-// ===== CLASSES DE RÉSULTATS =====
+// CLASSES DE RÉSULTATS 
 
 /// Résultat pour les opérations de recherche
 class SearchOperationResult {

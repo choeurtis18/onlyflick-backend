@@ -5,16 +5,12 @@ import '../services/api_service.dart';
 import '../models/post_models.dart';
 
 /// Service pour la gestion complète des posts
-/// Fournit toutes les opérations CRUD et interactions pour les posts
 class PostsService {
   final ApiService _apiService = ApiService();
 
-  // ============================================================================
   // RÉCUPÉRATION DES POSTS
-  // ============================================================================
 
-  /// 🆕 Récupère un post spécifique par son ID
-  /// Utilisé pour la page de détail PostDetailPage
+  /// Récupère un post spécifique par son ID
   Future<PostResult> getPostById(int postId) async {
     try {
       debugPrint('🔍 [PostsService] Fetching post by ID: $postId');
@@ -55,15 +51,12 @@ class PostsService {
       if (response.isSuccess && response.data != null) {
         List<Post> posts = [];
         
-        // ✅ CORRECTION: Vérifier le type de données reçues
         if (response.data is List) {
-          // Si c'est directement une liste de posts
           final postsData = response.data as List;
           posts = postsData
               .map((json) => Post.fromJson(json as Map<String, dynamic>))
               .toList();
         } else if (response.data is Map<String, dynamic>) {
-          // Si c'est wrappé dans un objet avec pagination
           final responseMap = response.data as Map<String, dynamic>;
           if (responseMap.containsKey('posts')) {
             final postsData = responseMap['posts'] as List;
@@ -111,7 +104,7 @@ class PostsService {
       if (response.isSuccess && response.data != null) {
         List<Post> posts = [];
         
-        // ✅ CORRECTION: Vérifier le type de données reçues
+        // Vérifier le type de données reçues
         if (response.data is List) {
           // Si c'est directement une liste de posts
           final postsData = response.data as List;
@@ -171,7 +164,7 @@ class PostsService {
       if (response.isSuccess && response.data != null) {
         List<Post> posts = [];
         
-        // ✅ CORRECTION: Vérifier le type de données reçues
+        // Vérifier le type de données reçues
         if (response.data is List) {
           final postsData = response.data as List;
           posts = postsData
@@ -225,7 +218,7 @@ class PostsService {
       if (response.isSuccess && response.data != null) {
         List<Post> posts = [];
         
-        // ✅ CORRECTION: Vérifier le type de données reçues
+        // Vérifier le type de données reçues
         if (response.data is List) {
           final postsData = response.data as List;
           posts = postsData
@@ -253,9 +246,7 @@ class PostsService {
     }
   }
 
-  // ============================================================================
   // INTERACTIONS AVEC LES POSTS (LIKE/UNLIKE)
-  // ============================================================================
 
   /// Toggle like/unlike sur un post
   Future<LikeToggleResult> toggleLike(int postId) async {
@@ -307,9 +298,7 @@ class PostsService {
     }
   }
 
-  // ============================================================================
   // GESTION DES COMMENTAIRES
-  // ============================================================================
 
   /// Récupère les commentaires d'un post avec pagination
   Future<CommentsResult> getPostComments(
@@ -333,7 +322,7 @@ class PostsService {
       if (response.isSuccess && response.data != null) {
         List<Comment> comments = [];
         
-        // ✅ CORRECTION: Vérifier le type de données reçues
+        // Vérifier le type de données reçues
         if (response.data is List) {
           // Si c'est directement une liste de commentaires
           final commentsData = response.data as List;
@@ -411,9 +400,7 @@ class PostsService {
     }
   }
 
-  // ============================================================================
   // CRÉATION ET MODIFICATION DES POSTS
-  // ============================================================================
 
   /// Crée un nouveau post
   Future<PostResult> createPost({
@@ -535,9 +522,7 @@ class PostsService {
     }
   }
 
-  // ============================================================================
   // SIGNALEMENT ET MODÉRATION
-  // ============================================================================
 
   /// Signale un post
   Future<ServiceResult> reportPost(int postId, String reason) async {
@@ -565,9 +550,7 @@ class PostsService {
     }
   }
 
-  // ============================================================================
   // RECHERCHE ET FILTRAGE
-  // ============================================================================
 
   /// Recherche des posts par terme de recherche
   Future<PostsResult> searchPosts({
@@ -602,7 +585,7 @@ class PostsService {
       if (response.isSuccess && response.data != null) {
         List<Post> posts = [];
         
-        // ✅ CORRECTION: Vérifier le type de données reçues
+        // Vérifier le type de données reçues
         if (response.data is List) {
           final postsData = response.data as List;
           posts = postsData
@@ -630,9 +613,7 @@ class PostsService {
     }
   }
 
-  // ============================================================================
   // MÉTHODES UTILITAIRES
-  // ============================================================================
 
   /// Vérifie si un post existe
   Future<bool> postExists(int postId) async {
@@ -672,9 +653,8 @@ class PostsService {
   }
 }
 
-// ============================================================================
+
 // CLASSES DE RÉSULTATS
-// ============================================================================
 
 /// Résultat pour un post unique
 class PostResult {

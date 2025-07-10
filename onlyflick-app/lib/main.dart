@@ -15,18 +15,14 @@ import 'package:matchmaker/core/providers/messaging_provider.dart';
 import 'package:matchmaker/core/providers/search_provider.dart';
 
 import 'package:matchmaker/core/config/stripe_config.dart';
-// 🔥 NOUVEAU: Import du service de test de connexion
 import 'package:matchmaker/core/services/api_health_service.dart';
 import 'package:matchmaker/core/config/app_config.dart';
 
 void main() async {
-  // 🔧 INITIALISATION FLUTTER OBLIGATOIRE
   WidgetsFlutterBinding.ensureInitialized();
   
-  // 🔥 NOUVEAU: Affichage des informations de configuration
   AppConfig.printDebugInfo();
   
-  // 💳 INITIALISATION STRIPE
   try {
     print('🔧 [Main] Initialisation de Stripe...');
     await StripeConfig.initialize();
@@ -59,28 +55,28 @@ class OnlyFlickBootstrap extends StatelessWidget {
         // ===== CONFIGURATION DES PROVIDERS MULTIPLES =====
         return MultiProvider(
           providers: [
-            // 🔐 Provider d'authentification (en premier car les autres en dépendent)
+            // Provider d'authentification (en premier car les autres en dépendent)
             ChangeNotifierProvider(
               create: (_) => AuthProvider()..checkAuth(),
             ),
             
-            // 👤 Provider de profil (dépend d'AuthProvider)
+            // Provider de profil (dépend d'AuthProvider)
             ChangeNotifierProxyProvider<AuthProvider, ProfileProvider>(
               create: (context) => ProfileProvider(context.read<AuthProvider>()),
               update: (context, auth, previous) => previous ?? ProfileProvider(auth),
             ),
             
-            // 📝 Provider des posts
+            //  Provider des posts
             ChangeNotifierProvider(
               create: (_) => PostsProvider(),
             ),
             
-            // 🔍 Provider de recherche et découverte
+            //  Provider de recherche et découverte
             ChangeNotifierProvider(
               create: (_) => SearchProvider(),
             ),
             
-            // 💬 Provider de messagerie (pour le chat temps réel)
+            // Provider de messagerie (pour le chat temps réel)
             ChangeNotifierProvider(
               create: (_) => MessagingProvider(),
             ),
@@ -93,11 +89,10 @@ class OnlyFlickBootstrap extends StatelessWidget {
     );
   }
 
-  /// 🔥 NOUVEAU: Initialise l'application avec test de connexion API
+  /// Initialise l'application avec test de connexion API
   Future<void> _initializeApp() async {
     print('🚀 [Bootstrap] Initializing OnlyFlick...');
     
-    // 🔥 ÉTAPE 1: Test de connexion à l'API
     print('🔍 [Bootstrap] Testing API connection...');
     final healthService = ApiHealthService();
     final healthResult = await healthService.testConnection();
@@ -114,7 +109,6 @@ class OnlyFlickBootstrap extends StatelessWidget {
     } else {
       print('✅ [Bootstrap] API connection successful!');
       
-      // 🔥 ÉTAPE 2: Test des endpoints essentiels
       print('🔍 [Bootstrap] Testing essential endpoints...');
       final endpointsResults = await healthService.testEssentialEndpoints();
       
@@ -124,12 +118,10 @@ class OnlyFlickBootstrap extends StatelessWidget {
       }
     }
     
-    // 🔥 ÉTAPE 3: Initialiser le service API
     await ApiService().initialize();
     
-    // 💳 Vérification finale de Stripe
     if (StripeConfig.isConfigured()) {
-      print('✅ [Bootstrap] Stripe configuré et prêt');
+      print(' [Bootstrap] Stripe configuré et prêt');
     } else {
       print('⚠️ [Bootstrap] Stripe non configuré - paiements désactivés');
     }
@@ -137,30 +129,26 @@ class OnlyFlickBootstrap extends StatelessWidget {
     // Simulation d'initialisation pour l'écran de chargement
     await Future.delayed(const Duration(milliseconds: 1500));
     
-    print('✅ [Bootstrap] OnlyFlick initialized successfully');
+    print('[Bootstrap] OnlyFlick initialized successfully');
   }
 }
 
-/// Application principale OnlyFlick avec ROUTER CORRIGÉ
 class OnlyFlickApp extends StatelessWidget {
   const OnlyFlickApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // 🔧 ROUTER RÉACTIF AUX CHANGEMENTS D'AUTHPROVIDER
+    //  ROUTER RÉACTIF AUX CHANGEMENTS D'AUTHPROVIDER
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        // 🚨 CRÉER LE ROUTER EN ÉCOUTANT LES CHANGEMENTS D'AUTHPROVIDER
         final routerInstance = createRouter(authProvider);
         
-        // 🔄 METTRE À JOUR LA VARIABLE GLOBALE POUR COMPATIBILITÉ
         router = routerInstance;
         
         return MaterialApp.router(
           title: 'OnlyFlick',
           theme: ThemeData.dark(useMaterial3: true),
           
-          // 🔧 ROUTER CONFIGURÉ POUR ÉCOUTER LES CHANGEMENTS D'AUTH
           routerConfig: routerInstance,
           
           debugShowCheckedModeBanner: false,
@@ -170,7 +158,6 @@ class OnlyFlickApp extends StatelessWidget {
   }
 }
 
-/// 🔥 NOUVEAU: Écran de chargement avec informations de connexion
 class _LoadingScreen extends StatelessWidget {
   const _LoadingScreen();
 
@@ -234,37 +221,7 @@ class _LoadingScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               
-              // 🔥 NOUVEAU: Informations de connexion
-              Column(
-                children: [
-                  Text(
-                    'Connexion à ${AppConfig.isProduction ? 'la production' : 'l\'environnement de développement'}...',
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (AppConfig.isProduction)
-                    const Text(
-                      '🌐 Production: massive-period-412821.lm.r.appspot.com',
-                      style: TextStyle(
-                        color: Colors.green,
-                        fontSize: 10,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  if (!AppConfig.isProduction)
-                    Text(
-                      '🔧 Dev: ${AppConfig.baseUrl}',
-                      style: const TextStyle(
-                        color: Colors.orange,
-                        fontSize: 10,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                ],
-              ),
+             
             ],
           ),
         ),
@@ -273,7 +230,6 @@ class _LoadingScreen extends StatelessWidget {
   }
 }
 
-/// 🔥 AMÉLIORÉ: Écran d'erreur avec plus d'informations
 class _ErrorScreen extends StatelessWidget {
   final String error;
   
@@ -321,7 +277,6 @@ class _ErrorScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 
-                // 🔥 NOUVEAU: Description selon l'environnement
                 Text(
                   AppConfig.isProduction
                     ? 'Le serveur de production OnlyFlick semble indisponible. Veuillez réessayer dans quelques minutes.'
@@ -335,7 +290,6 @@ class _ErrorScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 
-                // 🔥 NOUVEAU: URL de connexion
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -404,47 +358,8 @@ class _ErrorScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 
-                // 🔥 AMÉLIORÉ: Instructions selon l'environnement
-                if (!AppConfig.isProduction) ...[
-                  const Text(
-                    'Assurez-vous que votre serveur Go est démarré:',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'go run cmd/server/main.go',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ] else ...[
-                  const Text(
-                    'Environnement de production - Vérifiez votre connexion internet',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                
-                Text(
-                  '🌍 Environnement: ${AppConfig.currentEnvironment.displayName}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.blue,
-                    fontSize: 10,
-                  ),
-                ),
+               
+               
               ],
             ),
           ),

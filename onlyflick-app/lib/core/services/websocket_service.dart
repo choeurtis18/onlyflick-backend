@@ -145,7 +145,6 @@ class WebSocketService {
   }
 
   /// Rejoint une conversation pour recevoir ses messages en temps réel
-  /// Note: Cette méthode est maintenant automatique lors de connectToConversation
   void joinConversation(int conversationId) {
     if (!_isConnected) {
       debugPrint('❌ WebSocket: Cannot join conversation, not connected');
@@ -202,7 +201,6 @@ class WebSocketService {
         final type = json['type'] as String?;
         debugPrint('📡 WebSocket: Message type: $type');
         
-        // ✅ AMÉLIORATION: Vérifier d'abord si c'est un message direct (sans type mais avec les champs requis)
         if (type == null && json.containsKey('id') && json.containsKey('conversation_id') && json.containsKey('sender_id')) {
           debugPrint('💬 WebSocket: Detected direct message format (no type field)');
           _handleDirectMessage(json);
@@ -235,7 +233,6 @@ class WebSocketService {
               debugPrint('❓ WebSocket: Message without type field');
               debugPrint('❓ WebSocket: Full message: $json');
               
-              // ✅ AMÉLIORATION: Plus de vérifications pour les messages directs
               if (json.containsKey('id') && json.containsKey('content')) {
                 debugPrint('💬 WebSocket: Treating as direct message (legacy format)');
                 _handleDirectMessage(json);
@@ -299,7 +296,6 @@ class WebSocketService {
       debugPrint('💬 WebSocket: Message sender: ${message.senderId}');
       debugPrint('💬 WebSocket: Message conversation: ${message.conversationId}');
       
-      // ✅ Seuls les messages avec du contenu arrivent ici
       _messageController.add(message);
       
     } catch (e) {

@@ -34,7 +34,7 @@ class UserService {
     }
   }
 
-  /// ===== NOUVEAU : Récupère les posts d'un utilisateur =====
+  ///  Récupère les posts d'un utilisateur 
   Future<UserServiceResult<UserPostsResponse>> getUserPosts(
     int userId, {
     int page = 1,
@@ -54,7 +54,6 @@ class UserService {
       );
 
       if (response.isSuccess && response.data != null) {
-        // L'API retourne un objet avec 'data' qui contient les posts
         final responseData = response.data as Map<String, dynamic>;
         final postsData = responseData['data'] as Map<String, dynamic>;
         
@@ -141,7 +140,6 @@ class UserService {
     }
   }
 
-  /// S'abonner à un créateur (sans paiement immédiat)
   Future<UserServiceResult<String>> subscribeToCreator(int creatorId) async {
     try {
       debugPrint('🔔 Subscribing to creator $creatorId');
@@ -251,7 +249,7 @@ class UserService {
   }
 }
 
-/// ===== RÉSULTATS D'OPÉRATIONS =====
+///  RÉSULTATS D'OPÉRATIONS 
 
 /// Résultat générique pour les opérations du UserService
 class UserServiceResult<T> {

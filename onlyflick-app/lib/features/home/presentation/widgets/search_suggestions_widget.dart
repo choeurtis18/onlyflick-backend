@@ -112,7 +112,6 @@ class _SearchSuggestionsWidgetState extends State<SearchSuggestionsWidget>
   Widget _buildSuggestionsList() {
     final maxHeight = widget.maxHeight;
     final itemHeight = 80.0; // Plus haut pour plus de présence
-    // Hauteur minimum même pour un seul utilisateur
     final minHeight = 200.0;
     final calculatedHeight = (widget.suggestions.length * itemHeight) + 40; // +40 pour padding
     final actualHeight = calculatedHeight.clamp(minHeight, maxHeight);

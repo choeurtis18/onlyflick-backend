@@ -60,7 +60,6 @@ class TagsService {
 
       debugPrint('🏷️ Récupération des tags avec statistiques depuis l\'API...');
       
-      // ✅ Essayer d'abord l'endpoint tags/stats
       try {
         final response = await _apiService.get<Map<String, dynamic>>(
           '/search/tags/stats',
@@ -96,7 +95,6 @@ class TagsService {
         debugPrint('⚠️ Endpoint /search/tags/stats non disponible: $e');
       }
 
-      // ✅ Fallback: analyser les posts existants pour extraire les tags
       debugPrint('🔄 Fallback: analyse des posts pour extraire les tags...');
       return await _getTagsFromPosts();
       
@@ -108,7 +106,6 @@ class TagsService {
     }
   }
 
-  /// ✅ Méthode pour extraire les tags depuis les posts existants
   static Future<List<TagData>> _getTagsFromPosts() async {
     try {
       final response = await _apiService.get<Map<String, dynamic>>(
@@ -217,7 +214,7 @@ class TagsService {
     }
   }
 
-  /// ✅ Méthode pour récupérer les posts filtrés par tag
+  ///  Méthode pour récupérer les posts filtrés par tag
   static Future<Map<String, dynamic>> getPostsByTag(String tag, {
     int limit = 10,
     int offset = 0,
@@ -289,7 +286,7 @@ class TagsService {
     }
   }
 
-  /// ✅ Convertit un nom d'affichage en clé backend
+  ///  Convertit un nom d'affichage en clé backend
   static String getTagKey(String displayName) {
     const Map<String, String> tagDisplayToKey = {
       'Tous': 'tous',
@@ -312,7 +309,7 @@ class TagsService {
     return tagDisplayToKey[displayName] ?? displayName.toLowerCase();
   }
 
-  /// ✅ Convertit une clé backend en nom d'affichage
+  /// Convertit une clé backend en nom d'affichage
   static String getTagDisplayName(String key) {
     const Map<String, String> tagKeyToDisplay = {
       'tous': 'Tous',
@@ -334,7 +331,7 @@ class TagsService {
     return tagKeyToDisplay[key.toLowerCase()] ?? key;
   }
 
-  /// ✅ Retourne l'emoji d'un tag backend
+  ///  Retourne l'emoji d'un tag backend
   static String _getTagEmoji(String backendTag) {
     const Map<String, String> tagEmojis = {
       'wellness': '🧘',
@@ -355,7 +352,7 @@ class TagsService {
     return tagEmojis[backendTag.toLowerCase()] ?? '🏷️';
   }
 
-  /// ✅ Retourne la liste des tags backend valides
+  ///  Retourne la liste des tags backend valides
   static List<String> _getValidBackendTags() {
     return [
       'wellness',
@@ -381,7 +378,7 @@ class TagsService {
     debugPrint('🗑️ Cache des tags invalidé');
   }
 
-  /// ✅ Force le rafraîchissement des tags
+  ///  Force le rafraîchissement des tags
   static Future<List<String>> refreshTags() async {
     debugPrint('🔄 Rafraîchissement forcé des tags...');
     invalidateCache();
@@ -401,7 +398,7 @@ class TagsService {
     }
   }
 
-  /// ✅ Tags de fallback en cas d'erreur API (comptages réalistes)
+  ///  Tags de fallback en cas d'erreur API (comptages réalistes)
   static Future<List<TagData>> _getFallbackTags() async {
     debugPrint('🔄 Utilisation des tags de fallback avec comptages estimés');
     
