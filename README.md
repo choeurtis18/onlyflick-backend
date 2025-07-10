@@ -156,25 +156,26 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 ### Déploiement Docker à la racine du projet
 
 ```bash
-make reset
+docker build -t barrydevops/onlyflick-backend:latest .
 ```
 
 ### Grafana
 
 ```bash
-kubectl port-forward svc/grafana 3000:3000 -n monitoringkubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090 -n monitoring
-
+kubectl -n monitoring port-forward svc/prometheus-grafana 3000:80
 ```
 
-Récupéer les identifiants : 
+### Prometheus
+
+```bash
+kubectl -n monitoring port-forward svc/prometheus-operated 9090:9090
+```
+
+Récupéer les identifiants :
 
 ```bash
 echo "User: admin"
 echo "Password: $(kubectl get secret grafana-admin --namespace monitoring -o jsonpath="{.data.GF_SECURITY_ADMIN_PASSWORD}" | base64 -d)"
-```
-
-```bash
-kubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090 -n monitoring
 ```
 
 ### FÉLICITATIONS
@@ -185,4 +186,4 @@ Votre plateforme sociale **OnlyFlick/MatchMaker** est maintenant **100% déploy�
 
 ---
 
-*Dernière mise à jour : 11 juin 2025 - Déploiement réussi avec succès*
+**Dernière mise à jour : 10 juillet 2025 - Déploiement réussi avec succès**
