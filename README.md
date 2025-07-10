@@ -9,7 +9,7 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 - **Frontend Flutter** : Interface MatchMaker déployée et accessible
 - **Backend Go** : API REST + WebSocket fonctionnels  
 - **Infrastructure** : Kubernetes + Monitoring Grafana/Prometheus
-- **Tests** : 28 tests unitaires + E2E validés (100% succès)
+- **Tests** : Tests unitaires + Performances + E2E validés
 - **Sécurité** : JWT + AES + CORS configurés
 
 ### URLs Actives
@@ -30,6 +30,66 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 - **Tests** : Suite complète (unitaires, intégration, E2E, performance)
 - **Upload** : ImageKit pour les médias
 
+## 🚀 Prérequis
+
+- **Go 1.22+**
+- **Docker & Docker Compose** (ou Kubernetes)
+- **migrate CLI** (pour les migrations SQL)
+- **PostgreSQL 16** (local ou distant)
+- **(optionnel)** accès à ImageKit pour les uploads de médias en production
+
+## 🛠️ Installation & Build
+
+1. **Clonez le repo**
+
+```bash
+git clone https://github.com/choeurtis18/onlyflick-backend.git
+cd onlyflick-backend
+```
+
+2. **Installez les dépendances**
+
+```bash
+go mod download
+```
+
+3. **Compilez l'API**
+
+```bash
+go build -v ./...
+```
+
+## 🏃‍♂️ Exécution locale
+
+1. **Lancez PostgreSQL** (via Docker Compose ou Kubernetes)
+
+```bash
+docker run --rm -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=onlyflick_test -p 5432:5432 postgres:16
+```
+
+2. **Créez la base et appliquez les migrations**
+
+```bash
+export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/onlyflick_test?sslmode=disable"
+migrate -path migrations -database "${DATABASE_URL}" up
+```
+
+3. **Définissez la clé secrète JWT**
+
+```bash
+export SECRET_KEY="votre_cle_32_caracteres_ici"
+```
+
+4. **Démarrez l'API**
+
+```bash
+go run ./cmd/server
+# ou, si vous avez compilé :
+./onlyflick-backend
+```
+
+L'API tournera par défaut sur `:8080`.
+
 ## Infrastructure Kubernetes
 
 ### Containerisation
@@ -47,18 +107,34 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 - **Services & LoadBalancing** - Exposition des applications
 - **ConfigMaps & Secrets** - Gestion configuration sécurisée
 
-### Ingress & Networking
+### Exemple de déploiement Kubernetes
 
-- **NGINX Ingress Controller** - Reverse proxy et load balancer
-- **DNS local routing** - Résolution hosts personnalisée
-- **SSL/TLS ready** - Préparé pour certificats HTTPS
-- **Path-based routing** - Routage intelligent backend/frontend
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: onlyflick-backend }
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+        - name: backend
+          image: barrydevops/onlyflick-backend:latest
+          env:
+            - name: DATABASE_URL
+              value: postgresql://user:pass@postgres-svc:5432/onlyflick_prod?sslmode=require
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef: { name: onlyflick-secrets, key: jwt-key }
+          ports: [{ containerPort: 8080 }]
+```
 
 ## Monitoring & Observabilité
 
 ### Stack de monitoring
 
 - **Prometheus** - Collecte et stockage métriques time-series
+- **Sentry** - Collecte des erreurs côté Front
 - **Grafana** - Dashboards et visualisation métriques
 - **Node Exporter** - Métriques système (CPU, RAM, Disk)
 - **Kube-State-Metrics** - Métriques état cluster Kubernetes
@@ -71,29 +147,39 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 - Métriques Kubernetes (pods, nodes, deployments)
 - Métriques business (utilisateurs, posts, messages)
 
-## Testing & Qualité
+## ✅ Tests
 
-### Tests Backend Go
+### Tests unitaires
 
-- **Tests unitaires** (22 tests) - Fonctions isolées
-- **Tests d'intégration** (2 tests) - Flux business complets
-- **Tests E2E** (3 tests) - Parcours utilisateur end-to-end
-- **Tests de performance** (1 test) - Benchmarks et latence
-- **Coverage reports** - Couverture de code HTML
+```bash
+go test ./tests/unit/... -v
+```
 
-### Tests Frontend Flutter
+### Tests de performance
 
-- **Widget tests** - Tests composants UI
-- **Integration tests** - Tests parcours utilisateur
-- **Code analysis** - Lint et quality checks
-- **Performance tests** - Tests de performance web
+```bash
+go test ./tests/performance/... -v
+```
 
-### Tests de sécurité
+### Tests E2E
 
-- **Trivy scanner** - Vulnérabilités containers et dépendances
-- **Gosec** - Audit sécurité code Go
-- **SARIF reports** - Rapports sécurité standardisés
-- **Dependency scanning** - Audit des packages tiers
+```bash
+go test ./tests/e2e/... -v
+```
+
+### Toutes les suites de tests
+
+```bash
+go test ./tests/... -v
+```
+
+## 🐳 Docker
+
+### Build de l'image
+
+```bash
+docker build -t onlyflick-backend:latest .
+```
 
 ## CI/CD & Automation
 
@@ -107,18 +193,12 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 
 ### Workflow phases
 
-1. **Validation** - Detection changements + tests
-2. **Security** - Scans sécurité + quality gates
-3. **Build** - Images Docker multi-arch
-4. **Deploy** - Kubernetes staging puis production
-5. **Monitoring** - Health checks + notifications
+Dans `.github/workflows/ci.yml`, la pipeline:
 
-### Registry & Artifacts
-
-- **GitHub Container Registry (GHCR)** - Stockage images Docker
-- **Artifact storage** - Rapports tests et coverage
-- **Image signing** - Sécurité supply chain
-- **SBOM generation** - Software Bill of Materials
+1. **Build** → `go build ./...`
+2. **Migrations** → `migrate up`
+3. **Tests** → unitaires, perf, e2e
+4. **(sur main) docker** → construction + push image multi-arch
 
 ## Outils de développement
 
@@ -130,36 +210,9 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 - **PowerShell scripts** - Automatisation locale
 - **Docker Desktop** - Environnement containerisé local
 
-### Scripts d'automatisation
-
-- `deploy-full-stack.ps1` - Déploiement complet
-- `fix-503.ps1` - Diagnostic et correction erreurs
-- `verify-deployment.ps1` - Validation déploiement
-- `test-quick.ps1` - Tests rapides connectivité
-- `setup-monitoring.ps1` - Installation monitoring
-
 ## Networking & DNS
 
-### Architecture réseau
-
-- **DNS local** - Résolution hosts personnalisée
-- **Load balancing** - Distribution trafic multi-pods
-- **Service mesh ready** - Préparé pour Istio/Linkerd
-- **Network policies** - Sécurité réseau Kubernetes
-
-### URLs de production actives
-
-- **Application principale** : <http://onlyflick.local>
-- **API Backend** : <http://api.onlyflick.local>  
-- **Monitoring** : <http://grafana.local>
-
-### Déploiement Docker à la racine du projet
-
-```bash
-docker build -t barrydevops/onlyflick-backend:latest .
-```
-
-### Grafana
+### Configuration Grafana
 
 ```bash
 kubectl -n monitoring port-forward svc/prometheus-grafana 3000:80
@@ -171,14 +224,14 @@ kubectl -n monitoring port-forward svc/prometheus-grafana 3000:80
 kubectl -n monitoring port-forward svc/prometheus-operated 9090:9090
 ```
 
-Récupéer les identifiants :
+Récupérer les identifiants :
 
 ```bash
 echo "User: admin"
 echo "Password: $(kubectl get secret grafana-admin --namespace monitoring -o jsonpath="{.data.GF_SECURITY_ADMIN_PASSWORD}" | base64 -d)"
 ```
 
-### FÉLICITATIONS
+### 🎉 FÉLICITATIONS
 
 Votre plateforme sociale **OnlyFlick/MatchMaker** est maintenant **100% déployée et opérationnelle** ! L'application combine une interface Flutter moderne avec un backend Go robuste, le tout orchestré sur Kubernetes avec monitoring intégré.
 
