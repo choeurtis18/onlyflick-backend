@@ -196,6 +196,58 @@ CONDITIONAL_DEPLOYMENT_IMPLEMENTED=true
 PIPELINE_READY_FOR_PRODUCTION=true
 ```
 
+## 🚀 Fonctionnalités principales
+
+### 🔐 Authentification
+- Création de compte (Abonné / Créateur)
+- Connexion sécurisée avec JWT
+- Demande de passage en compte créateur
+
+### 👥 Gestion des utilisateurs
+- Mise à jour du profil (infos, image, etc.)
+- Affichage des abonnements personnels
+- Blocage d’abonnés (côté créateur)
+
+### 📸 Publication & contenu
+- Création de posts (image, texte, vidéo)
+- Ajout de tags sur les publications
+- Choix de la visibilité : public ou premium
+- Suppression/modification de ses contenus
+
+### 💬 Interaction & messagerie
+- Système de like et de commentaire
+- Messagerie privée (WebSocket côté backend fonctionnel, front en cours de stabilisation)
+
+### 🔍 Recherche & recommandations
+- Recherche d’utilisateurs ou de contenus par mots-clés
+- Filtres par tags
+- Affichage de contenus recommandés (basés sur des métriques)
+
+### 💸 Abonnements & monétisation
+- Abonnement à un créateur
+- Historique des abonnements
+- Système de revenus pour créateurs (non encore implémenté)
+
+### ⚙️ Back-office (admin)
+- Modération des contenus et utilisateurs
+- Visualisation globale des profils et métriques
+- Activation/désactivation de fonctionnalités
+
+### 📊 Statistiques
+- Dashboard pour créateurs (stats de posts, abonnés...)
+- Dashboard global pour l’administrateur
+
+### 🛠️ Autres fonctionnalités
+- Upload des médias via ImageKit
+- Configuration CI/CD + monitoring
+- Gestion des erreurs avec messages utilisateur
+
+> 🔧 **En cours d'amélioration :**
+> - Notifications push
+> - WebSocket sur navigateur web (limitations techniques Flutter web)
+> - Complétion frontend des statistiques d'abonnement et revenus
+
+
 ##  **Matrice des Droits**
 
 | Fonctionnalité                                             | Abonné | Créateur | Administrateur |
