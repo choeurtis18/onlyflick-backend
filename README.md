@@ -1,18 +1,10 @@
 # OnlyFlick - Un réseau social innovant
 
-
-
 ## PROJET COMPLET DÉPLOYÉ ET FONCTIONNEL
 
 OnlyFlick est une plateforme sociale complète connectant créateurs de contenu et abonnés. Ce projet full-stack combine un backend Go robuste avec une interface Flutter moderne, le tout déployé sur Kubernetes avec monitoring intégré.
 
-<br/>
-<br/>
-
 ![screenshot](https://github.com/choeurtis18/onlyflick-backend/blob/main/assets/demo_onlyflick.png)
-
-<br/>
-<br/>
 
 ## Liens importants du projet
 
@@ -23,9 +15,7 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 - **Wireframe (Figma)** : [Consulter le design](https://www.figma.com/design/RdPh9Vqpi6SrS6dXGWe7Yx/OnlyFlick---Wireframe?node-id=2547-3430&t=3Q27SaSfp48n3j2r-0)
 - **Diagramme UML (DbDiagram)** : [Voir le MCD](https://i.postimg.cc/rmXQqVzn/MCD-Only-Flick.png)
 
-
-
-##  Comptes de démonstration (production)
+## Comptes de démonstration (production)
 
 Voici des identifiants de test pour accéder à l'application en conditions réelles :
 
@@ -40,8 +30,6 @@ Voici des identifiants de test pour accéder à l'application en conditions rée
 - **Abonné**
   - Email : `emma.code@hotmail.com`
   - Mot de passe : `password123`
-
-
 
 ## STATUT DU PROJET : 100% OPÉRATIONNEL
 
@@ -63,10 +51,9 @@ Voici des identifiants de test pour accéder à l'application en conditions rée
 - **Tests** : Suite complète (unitaires, intégration, E2E, performance)
 - **Upload** : ImageKit pour les médias
 
-
 ## Comment utiliser ce projet
 
-###  Prérequis
+### Prérequis
 
 Avant de lancer le projet, installez les outils suivants :
 
@@ -82,6 +69,7 @@ Avant de lancer le projet, installez les outils suivants :
 ### Étapes d'installation
 
 #### Backend – Go
+
 ```bash
 # Clonez ce dépôt.
 $ git clone https://github.com/choeurtis18/onlyflick-backend.git
@@ -94,7 +82,8 @@ $ go run cmd/server/main.go
 
 ```
 
-####  Frontend – Flutter
+### Frontend – Flutter
+
 #### Option 1 – Via script (recommandé)
 
 ```bash
@@ -109,6 +98,7 @@ chmod +x scripts/dev_commands.sh
 # Voir toutes les commandes disponibles
 ./scripts/dev_commands.sh help
 ```
+
 #### Option 2 – Manuellement avec Flutter CLI
 
 ```bash
@@ -126,7 +116,7 @@ flutter run -d chrome
 
 Avant de lancer l'application, configurez le fichier `.env` avec vos variables d'environnement :
 
-```env
+```bash
 # Clés de sécurité
 SECRET_KEY=
 
@@ -204,57 +194,67 @@ PIPELINE_READY_FOR_PRODUCTION=true
 ## Fonctionnalités principales
 
 ### Authentification
+
 - Création de compte (Abonné / Créateur)
 - Connexion sécurisée avec JWT
 - Demande de passage en compte créateur
 
 ### Gestion des utilisateurs
+
 - Mise à jour du profil (infos, image, etc.)
 - Affichage des abonnements personnels
 - Blocage d’abonnés (côté créateur)
 
 ### Publication & contenu
+
 - Création de posts (image, texte, vidéo)
 - Ajout de tags sur les publications
 - Choix de la visibilité : public ou premium
 - Suppression/modification de ses contenus
 
 ### Interaction & messagerie
+
 - Système de like et de commentaire
 - Messagerie privée (WebSocket côté backend fonctionnel, front en cours de stabilisation)
 
 ### Recherche & recommandations
+
 - Recherche d’utilisateurs ou de contenus par mots-clés
 - Filtres par tags
 - Affichage de contenus recommandés (basés sur des métriques)
 
 ### Abonnements & monétisation
+
 - Abonnement à un créateur
 - Historique des abonnements
 - Système de revenus pour créateurs (non encore implémenté)
 
 ### Back-office (admin)
+
 - Modération des contenus et utilisateurs
 - Visualisation globale des profils et métriques
 - Activation/désactivation de fonctionnalités
 
 ### Statistiques
+
 - Dashboard pour créateurs (stats de posts, abonnés...)
 - Dashboard global pour l’administrateur
 
 ### Autres fonctionnalités
+
 - Upload des médias via ImageKit
 - Configuration CI/CD + Monitoring
 - Gestion des erreurs avec messages utilisateur
 
-> **En cours d'amélioration :**
+## En cours d'amélioration
+
 > - Notifications push
 > - WebSocket sur navigateur web (limitations techniques Flutter web)
 > - Complétion frontend des statistiques d'abonnement et revenus
 
+## Matrice des Droits
 
-##  **Matrice des Droits**
-
+```txt
 | Fonctionnalité                                             | Abonné | Créateur | Administrateur |
 |------------------------------------------------------------|--------|----------|----------------|
 | Créer un compte / Se connecter                             | ✅     | ✅        | ✅              |
@@ -281,6 +281,7 @@ PIPELINE_READY_FOR_PRODUCTION=true
 | Accéder à tous les profils / contenus                      | ❌     | ❌        | ✅              |
 | Activer / désactiver des fonctionnalités (feature toggles) | ❌     | ❌        | ✅              |
 | Accéder aux logs, alertes techniques, monitoring           | ❌     | ❌        | ✅              |
+```
 
 ## Infrastructure Kubernetes
 
@@ -403,7 +404,41 @@ PIPELINE_READY_FOR_PRODUCTION=true
 docker build -t barrydevops/onlyflick-backend:latest .
 ```
 
-### Grafana
+## Tests
+
+### Tests unitaires
+
+```bash
+go test ./tests/unit/... -v
+```
+
+### Tests de performance
+
+```bash
+go test ./tests/performance/... -v
+```
+
+### Tests E2E
+
+```bash
+go test ./tests/e2e/... -v
+```
+
+### Toutes les suites de tests
+
+```bash
+go test ./tests/... -v
+```
+
+## Docker
+
+### Build de l'image
+
+```bash
+docker build -t onlyflick-backend:latest .
+```
+
+## Grafana
 
 ```bash
 kubectl -n monitoring port-forward svc/prometheus-grafana 3000:80
@@ -415,15 +450,12 @@ kubectl -n monitoring port-forward svc/prometheus-grafana 3000:80
 kubectl -n monitoring port-forward svc/prometheus-operated 9090:9090
 ```
 
-Récupéer les identifiants :
+Récupérer les identifiants :
 
 ```bash
 echo "User: admin"
 echo "Password: $(kubectl get secret grafana-admin --namespace monitoring -o jsonpath="{.data.GF_SECURITY_ADMIN_PASSWORD}" | base64 -d)"
 ```
-
-
-**Dernière mise à jour : 10 juillet 2025 - Déploiement réussi avec succès**
 
 ### Résumé des Contributions
 
@@ -453,6 +485,8 @@ echo "Password: $(kubectl get secret grafana-admin --namespace monitoring -o jso
 
 Pour toute question ou suggestion, contactez-nous via :
 
-- mouhamadou.etu@gmail.com
-- choeurtis.tchounga@gmail.com
-- ibrahimabarry1503@gmail.com
+- <mouhamadou.etu@gmail.com>
+- <choeurtis.tchounga@gmail.com>
+- <ibrahimabarry1503@gmail.com>
+
+### Dernière mise à jour : 10 juillet 2025 - Déploiement réussi avec succès
