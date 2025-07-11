@@ -61,9 +61,7 @@ jobs:
       - name: Test
         run: |
           if [ -f "go.mod" ]; then
-            go test -v -race ./cmd/server
-          elif [ -f "cmd/server/go.mod" ]; then
-            cd cmd/server && go test -v -race .
+            go test ./tests/... -v
           else
             echo "Could not find go.mod file"
             exit 1
