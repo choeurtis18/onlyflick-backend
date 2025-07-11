@@ -59,18 +59,8 @@ jobs:
           fi
 
       - name: Test
-        run: |
-          if [ -f "go.mod" ]; then
-            go test -v -race ./cmd/server
-          elif [ -f "cmd/server/go.mod" ]; then
-            cd cmd/server && go test -v -race .
-          else
-            echo "Could not find go.mod file"
-            exit 1
-          fi
-        env:
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/onlyflick_test?sslmode=disable"
+        run:
+          go test ./tests/... -v
 
   docker:
     runs-on: ubuntu-latest
