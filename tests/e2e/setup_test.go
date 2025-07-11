@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS users (
     bio TEXT,
     avatar_url TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS posts (
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS posts (
     media_url TEXT,
     visibility VARCHAR(20) NOT NULL DEFAULT 'public',
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS subscriptions (
