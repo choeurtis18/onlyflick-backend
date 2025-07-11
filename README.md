@@ -48,7 +48,7 @@ Voici des identifiants de test pour accéder à l'application en conditions rée
 - **Frontend Flutter** : Interface Onlyflick déployée et accessible via une apk/web
 - **Backend Go** : API REST + WebSocket fonctionnels  
 - **Infrastructure** : Kubernetes + Monitoring Grafana/Prometheus
-- **Tests** : 28 tests unitaires + E2E validés (100% succès)
+- **Tests** : 10 tests unitaires + performance + E2E validés (100% succès)
 - **Sécurité** : JWT + AES + CORS configurés
 
 ## Stack technique
@@ -244,7 +244,7 @@ PIPELINE_READY_FOR_PRODUCTION=true
 
 ### 🛠️ Autres fonctionnalités
 - Upload des médias via ImageKit
-- Configuration CI/CD + monitoring
+- Configuration CI/CD + Monitoring
 - Gestion des erreurs avec messages utilisateur
 
 > 🔧 **En cours d'amélioration :**
@@ -327,11 +327,9 @@ PIPELINE_READY_FOR_PRODUCTION=true
 
 ### Tests Backend Go
 
-- **Tests unitaires** (22 tests) - Fonctions isolées
-- **Tests d'intégration** (2 tests) - Flux business complets
-- **Tests E2E** (3 tests) - Parcours utilisateur end-to-end
+- **Tests unitaires** (5 tests) - Fonctions isolées
+- **Tests E2E** (4 tests) - Parcours utilisateur end-to-end
 - **Tests de performance** (1 test) - Benchmarks et latence
-- **Coverage reports** - Couverture de code HTML
 
 ### Tests Frontend Flutter
 
@@ -399,12 +397,6 @@ PIPELINE_READY_FOR_PRODUCTION=true
 - **Service mesh ready** - Préparé pour Istio/Linkerd
 - **Network policies** - Sécurité réseau Kubernetes
 
-### URLs de production actives
-
-- **Application principale** : <http://onlyflick.local>
-- **API Backend** : <http://api.onlyflick.local>  
-- **Monitoring** : <http://grafana.local>
-
 ### Déploiement Docker à la racine du projet
 
 ```bash
@@ -453,7 +445,7 @@ echo "Password: $(kubectl get secret grafana-admin --namespace monitoring -o jso
   - Mise en place de l’**infrastructure Kubernetes**  
   - Implémentation du **CI/CD (GitHub Actions)**  
   - Configuration du **monitoring** avec Grafana et Prometheus  
-  - Écriture des **tests** (unitaires, fonctionnels, E2E)  
+  - Écriture des **tests** (unitaires, performance, E2E)  
   - Automatisation & gestion **DevOps** complète  
   - Contribution à la **documentation technique**
 
