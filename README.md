@@ -398,12 +398,6 @@ PIPELINE_READY_FOR_PRODUCTION=true
 - **Service mesh ready** - Préparé pour Istio/Linkerd
 - **Network policies** - Sécurité réseau Kubernetes
 
-### Déploiement Docker à la racine du projet
-
-```bash
-docker build -t barrydevops/onlyflick-backend:latest .
-```
-
 ## Tests
 
 ### Tests unitaires
