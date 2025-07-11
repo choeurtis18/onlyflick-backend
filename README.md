@@ -16,12 +16,12 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 
 ## Liens importants du projet
 
-- 📄 **Cahier des charges** : [Télécharger le PDF](https://github.com/choeurtis18/onlyflick-backend/blob/main/Cahier%20des%20charges%20OnlyFlick%20.pdf)
-- 📱 **Application mobile (APK)** : [Télécharger l’APK OnlyFlick](https://github.com/choeurtis18/onlyflick-backend/releases/download/APK/OnlyFlick_V1.0.apk)
-- 🌐 **Site web en production** : [onlyflick.netlify.app](https://onlyflick.netlify.app/)
-- 📋 **Tableau Kanban (Notion)** : [Voir le suivi projet](https://western-cereal-a39.notion.site/1ea3b17dc80c80c191f8df757de32744?v=1ea3b17dc80c808d9fe9000cb5fafc65)
-- 🎨 **Wireframe (Figma)** : [Consulter le design](https://www.figma.com/design/RdPh9Vqpi6SrS6dXGWe7Yx/OnlyFlick---Wireframe?node-id=2547-3430&t=3Q27SaSfp48n3j2r-0)
-- 🗂️ **Diagramme UML (DbDiagram)** : [Voir le MCD](https://i.postimg.cc/rmXQqVzn/MCD-Only-Flick.png)
+- **Cahier des charges** : [Télécharger le PDF](https://github.com/choeurtis18/onlyflick-backend/blob/main/Cahier%20des%20charges%20OnlyFlick%20.pdf)
+- **Application mobile (APK)** : [Télécharger l’APK OnlyFlick](https://github.com/choeurtis18/onlyflick-backend/releases/download/APK/OnlyFlick_V1.0.apk)
+- **Site web en production** : [onlyflick.netlify.app](https://onlyflick.netlify.app/)
+- **Tableau Kanban (Notion)** : [Voir le suivi projet](https://western-cereal-a39.notion.site/1ea3b17dc80c80c191f8df757de32744?v=1ea3b17dc80c808d9fe9000cb5fafc65)
+- **Wireframe (Figma)** : [Consulter le design](https://www.figma.com/design/RdPh9Vqpi6SrS6dXGWe7Yx/OnlyFlick---Wireframe?node-id=2547-3430&t=3Q27SaSfp48n3j2r-0)
+- **Diagramme UML (DbDiagram)** : [Voir le MCD](https://i.postimg.cc/rmXQqVzn/MCD-Only-Flick.png)
 
 
 
@@ -30,16 +30,16 @@ OnlyFlick est une plateforme sociale complète connectant créateurs de contenu 
 Voici des identifiants de test pour accéder à l'application en conditions réelles :
 
 - **Administrateur**
-  - 📧 Email : `admin@onlyflick.com`
-  - 🔑 Mot de passe : `password123`
+  - Email : `admin@onlyflick.com`
+  - Mot de passe : `password123`
 
 - **Créateur**
-  - 📧 Email : `marcus.football@yahoo.com`
-  - 🔑 Mot de passe : `password123`
+  - Email : `marcus.football@yahoo.com`
+  - Mot de passe : `password123`
 
 - **Abonné**
-  - 📧 Email : `emma.code@hotmail.com`
-  - 🔑 Mot de passe : `password123`
+  - Email : `emma.code@hotmail.com`
+  - Mot de passe : `password123`
 
 
 
@@ -127,25 +127,25 @@ flutter run -d chrome
 Avant de lancer l'application, configurez le fichier `.env` avec vos variables d'environnement :
 
 ```env
-# 🔐 Clés de sécurité
+# Clés de sécurité
 SECRET_KEY=
 
-# 🐘 Base de données
+# Base de données
 DATABASE_URL=postgres://user:password@host:port/dbname
 
-# 📦 ImageKit
+# ImageKit
 IMAGEKIT_PRIVATE_KEY=
 IMAGEKIT_PUBLIC_KEY=
 IMAGEKIT_URL_ENDPOINT=https://your-imagekit-endpoint
 
-# 🌐 Port du serveur backend
+# Port du serveur backend
 PORT=8080
 
-# 💳 Stripe
+# Stripe
 STRIPE_PUBLIC_KEY=
 STRIPE_SECRET_KEY=
 
-# 🌍 Environnement / URLs
+# Environnement / URLs
 ENVIRONMENT=development
 API_BASE_URL=http://localhost:8080
 FRONTEND_URL=http://localhost:3000
@@ -153,101 +153,101 @@ GRAFANA_URL=http://localhost:3001
 APP_STATUS=IN_PROGRESS
 DEPLOYMENT_DATE=
 
-# ⚙️ CI/CD Configuration
+# CI/CD Configuration
 CI_REGISTRY=ghcr.io
 CI_IMAGE_PREFIX=onlyflick
 CI_CACHE_FROM=type=gha
 CI_PLATFORMS=linux/amd64,linux/arm64
 CI_ARTIFACT_RETENTION=30
 
-# 🚀 Déploiement Kubernetes
+# Déploiement Kubernetes
 HELM_CHART_PATH=./k8s/helm-chart
 KUBECTL_VERSION=v1.28.0
 DEPLOYMENT_TIMEOUT=900s
 STAGING_NAMESPACE=onlyflick-staging
 PRODUCTION_NAMESPACE=onlyflick
 
-# ⚙️ GitHub Actions
+# GitHub Actions
 CI_DOCKER_REGISTRY=docker.io
 CI_BACKEND_IMAGE_NAME=onlyflick-backend
 CI_FRONTEND_IMAGE_NAME=onlyflick-frontend
 CI_SIMULATION_MODE=true
 CI_REQUIRE_KUBE_CONFIG=true
 
-# 📦 Statut CI/CD
+# Statut CI/CD
 KUBE_CONFIG_REQUIRED=true
 DEPLOYMENT_MODE=simulation
 GITHUB_ACTIONS_READY=true
 PIPELINE_DEPLOYMENT_FIXED=true
 
-# 📚 Documentation & Statut Projet
+# Documentation & Statut Projet
 PROJECT_STATUS=PRODUCTION_READY
 DOCUMENTATION_UPDATED=
 README_VERSION=2.0_COMPREHENSIVE
 TECH_STACK_COMPLETE=true
 CI_PIPELINE_FIXED=true
 
-# ✅ Qualité Code / Linting
+# Qualité Code / Linting
 MARKDOWN_LINT_FIXED=true
 YAML_SYNTAX_VALIDATED=true
 FLUTTER_WARNINGS_FIXED=true
 GOLANG_UNUSED_FUNCTIONS_CLEANED=true
 PIPELINE_ERRORS_RESOLVED=true
 
-# ✅ Statut CI Final
+# Statut CI Final
 YAML_SYNTAX_FIXED=true
 DEPLOYMENT_LOGIC_CORRECTED=true
 CONDITIONAL_DEPLOYMENT_IMPLEMENTED=true
 PIPELINE_READY_FOR_PRODUCTION=true
 ```
 
-## 🚀 Fonctionnalités principales
+## Fonctionnalités principales
 
-### 🔐 Authentification
+### Authentification
 - Création de compte (Abonné / Créateur)
 - Connexion sécurisée avec JWT
 - Demande de passage en compte créateur
 
-### 👥 Gestion des utilisateurs
+### Gestion des utilisateurs
 - Mise à jour du profil (infos, image, etc.)
 - Affichage des abonnements personnels
 - Blocage d’abonnés (côté créateur)
 
-### 📸 Publication & contenu
+### Publication & contenu
 - Création de posts (image, texte, vidéo)
 - Ajout de tags sur les publications
 - Choix de la visibilité : public ou premium
 - Suppression/modification de ses contenus
 
-### 💬 Interaction & messagerie
+### Interaction & messagerie
 - Système de like et de commentaire
 - Messagerie privée (WebSocket côté backend fonctionnel, front en cours de stabilisation)
 
-### 🔍 Recherche & recommandations
+### Recherche & recommandations
 - Recherche d’utilisateurs ou de contenus par mots-clés
 - Filtres par tags
 - Affichage de contenus recommandés (basés sur des métriques)
 
-### 💸 Abonnements & monétisation
+### Abonnements & monétisation
 - Abonnement à un créateur
 - Historique des abonnements
 - Système de revenus pour créateurs (non encore implémenté)
 
-### ⚙️ Back-office (admin)
+### Back-office (admin)
 - Modération des contenus et utilisateurs
 - Visualisation globale des profils et métriques
 - Activation/désactivation de fonctionnalités
 
-### 📊 Statistiques
+### Statistiques
 - Dashboard pour créateurs (stats de posts, abonnés...)
 - Dashboard global pour l’administrateur
 
-### 🛠️ Autres fonctionnalités
+### Autres fonctionnalités
 - Upload des médias via ImageKit
 - Configuration CI/CD + Monitoring
 - Gestion des erreurs avec messages utilisateur
 
-> 🔧 **En cours d'amélioration :**
+> **En cours d'amélioration :**
 > - Notifications push
 > - WebSocket sur navigateur web (limitations techniques Flutter web)
 > - Complétion frontend des statistiques d'abonnement et revenus
