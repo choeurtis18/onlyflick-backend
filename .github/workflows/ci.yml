@@ -47,6 +47,19 @@ jobs:
             exit 1
           fi
 
+      - name: Create test environment file
+        run: |
+          echo "# CI Test Environment" > .env
+          echo "SECRET_KEY=12345678901234567890123456789012" >> .env
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/onlyflick_test?sslmode=disable" >> .env
+          echo "IMAGEKIT_PRIVATE_KEY=private_test_key" >> .env
+          echo "IMAGEKIT_PUBLIC_KEY=public_test_key" >> .env
+          echo "IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/test" >> .env
+          echo "CI=true" >> .env
+          echo "ENVIRONMENT=test" >> .env
+          echo "✓ Test environment file created for CI"
+          cat .env
+
       - name: Build
         run: |
           if [ -f "go.mod" ]; then
@@ -59,8 +72,13 @@ jobs:
           fi
 
       - name: Test
-        run:
-          go test ./tests/... -v
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/onlyflick_test?sslmode=disable"
+          SECRET_KEY: "12345678901234567890123456789012"
+        run: |
+          go test ./tests/unit/... -v
+          go test ./tests/performance/... -v
+          go test ./tests/e2e/... -v
 
   docker:
     runs-on: ubuntu-latest
@@ -75,4 +93,3 @@ jobs:
 
       - name: Pull backend image
         run: docker pull barrydevops/onlyflick-backend:latest
-      
